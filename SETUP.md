@@ -47,6 +47,18 @@ El proyecto tiene también un objetivo formativo y profesional:
 - **TypeScript**
 - **Tailwind CSS**
 
+### Modelo de Renderizado y Arquitectura: SPA vs. SSR
+Se ha evaluado la opción de utilizar una **SPA (Single Page Application)** frente a una arquitectura de **Renderizado en el Servidor (SSR)**:
+
+*   **SPA (Single Page Application - React + Vite):**
+    *   *Ventajas:* Experiencia fluida "tipo aplicación" (sin recargas de página), desacoplamiento total del backend (FastAPI es una API JSON limpia), menor coste de despliegue (se sirve como archivos estáticos en Vercel, Netlify o Cloudflare Pages de forma gratuita).
+    *   *Desventajas:* Carga inicial ligeramente superior y SEO subóptimo de base.
+*   **SSR (Server-Side Rendering - Next.js / Remix / FastAPI + Jinja2):**
+    *   *Ventajas:* Carga inicial ultrarrápida, SEO perfecto y simplificación de la seguridad en sesiones al manejarse directamente en el servidor.
+    *   *Desventajas:* Requiere un servidor Node.js activo en producción (mayor coste) o acoplamiento excesivo con plantillas de Python/Jinja2, perdiendo interactividad dinámica rica en el cliente.
+
+**Decisión final:** **SPA (Single Page Application)** con React + Vite. Dado que GlyphLog es un panel personal e interactivo que no requiere indexación SEO pública, los beneficios de una SPA (menor complejidad, desacoplamiento limpio de la API, despliegue estático y agilidad de desarrollo) superan con creces las ventajas del SSR.
+
 ### Backend
 - **FastAPI**
 - **Python**
