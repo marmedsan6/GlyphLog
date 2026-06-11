@@ -1,0 +1,28 @@
+# GlyphLog - Local Development Infrastructure
+#
+# This compose file only manages PostgreSQL for local development.
+# Frontend and backend run natively on the host with their dev servers.
+# See docs/architecture/deployment.md for the full strategy.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: glyphlog-postgres
+    environment:
+      POSTGRES_USER: glyphlog
+      POSTGRES_PASSWORD: glyphlog
+      POSTGRES_DB: glyphlog
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphlog -d glyphlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

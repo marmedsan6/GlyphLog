@@ -1,0 +1,118 @@
+# ─── Node.js / pnpm ────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Build outputs ─────────────────────────────────────────────────────────────
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# ─── Turborepo ─────────────────────────────────────────────────────────────────
+.turbo/
+
+# ─── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ─── Python: entornos virtuales ────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env.bak/
+
+# ─── Python: paquetes y builds ─────────────────────────────────────────────────
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+
+# ─── Python: testing y coverage ────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# ─── Python: mypy / type checking ──────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# ─── Variables de entorno ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ─── Docker ────────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── IDEs: VSCode ──────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+
+# ─── IDEs: JetBrains ───────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ─── IDEs: Zed ─────────────────────────────────────────────────────────────────
+# (Zed no genera archivos de proyecto ignorables)
+
+# ─── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ─── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Uploads y archivos temporales ─────────────────────────────────────────────
+uploads/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ─── Certificados y secretos ───────────────────────────────────────────────────
+*.pem
+*.key
+*.cert
+*.crt
