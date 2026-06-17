@@ -9,8 +9,8 @@
 | Pydantic | 2.x | Validación y serialización de datos (schemas) |
 | SQLAlchemy | 2.x | ORM, definición de modelos y queries |
 | Alembic | 1.x | Migraciones de base de datos |
-| python-jose | — | Generación y verificación de JWT |
-| passlib | — | Hashing de contraseñas (bcrypt) |
+| PyJWT | 2.x | Generación y verificación de JWT |
+| bcrypt | 4.1+ | Hashing de contraseñas |
 | uvicorn | — | Servidor ASGI para desarrollo y producción |
 
 ---
@@ -119,7 +119,7 @@ class EntryRepository:
 ## Autenticación
 
 - **Mecanismo**: JWT Bearer tokens (OAuth2PasswordBearer).
-- **Librería**: `python-jose` para firmar/verificar, `passlib[bcrypt]` para hashear contraseñas.
+- **Librería**: `PyJWT` para firmar/verificar, `bcrypt` para hashear contraseñas.
 - **Flujo**:
   1. El cliente hace `POST /api/v1/auth/login` con email y contraseña.
   2. El backend verifica las credenciales y devuelve un `access_token` (JWT).

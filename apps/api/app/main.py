@@ -1,10 +1,18 @@
+import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
+from app.core.rate_limiter import limiter
 from app.routers.auth import router as auth_router
 from app.routers.entries import router as entries_router
 
@@ -36,6 +44,66 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# Rate limiting — se vincula vía app.state.limiter; solo aplica a endpoints con @limiter.limit()
+app.state.limiter = limiter
+
+
+# --- Exception handlers globales ---
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """Maneja HTTPExceptions (404, 401, 403, etc.) con formato JSON consistente."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Retorna 429 con mensaje en español y header Retry-After cuando se supera el límite."""
+    # exc.limit.limit es un RateLimitItem de la librería `limits`;
+    # get_expiry() devuelve el período en segundos (ej: 60 para "por minuto").
+    retry_after = exc.limit.limit.get_expiry() if exc.limit and exc.limit.limit else 60
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": f"Demasiadas peticiones. Intenta de nuevo en {retry_after} segundos."},
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Maneja errores de validación de Pydantic con formato JSON."""
+    errors = exc.errors()
+    messages = [err.get("msg", "Error de validación") for err in errors]
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "; ".join(messages)},
+    )
+
+
+@app.exception_handler(NotImplementedError)
+async def not_implemented_handler(request: Request, exc: NotImplementedError) -> JSONResponse:
+    """Maneja endpoints no implementados con 501."""
+    return JSONResponse(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        content={"detail": "This endpoint is not yet implemented"},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Maneja errores inesperados con 500. Muestra traceback solo en debug."""
+    error_detail = traceback.format_exc() if settings.debug else "Internal server error"
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": error_detail},
+    )
+
 
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
@@ -45,3 +113,9 @@ async def health_check() -> dict[str, str]:
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(entries_router, prefix="/api/v1/entries", tags=["entries"])
+
+# Servir archivos subidos estáticamente.
+# El mount va DESPUÉS de los routers para no interceptar rutas de la API.
+_uploads_dir = Path("uploads")
+_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

@@ -9,6 +9,7 @@ import { HomePage } from '@/pages/home/home.page'
 import { LoginPage } from '@/pages/login/login.page'
 import { RegisterPage } from '@/pages/register/register.page'
 import { CollectionPage } from '@/pages/collection/collection.page'
+import { CreateEntryPage } from '@/pages/create-entry/create-entry.page'
 import { EntryDetailPage } from '@/pages/entry-detail/entry-detail.page'
 import { NotFoundPage } from '@/pages/not-found/not-found.page'
 
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: '/collection', element: <CollectionPage /> },
+          { path: '/entries/new', element: <CreateEntryPage /> },
           { path: '/entries/:id', element: <EntryDetailPage /> },
         ],
       },

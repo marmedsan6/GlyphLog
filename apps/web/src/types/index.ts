@@ -16,8 +16,36 @@ export interface Entry {
   title: string
   type: EntryType
   status: EntryStatus
-  createdAt: string
-  updatedAt: string
+  rating: number | null
+  year: number | null
+  notes: string | null
+  cover_image: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface EntryCreate {
+  title: string
+  type: EntryType
+  status: EntryStatus
+  rating?: number | null
+  year?: number | null
+  notes?: string | null
+  cover_image?: File | null
+}
+
+export interface EntryResponse {
+  id: string
+  user_id: string
+  title: string
+  type: EntryType
+  status: EntryStatus
+  rating: number | null
+  year: number | null
+  notes: string | null
+  cover_image: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface User {
@@ -40,6 +68,12 @@ export interface LoginResponse {
 export interface RegisterRequest {
   email: string
   password: string
+}
+
+export interface RegisterResponse {
+  user: User
+  access_token: string
+  token_type: 'bearer'
 }
 
 // ── API errors ────────────────────────────────────────────────────────────────

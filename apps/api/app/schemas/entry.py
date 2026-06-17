@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.entry import EntryStatus, EntryType
 
@@ -10,6 +10,10 @@ class EntryCreate(BaseModel):
     title: str
     type: EntryType
     status: EntryStatus
+    rating: float | None = Field(default=None, ge=1.0, le=10.0)
+    year: int | None = Field(default=None, ge=1950, le=2100)
+    notes: str | None = Field(default=None, max_length=5000)
+    cover_image: str | None = None  # Ruta relativa asignada por el servicio de uploads
 
     @field_validator("title")
     @classmethod
@@ -20,6 +24,13 @@ class EntryCreate(BaseModel):
         if len(stripped) > 500:
             raise ValueError("El título no puede superar los 500 caracteres")
         return stripped
+
+    @field_validator("notes")
+    @classmethod
+    def notes_strip(cls, v: str | None) -> str | None:
+        if v is not None:
+            return v.strip()
+        return v
 
 
 class EntryUpdate(BaseModel):
@@ -39,9 +50,14 @@ class EntryUpdate(BaseModel):
 
 class EntryResponse(BaseModel):
     id: UUID
+    user_id: UUID
     title: str
     type: EntryType
     status: EntryStatus
+    rating: float | None
+    year: int | None
+    notes: str | None
+    cover_image: str | None
     created_at: datetime
     updated_at: datetime
 

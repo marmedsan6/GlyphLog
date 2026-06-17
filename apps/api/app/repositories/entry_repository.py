@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.entry import Entry
@@ -20,7 +21,24 @@ class EntryRepository:
         raise NotImplementedError
 
     async def create(self, user_id: UUID, data: EntryCreate) -> Entry:
-        raise NotImplementedError
+        entry = Entry(
+            user_id=user_id,
+            title=data.title,
+            type=data.type,
+            status=data.status,
+            rating=data.rating,
+            year=data.year,
+            notes=data.notes,
+            cover_image=data.cover_image,
+        )
+        self.db.add(entry)
+        try:
+            await self.db.commit()
+            await self.db.refresh(entry)
+            return entry
+        except IntegrityError:
+            await self.db.rollback()
+            raise
 
     async def update(self, entry_id: UUID, user_id: UUID, data: EntryUpdate) -> Entry | None:
         raise NotImplementedError

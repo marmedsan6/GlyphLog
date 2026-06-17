@@ -1,17 +1,32 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from email_validator import EmailNotValidError, validate_email
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class UserCreate(BaseModel):
-    email: EmailStr  # Valida formato real de email (requiere email-validator)
+    email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_and_normalize_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        try:
+            validated = validate_email(v, check_deliverability=False)
+            return validated.normalized
+        except EmailNotValidError:
+            raise ValueError("El formato del email no es válido")
 
     @field_validator("password")
     @classmethod
-    def password_min_length(cls, v: str) -> str:
+    def password_length(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("La contraseña no puede contener solo espacios")
         if len(v) < 8:
             raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        if len(v) > 128:
+            raise ValueError("La contraseña no puede superar los 128 caracteres")
         return v
 
 

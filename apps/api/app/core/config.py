@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # ── Rate limiting ────────────────────────────────────────────────────────
+    # Formato: "N/period" (ej: "5/minute", "10/hour"). Slowapi parsea estos strings.
+    rate_limit_login: str = "5/minute"
+    rate_limit_register: str = "3/minute"
+
     # ── App ────────────────────────────────────────────────────────────────────
     debug: bool = False
     allowed_origins: list[str] = ["http://localhost:5173"]
