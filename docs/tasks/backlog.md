@@ -28,12 +28,13 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 
 | ID | Tipo | Título | Prioridad | Estado | Dependencias |
 |---|---|---|---|---|---|
-| T-008 | FEAT | HU: Registro de usuario (endpoint + frontend) | alta | backlog | T-006 |
-| T-009 | FEAT | HU: Login de usuario (JWT + frontend) | alta | backlog | T-008 |
-| T-010 | FEAT | HU: Crear entrada | alta | backlog | T-007, T-009 |
-| T-011 | FEAT | HU: Listar colección | alta | backlog | T-010 |
-| T-012 | FEAT | HU: Editar entrada | alta | backlog | T-010 |
-| T-013 | FEAT | HU: Eliminar entrada | alta | backlog | T-010 |
+| T-008 | FEAT | HU: Registro de usuario (endpoint + frontend) | alta | completada | T-006 |
+| T-009 | FEAT | HU: Login de usuario (JWT + frontend) | alta | completada | T-008 |
+| T-010a | FEAT | HU: Crear entrada básica + validación de duplicados | alta | backlog | T-007, T-009 |
+| T-010b | FEAT | HU: Campos opcionales (rating, año, notas, imagen subida) | alta | backlog | T-010a |
+| T-011 | FEAT | HU: Listar colección | alta | backlog | T-010a |
+| T-012 | FEAT | HU: Editar entrada | alta | backlog | T-010a |
+| T-013 | FEAT | HU: Eliminar entrada | alta | backlog | T-010a |
 
 ---
 
@@ -43,7 +44,7 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 |---|---|---|---|---|---|
 | T-014 | FEAT | Login social (Google OAuth) | media | backlog | T-009 |
 | T-015 | FEAT | Recuperación de contraseña por email | media | backlog | T-008 |
-| T-016 | FEAT | Campo de progreso en entradas (episodio actual, capítulo, horas) | media | backlog | T-010 |
+| T-016 | FEAT | Campo de progreso en entradas (episodio actual, capítulo, horas) | media | backlog | T-010a |
 
 ---
 
@@ -51,6 +52,6 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 
 | ID | Tipo | Título | Prioridad | Estado | Dependencias |
 |---|---|---|---|---|---|
-| T-017 | FEAT | Rating, tags y notas en entradas | baja | backlog | T-010 |
+| T-017 | FEAT | Tags y categorías en entradas | baja | backlog | T-010a |
 | T-018 | FEAT | Filtros y búsqueda en la colección | baja | backlog | T-011 |
 | T-019 | FEAT | Estadísticas de colección (dashboard con métricas) | baja | backlog | T-011 |

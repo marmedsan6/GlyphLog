@@ -1,31 +1,42 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+# bcrypt tiene un límite de 72 bytes. Contraseñas más largas se truncan
+# antes del hashing para evitar ValueError en bcrypt >= 4.1.
+_BCRYPT_MAX_BYTES = 72
 
 
 def hash_password(password: str) -> str:
-    """Genera el hash bcrypt de una contraseña en texto plano."""
-    return pwd_context.hash(password)
+    """
+    Genera el hash bcrypt de una contraseña en texto plano.
+
+    bcrypt trunca contraseñas a 72 bytes. Se trunca explícitamente
+    para evitar ValueError en bcrypt >= 4.1 y documentar el comportamiento.
+    """
+    password_bytes = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verifica una contraseña contra su hash bcrypt.
     Operación constant-time: resistente a timing attacks.
+    Trunca a 72 bytes para coincidir con hash_password().
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    password_bytes = plain_password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
 
 
 def create_access_token(subject: str | UUID) -> str:
@@ -88,8 +99,17 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido: subject no es un UUID válido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     repo = UserRepository(db)
-    user = await repo.get_by_id(UUID(user_id))
+    user = await repo.get_by_id(user_uuid)
 
     if not user:
         raise HTTPException(

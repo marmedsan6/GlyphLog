@@ -8,11 +8,21 @@ os.environ.setdefault("ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 os.environ.setdefault("DEBUG", "true")
 os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:5173"]')
+# Límites bajos para testing — permiten verificar rate limiting sin cientos de peticiones.
+os.environ.setdefault("RATE_LIMIT_LOGIN", "2/minute")
+os.environ.setdefault("RATE_LIMIT_REGISTER", "2/minute")
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.core.rate_limiter import limiter
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> None:
+    """Resetea el contador de rate limiting entre tests para evitar interferencias."""
+    limiter.reset()
 
 
 @pytest.fixture

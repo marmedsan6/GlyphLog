@@ -1,9 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from app.core.dependencies import get_entry_service
 from app.core.security import get_current_user
+from app.core.uploads import save_cover_image
+from app.models.entry import EntryStatus, EntryType
 from app.models.user import User
 from app.schemas.entry import EntryCreate, EntryResponse, EntryUpdate
 from app.services.entry_service import EntryService
@@ -21,10 +25,48 @@ async def list_entries(
 
 @router.post("/", response_model=EntryResponse, status_code=status.HTTP_201_CREATED)
 async def create_entry(
-    data: EntryCreate,
+    title: str = Form(""),
+    type: str = Form(...),
+    status: str = Form(...),
+    rating: str | None = Form(None),
+    year: str | None = Form(None),
+    notes: str | None = Form(None),
+    cover_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse:
+    # Conversión explícita str → float/int.
+    # Los formularios multipart envían todos los valores como strings;
+    # declarar str | None es honesto con los tipos y evita type: ignore.
+    rating_value: float | None = float(rating) if rating else None
+    year_value: int | None = int(year) if year else None
+    notes_value: str | None = notes if notes else None
+
+    # Validar datos del formulario PRIMERO (antes de guardar archivos)
+    # para evitar archivos huérfanos en disco si la validación falla.
+    try:
+        data = EntryCreate(
+            title=title,
+            type=EntryType(type),
+            status=EntryStatus(status),
+            rating=rating_value,
+            year=year_value,
+            notes=notes_value,
+            cover_image=None,
+        )
+    except (ValidationError, ValueError) as exc:
+        if isinstance(exc, ValidationError):
+            messages = [err.get("msg", "Error de validación") for err in exc.errors()]
+            detail = "; ".join(messages)
+        else:
+            detail = str(exc)
+        return JSONResponse(status_code=422, content={"detail": detail})
+
+    # Guardar imagen SOLO si la validación pasó
+    if cover_image is not None:
+        cover_image_path = await save_cover_image(cover_image)
+        data.cover_image = cover_image_path
+
     return await service.create(user_id=current_user.id, data=data)
 
 

@@ -12,5 +12,6 @@ pydantic-settings==2.14.1
 email-validator==2.2.0
 # PyJWT en lugar de python-jose (CVE-2024-33663 activa en python-jose)
 PyJWT==2.13.0
-passlib[bcrypt]==1.7.4
+bcrypt==5.0.0
 python-multipart==0.0.20
+slowapi==0.1.10
