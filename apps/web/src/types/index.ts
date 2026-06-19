@@ -1,28 +1,39 @@
 // Tipos del dominio de GlyphLog.
-// Deben mantenerse en sincronía con los schemas Pydantic del backend.
-// Ante cualquier cambio en la API, actualizar estos tipos primero.
+//
+// NOTA SOBRE AUTOGENERACIÓN:
+// Los tipos que provienen directamente de la API (responses y JSON bodies)
+// se importan desde ./api, un archivo generado automáticamente por
+// openapi-typescript a partir de /openapi.json del backend.
+//
+// Para regenerar los tipos:
+//   pnpm --filter web generate-types
+//
+// Los tipos de formularios que incluyen objetos File (ej. EntryCreate)
+// se mantienen manuales porque OpenAPI no representa correctamente los
+// campos de tipo archivo en el cliente TypeScript.
 
-export type EntryType = 'anime' | 'manga' | 'game'
+import type { components } from './api'
 
-export type EntryStatus =
-  | 'watching'
-  | 'completed'
-  | 'on_hold'
-  | 'dropped'
-  | 'plan_to_watch'
+// ── Tipos autogenerados desde la API ──────────────────────────────────────────
 
-export interface Entry {
-  id: string
-  title: string
-  type: EntryType
-  status: EntryStatus
-  rating: number | null
-  year: number | null
-  notes: string | null
-  cover_image: string | null
-  created_at: string
-  updated_at: string
+export type EntryType = components['schemas']['EntryType']
+export type EntryStatus = components['schemas']['EntryStatus']
+
+export type EntryResponse = components['schemas']['EntryResponse']
+
+export type User = components['schemas']['UserResponse']
+
+export type LoginRequest = components['schemas']['LoginRequest']
+export type LoginResponse = components['schemas']['TokenResponse']
+
+export type RegisterRequest = components['schemas']['UserCreate']
+export type RegisterResponse = components['schemas']['RegisterResponse']
+
+export type ApiError = {
+  detail: string
 }
+
+// ── Tipos manuales (formularios con archivos u objetos no representables) ─────
 
 export interface EntryCreate {
   title: string
@@ -34,50 +45,5 @@ export interface EntryCreate {
   cover_image?: File | null
 }
 
-export interface EntryResponse {
-  id: string
-  user_id: string
-  title: string
-  type: EntryType
-  status: EntryStatus
-  rating: number | null
-  year: number | null
-  notes: string | null
-  cover_image: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface User {
-  id: string
-  email: string
-}
-
-// ── Auth ──────────────────────────────────────────────────────────────────────
-
-export interface LoginRequest {
-  email: string
-  password: string
-}
-
-export interface LoginResponse {
-  access_token: string
-  token_type: 'bearer'
-}
-
-export interface RegisterRequest {
-  email: string
-  password: string
-}
-
-export interface RegisterResponse {
-  user: User
-  access_token: string
-  token_type: 'bearer'
-}
-
-// ── API errors ────────────────────────────────────────────────────────────────
-
-export interface ApiError {
-  detail: string
-}
+// Entry es un alias de la respuesta de la API para uso interno del frontend.
+export type Entry = EntryResponse
