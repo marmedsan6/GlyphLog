@@ -98,6 +98,9 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
+# ─── OpenAPI / tipos autogenerados (intermedios) ───────────────────────────────
+apps/web/openapi.json
+
 # ─── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 logs/
