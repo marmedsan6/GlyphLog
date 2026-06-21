@@ -62,3 +62,29 @@ class EntryResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EntryListItem(BaseModel):
+    """Schema para ítems del listado de colección.
+
+    Excluye user_id por decisión de diseño: en el listado propio del usuario
+    autenticado no es necesario exponer el identificador interno.
+    """
+
+    id: UUID
+    title: str
+    type: EntryType
+    status: EntryStatus
+    rating: float | None
+    cover_image: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedEntryResponse(BaseModel):
+    entries: list[EntryListItem]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

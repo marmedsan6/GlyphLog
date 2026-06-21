@@ -34,7 +34,7 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 
 ## Fase actual
 
-**Fase 0 — Setup completado hasta migraciones iniciales** (junio 2025)
+**Fase 0 — Setup completado; T-011-BE implementado** (junio 2026)
 
 - `apps/web` scaffoldeado: Vite + React 18 + TypeScript strict + Tailwind CSS + shadcn/ui
 - Sistema de auth con JWT en sessionStorage
@@ -44,9 +44,14 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 - Componentes shadcn/ui base instalados: Button, Input, Label, Card, Form, Toast, Dropdown, Avatar
 - Build de producción verificado (241 kB, 0 errores TypeScript, 0 errores ESLint)
 - `apps/api` scaffoldeado: FastAPI + estructura de carpetas (routers, services, repositories, schemas, models, core)
-- Modelos SQLAlchemy definidos: User (UUID, email, hashed_password) y Entry (UUID, user_id, title, type, status)
+- Modelos SQLAlchemy definidos: User (UUID, email, hashed_password) y Entry (UUID, user_id, title, type, status, rating, year, notes, cover_image)
 - `docker-compose.yml` creado: PostgreSQL 15 Alpine con healthcheck, volumen persistente y puerto restringido a 127.0.0.1
-- Primera migración Alembic ejecutada: tablas `users` y `entries` creadas en PostgreSQL con índices y constraints
+- Migraciones Alembic ejecutadas: tablas `users` y `entries` creadas; índice `ix_entries_created_at` añadido para optimizar listados
+- Backend implementado:
+  - `POST /api/v1/entries/` — crear entrada con validaciones y manejo de duplicados
+  - `GET /api/v1/entries/` — listar entradas del usuario autenticado con filtro por tipo y paginación (15 ítems por página, ordenadas por `created_at DESC`)
+  - Respuesta paginada: `entries`, `total`, `page`, `limit`, `total_pages`
+  - Tests de servicio e integración para listado con mocks
 
 ---
 

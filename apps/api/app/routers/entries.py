@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -9,18 +9,32 @@ from app.core.security import get_current_user
 from app.core.uploads import save_cover_image
 from app.models.entry import EntryStatus, EntryType
 from app.models.user import User
-from app.schemas.entry import EntryCreate, EntryResponse, EntryUpdate
-from app.services.entry_service import EntryService
+from app.schemas.entry import EntryCreate, EntryResponse, EntryUpdate, PaginatedEntryResponse
+from app.services.entry_service import EntryService, InvalidPaginationError
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[EntryResponse])
+@router.get("/", response_model=PaginatedEntryResponse)
 async def list_entries(
+    type: EntryType | None = None,
+    page: int = 1,
+    limit: int = 15,
     current_user: User = Depends(get_current_user),
     service: EntryService = Depends(get_entry_service),
-) -> list[EntryResponse]:
-    return await service.get_all(user_id=current_user.id)
+) -> PaginatedEntryResponse:
+    try:
+        return await service.get_all(
+            user_id=current_user.id,
+            entry_type=type,
+            page=page,
+            limit=limit,
+        )
+    except InvalidPaginationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post("/", response_model=EntryResponse, status_code=status.HTTP_201_CREATED)
