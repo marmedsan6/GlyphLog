@@ -32,6 +32,9 @@ class Entry(Base, TimestampMixin):
     __tablename__ = "entries"
     __table_args__ = (
         Index("uq_entries_user_title_type", "user_id", "title", "type", unique=True),
+        # Índice compuesto para filtrar por user_id y ordenar por created_at DESC
+        # en listados paginados de forma eficiente.
+        Index("ix_entries_user_id_created_at", "user_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

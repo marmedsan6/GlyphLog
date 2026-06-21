@@ -1,9 +1,10 @@
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.entry import Entry
+from app.models.entry import Entry, EntryType
 from app.schemas.entry import EntryCreate, EntryUpdate
 
 
@@ -11,10 +12,36 @@ class EntryRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def get_all(self, user_id: UUID) -> list[Entry]:
+    def _base_query(self, user_id: UUID, entry_type: EntryType | None = None) -> select:
+        """Construye la query base con filtro obligatorio por user_id."""
+        stmt = select(Entry).where(Entry.user_id == user_id)
+        if entry_type is not None:
+            stmt = stmt.where(Entry.type == entry_type)
+        return stmt
+
+    async def get_all(
+        self,
+        user_id: UUID,
+        entry_type: EntryType | None = None,
+        limit: int = 15,
+        offset: int = 0,
+    ) -> list[Entry]:
         # SEGURIDAD: siempre filtrar por user_id.
         # Un usuario nunca debe poder leer entradas de otro usuario.
-        raise NotImplementedError
+        stmt = (
+            self._base_query(user_id, entry_type)
+            .order_by(Entry.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count(self, user_id: UUID, entry_type: EntryType | None = None) -> int:
+        """Cuenta el total de entradas del usuario, aplicando filtro por tipo si aplica."""
+        stmt = self._base_query(user_id, entry_type).with_only_columns(func.count(Entry.id))
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
 
     async def get_by_id(self, entry_id: UUID, user_id: UUID) -> Entry | None:
         # SEGURIDAD: filtrar por entry_id Y user_id.
