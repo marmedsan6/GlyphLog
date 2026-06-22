@@ -170,9 +170,9 @@ export function EntryDetailPage() {
         title: values.title,
         type: values.type,
         status: values.status,
-        rating: values.rating,
-        year: values.year,
-        notes: values.notes,
+        rating: values.rating ?? null,
+        year: values.year ?? null,
+        notes: values.notes ?? null,
         cover_image: selectedImage ?? (keepCoverImage ? undefined : null),
       })
       setIsEditing(false)
