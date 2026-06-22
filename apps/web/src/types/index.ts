@@ -61,8 +61,8 @@ export interface EntryUpdateFormData {
   title: string
   type: EntryType
   status: EntryStatus
-  rating: string
-  year: string
-  notes: string
+  rating: string | null
+  year: string | null
+  notes: string | null
   cover_image?: File | null
 }
