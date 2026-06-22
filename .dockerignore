@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GlyphLog — .dockerignore
+# Archivos y directorios que NO se envían al contexto de build de Docker.
+# Acelera los builds y evita leaks accidentales de datos sensibles.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Dependencias
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Entorno y secretos
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# IDEs y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build outputs y cache
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+coverage/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Documentación y assets no necesarios en build
+docs/
+memory-bank/
+*.md
+!README.md
+
+# Tests
+**/tests/
+**/test_*
+**/*.test.*
+**/*.spec.*
+playwright-report/
+test-results/
+
+# MCP y herramientas
+.playwright-mcp/
+.mcp.json
+
+# Logs
+*.log

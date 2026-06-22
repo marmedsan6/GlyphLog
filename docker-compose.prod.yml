@@ -1,0 +1,73 @@
+# GlyphLog - Production Infrastructure
+#
+# Diferencias con el docker-compose de desarrollo:
+#   - SIN servicio sonarqube (solo desarrollo/CI)
+#   - SIN servicio web dev (reemplazado por nginx sirviendo build de Vite)
+#   - api: SIN --reload, SIN user: root, SIN volume bind del código
+#   - postgres: SIN exponer puerto al host
+#   - nginx: sirve estáticos del frontend y proxy_pass a /api/v1/ y /uploads/
+#
+# Requisitos previos:
+#   - Archivo .env.production con todas las variables de entorno necesarias
+#   - DATABASE_URL, SECRET_KEY, POSTGRES_PASSWORD deben estar configurados
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: glyphlog-postgres-prod
+    env_file: .env.production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphlog -d glyphlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - glyphlog-network
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: glyphlog-api-prod
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file: .env.production
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - glyphlog-network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+        VITE_API_BASE_URL: ""
+    container_name: glyphlog-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - glyphlog-network
+
+volumes:
+  postgres_data:
+  uploads:
+
+networks:
+  glyphlog-network:
+    driver: bridge
