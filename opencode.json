@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "codegraphcontext": {
+      "type": "local",
+      "command": ["pipx", "run", "codegraphcontext", "mcp", "start"],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": true
+    }
+  },
+  "agent": {
+    "qa-senior": {
+      "description": "Senior QA engineer that creates test plans, executes E2E tests with Playwright, and generates technical/non-technical reports.",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "npx playwright *": "allow",
+          "npm test *": "allow",
+          "pnpm test *": "allow",
+          "*": "ask"
+        }
+      }
+    }
+  }
+}

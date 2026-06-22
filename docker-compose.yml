@@ -1,0 +1,84 @@
+# GlyphLog - Local Development Infrastructure
+#
+# Runs PostgreSQL, API (FastAPI) and SPA (React/Vite) in Docker.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: glyphlog-postgres
+    environment:
+      POSTGRES_USER: glyphlog
+      POSTGRES_PASSWORD: glyphlog
+      POSTGRES_DB: glyphlog
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphlog -d glyphlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: glyphlog-api
+    user: root # Necesario para evitar problemas de permisos al escribir en uploads/ montado en el host
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - /app/.venv # Evita sobreescribir venv local si existe en el host
+      - ./apps/api/uploads:/app/uploads # Persistencia de imágenes de portada en el host
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://glyphlog:glyphlog@postgres:5432/glyphlog
+      - SECRET_KEY=your-super-secret-key-that-is-at-least-32-chars-long-for-dev
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - DEBUG=true
+      - ALLOWED_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    container_name: glyphlog-web
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:10.5-community
+    container_name: glyphlog-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
