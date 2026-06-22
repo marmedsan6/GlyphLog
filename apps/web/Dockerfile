@@ -44,10 +44,13 @@ FROM nginx:alpine
 # Copiar estáticos compilados desde el stage de build
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
-# Configuración de nginx (SPA routing, proxy a API, gzip)
+# Configuración de nginx (SPA routing, proxy a API, gzip, SSL)
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Directorio para certificados SSL (se monta como volumen en producción)
+RUN mkdir -p /etc/nginx/certs
+
+EXPOSE 80 443
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget -q --spider http://127.0.0.1:80/health || exit 1
