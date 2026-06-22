@@ -1,6 +1,8 @@
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { ThemeProvider } from '@/components/shared/theme-provider'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { Toaster } from '@/components/ui/toaster'
 import { queryClient } from '@/lib/query-client'
 import { ProtectedRoute } from '@/components/shared/protected-route'
 import { AppLayout } from '@/components/shared/app-layout'
@@ -41,10 +43,13 @@ const router = createBrowserRouter([
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      {/* ReactQueryDevtools se excluye automáticamente en producción
-          cuando NODE_ENV=production (Vite lo establece durante el build) */}
-      <ReactQueryDevtools initialIsOpen={false} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+        <Toaster />
+        {/* ReactQueryDevtools se excluye automáticamente en producción
+            cuando NODE_ENV=production (Vite lo establece durante el build) */}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }

@@ -243,6 +243,32 @@ Decisiones, referencias, consideraciones a tener en cuenta.
 
 ---
 
+### GitHub CLI (gh)
+
+> ⚠️ **REQUISITO DE SEGURIDAD**: Nunca uses `gh` directamente. Siempre usa el wrapper `bash scripts/gh.sh`.
+
+El wrapper usa dos tokens con permisos mínimos:
+- **Operaciones de repo** (push, issues, PRs, etc.) → fine-grained PAT limitado solo a `marmedsan6/GlyphLog`
+- **Operaciones de project** (`gh project ...`) → classic PAT con solo scopes `project`, `read:org`, `read:discussion`
+
+El wrapper **bloquea explícitamente** cualquier comando que mencione `turing-challenge`.
+
+| Comando | Descripción |
+|---------|-------------|
+| `bash scripts/gh.sh project list` | Listar proyectos |
+| `bash scripts/gh.sh project view <id>` | Ver detalle de proyecto |
+| `bash scripts/gh.sh project item-list <id>` | Listar items de un proyecto |
+| `bash scripts/gh.sh project view <id> --owner marmedsan6` | Ver detalle de proyecto |
+| `bash scripts/gh.sh project item-list <id> --owner marmedsan6` | Listar items de un proyecto |
+| `bash scripts/gh.sh project field-list <id> --owner marmedsan6` | Listar campos de un proyecto |
+| `bash scripts/gh.sh ...` | Cualquier comando gh |
+
+El proyecto **#2 "Backlog del proyecto"** (privado, `marmedsan6`) contiene las tareas y el backlog del desarrollo de GlyphLog. Es el tablero principal del proyecto. El proyecto **#1** es otro proyecto personal no relacionado.
+
+Los tokens están en `scripts/gh.sh` (ignorado por git). Si caducan, regenerarlos y actualizar el script.
+
+---
+
 ## 9. MCPs disponibles
 
 Los MCPs (Model Context Protocol servers) amplían las capacidades del agente con acceso a herramientas externas. Documentación completa en `docs/mcps/`.

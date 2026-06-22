@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 // Layout principal para las páginas protegidas.
 // Incluye header con navegación y área de contenido principal.
@@ -29,6 +30,7 @@ export function AppLayout() {
             >
               Colección
             </Link>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"

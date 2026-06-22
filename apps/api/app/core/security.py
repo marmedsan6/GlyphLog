@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
 import bcrypt
@@ -53,7 +54,7 @@ def create_access_token(subject: str | UUID) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-def decode_access_token(token: str) -> dict:
+def decode_access_token(token: str) -> dict[str, Any]:
     """
     Decodifica y valida un JWT.
     Lanza HTTPException 401 si el token es inválido o ha expirado.

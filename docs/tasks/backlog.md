@@ -15,6 +15,13 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 | T-005 | SETUP | Docker Compose (PostgreSQL + servicios de infraestructura) | alta | completada | T-002 |
 | T-006 | FEAT | Modelo User + migración inicial (Alembic) | alta | completada | T-004, T-005 |
 | T-007 | FEAT | Modelo Entry + migración | alta | completada | T-006 |
+| T-008 | FEAT | HU: Registro de usuario (endpoint + frontend) | alta | completada | T-006 |
+| T-009 | FEAT | HU: Login de usuario (JWT + frontend) | alta | completada | T-008 |
+| T-010a | FEAT | HU: Crear entrada básica + validación de duplicados | alta | completada | T-007, T-009 |
+| T-010b | FEAT | HU: Campos opcionales (rating, año, notas, imagen subida) | alta | completada | T-010a |
+| T-011 | FEAT | HU: Listar colección | alta | completada | T-010a |
+| T-012 | FEAT | HU: Editar entrada | alta | completada | T-010a |
+| T-013 | FEAT | HU: Eliminar entrada | alta | completada | T-010a |
 
 ---
 
@@ -28,13 +35,6 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 
 | ID | Tipo | Título | Prioridad | Estado | Dependencias |
 |---|---|---|---|---|---|
-| T-008 | FEAT | HU: Registro de usuario (endpoint + frontend) | alta | completada | T-006 |
-| T-009 | FEAT | HU: Login de usuario (JWT + frontend) | alta | completada | T-008 |
-| T-010a | FEAT | HU: Crear entrada básica + validación de duplicados | alta | backlog | T-007, T-009 |
-| T-010b | FEAT | HU: Campos opcionales (rating, año, notas, imagen subida) | alta | backlog | T-010a |
-| T-011 | FEAT | HU: Listar colección | alta | backlog | T-010a |
-| T-012 | FEAT | HU: Editar entrada | alta | backlog | T-010a |
-| T-013 | FEAT | HU: Eliminar entrada | alta | backlog | T-010a |
 
 ---
 

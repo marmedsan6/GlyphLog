@@ -20,6 +20,8 @@ export type EntryType = components['schemas']['EntryType']
 export type EntryStatus = components['schemas']['EntryStatus']
 
 export type EntryResponse = components['schemas']['EntryResponse']
+export type EntryListItem = components['schemas']['EntryListItem']
+export type PaginatedEntryResponse = components['schemas']['PaginatedEntryResponse']
 
 export type User = components['schemas']['UserResponse']
 
@@ -47,3 +49,20 @@ export interface EntryCreate {
 
 // Entry es un alias de la respuesta de la API para uso interno del frontend.
 export type Entry = EntryResponse
+
+// Datos del formulario de edición de una entrada.
+// Los campos rating/year se mantienen como string para manejar inputs vacíos,
+// igual que en el formulario de creación.
+// cover_image:
+//   - undefined: no se quiere cambiar la imagen actual
+//   - null: se quiere eliminar la imagen actual
+//   - File: se quiere subir una nueva imagen mediante POST /entries/{id}/cover
+export interface EntryUpdateFormData {
+  title: string
+  type: EntryType
+  status: EntryStatus
+  rating: string
+  year: string
+  notes: string
+  cover_image?: File | null
+}

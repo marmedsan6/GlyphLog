@@ -1,13 +1,15 @@
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     # ── Base de datos ──────────────────────────────────────────────────────────
-    database_url: str
+    # Valores por defecto vacíos para tipado estricto con mypy; los validadores
+    # garantizan que el entorno provea valores reales antes de que la app arranque.
+    database_url: str = Field(default="")
 
     # ── JWT ────────────────────────────────────────────────────────────────────
-    secret_key: str
+    secret_key: str = Field(default="")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
@@ -24,6 +26,14 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
     )
+
+    @field_validator("database_url")
+    @classmethod
+    def database_url_must_be_set(cls, v: str) -> str:
+        # La app no arranca si DATABASE_URL no está configurada.
+        if not v:
+            raise ValueError("DATABASE_URL no está configurada")
+        return v
 
     @field_validator("secret_key")
     @classmethod

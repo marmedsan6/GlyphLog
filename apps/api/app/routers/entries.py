@@ -48,7 +48,7 @@ async def create_entry(
     cover_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
     service: EntryService = Depends(get_entry_service),
-) -> EntryResponse:
+) -> EntryResponse | JSONResponse:
     # Conversión explícita str → float/int.
     # Los formularios multipart envían todos los valores como strings;
     # declarar str | None es honesto con los tipos y evita type: ignore.
@@ -93,7 +93,7 @@ async def get_entry(
     return await service.get_by_id(entry_id=entry_id, user_id=current_user.id)
 
 
-@router.patch("/{entry_id}", response_model=EntryResponse)
+@router.put("/{entry_id}", response_model=EntryResponse)
 async def update_entry(
     entry_id: UUID,
     data: EntryUpdate,
@@ -101,6 +101,20 @@ async def update_entry(
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse:
     return await service.update(entry_id=entry_id, user_id=current_user.id, data=data)
+
+
+@router.post("/{entry_id}/cover", response_model=EntryResponse)
+async def upload_cover_image(
+    entry_id: UUID,
+    cover_image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    service: EntryService = Depends(get_entry_service),
+) -> EntryResponse:
+    return await service.update_cover_image(
+        entry_id=entry_id,
+        user_id=current_user.id,
+        file=cover_image,
+    )
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)

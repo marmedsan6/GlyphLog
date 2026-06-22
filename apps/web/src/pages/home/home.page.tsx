@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 // Página de inicio pública.
 // Si el usuario ya está autenticado, redirige directamente a /collection.
@@ -16,6 +17,9 @@ export function HomePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="fixed right-4 top-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="text-center space-y-6 max-w-md px-4">
         <h1 className="text-5xl font-bold text-foreground">GlyphLog</h1>
         <p className="text-lg text-muted-foreground">

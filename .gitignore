@@ -43,8 +43,8 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
+/lib/
+/lib64/
 wheels/
 
 # ─── Python: testing y coverage ────────────────────────────────────────────────
@@ -104,6 +104,12 @@ apps/web/openapi.json
 # ─── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 logs/
+
+# ─── Scripts locales con tokens
+scripts/gh.sh
+
+# ─── Playwright MCP ────────────────────────────────────────────────────────────
+.playwright-mcp/
 
 # ─── Uploads y archivos temporales ─────────────────────────────────────────────
 uploads/

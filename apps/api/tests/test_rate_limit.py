@@ -6,30 +6,19 @@ Los límites bajos (2/minute) se configuran en conftest.py.
 """
 
 from unittest.mock import AsyncMock
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 
 from app.core.dependencies import get_auth_service
-from app.core.security import hash_password
 from app.main import app
-from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from tests.factories import make_user
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _make_user(email: str = "test@example.com") -> User:
-    """Crea una instancia de User en memoria (sin sesión de BD)."""
-    return User(
-        id=uuid4(),
-        email=email,
-        hashed_password=hash_password("validpass1"),
-    )
 
 
 def _override_auth_service(service: AuthService) -> None:
@@ -67,7 +56,7 @@ class TestLoginRateLimit:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """Tras superar el límite de peticiones, retorna 429 Too Many Requests."""
-        mock_user_repo.get_by_email.return_value = _make_user()
+        mock_user_repo.get_by_email.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -92,7 +81,7 @@ class TestLoginRateLimit:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """La respuesta 429 incluye el header Retry-After con segundos restantes."""
-        mock_user_repo.get_by_email.return_value = _make_user()
+        mock_user_repo.get_by_email.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -119,7 +108,7 @@ class TestLoginRateLimit:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """El mensaje de error 429 está en español."""
-        mock_user_repo.get_by_email.return_value = _make_user()
+        mock_user_repo.get_by_email.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -155,7 +144,7 @@ class TestRegisterRateLimit:
     ) -> None:
         """Tras superar el límite de peticiones, retorna 429 Too Many Requests."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -181,7 +170,7 @@ class TestRegisterRateLimit:
     ) -> None:
         """La respuesta 429 incluye el header Retry-After con segundos restantes."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -208,7 +197,7 @@ class TestRegisterRateLimit:
     ) -> None:
         """El mensaje de error 429 está en español."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:

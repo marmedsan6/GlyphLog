@@ -15,29 +15,17 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import get_auth_service
-from app.core.security import decode_access_token, hash_password, verify_password
+from app.core.security import decode_access_token, verify_password
 from app.main import app
-from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate
 from app.services.auth_service import AuthService
+from tests.factories import make_user
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-
-def _make_user(
-    email: str = "test@example.com",
-    hashed_password: str | None = None,
-) -> User:
-    """Crea una instancia de User en memoria (sin sesión de BD)."""
-    return User(
-        id=uuid4(),
-        email=email,
-        hashed_password=hashed_password or hash_password("validpass1"),
-    )
 
 
 @pytest.fixture
@@ -158,7 +146,7 @@ class TestAuthServiceRegister:
     ) -> None:
         """Criterio #9: la contraseña se almacena como hash bcrypt, nunca en texto plano."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
 
         data = UserCreate(email="test@example.com", password="validpass1")
         await auth_service.register(data)
@@ -175,7 +163,7 @@ class TestAuthServiceRegister:
         self, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """Criterio #4: email duplicado detectado por get_by_email → 409."""
-        mock_user_repo.get_by_email.return_value = _make_user()
+        mock_user_repo.get_by_email.return_value = make_user()
 
         data = UserCreate(email="test@example.com", password="validpass1")
         with pytest.raises(HTTPException) as exc_info:
@@ -231,7 +219,7 @@ class TestRegisterEndpoint:
     ) -> None:
         """Criterio #1 y #2: email + contraseña válidos → 201 con user data + token."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -257,7 +245,7 @@ class TestRegisterEndpoint:
     ) -> None:
         """Criterio #2: la respuesta nunca incluye la contraseña."""
         mock_user_repo.get_by_email.return_value = None
-        mock_user_repo.create.return_value = _make_user()
+        mock_user_repo.create.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -280,7 +268,7 @@ class TestRegisterEndpoint:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """Criterio #3: el JWT es válido y contiene el user_id como subject."""
-        user = _make_user()
+        user = make_user()
         mock_user_repo.get_by_email.return_value = None
         mock_user_repo.create.return_value = user
         _override_auth_service(auth_service)
@@ -304,7 +292,7 @@ class TestRegisterEndpoint:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """Criterio #4: email duplicado vía HTTP → 409 con mensaje en español."""
-        mock_user_repo.get_by_email.return_value = _make_user()
+        mock_user_repo.get_by_email.return_value = make_user()
         _override_auth_service(auth_service)
 
         try:
@@ -322,7 +310,7 @@ class TestRegisterEndpoint:
         self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
     ) -> None:
         """Criterio #4 y #10: email duplicado con mayúsculas vía HTTP → 409."""
-        mock_user_repo.get_by_email.return_value = _make_user(email="test@example.com")
+        mock_user_repo.get_by_email.return_value = make_user(email="test@example.com")
         _override_auth_service(auth_service)
 
         try:
