@@ -85,14 +85,31 @@ export interface paths {
         };
         /** Get Entry */
         get: operations["get_entry_api_v1_entries__entry_id__get"];
-        put?: never;
+        /** Update Entry */
+        put: operations["update_entry_api_v1_entries__entry_id__put"];
         post?: never;
         /** Delete Entry */
         delete: operations["delete_entry_api_v1_entries__entry_id__delete"];
         options?: never;
         head?: never;
-        /** Update Entry */
-        patch: operations["update_entry_api_v1_entries__entry_id__patch"];
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entries/{entry_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Cover Image */
+        post: operations["upload_cover_image_api_v1_entries__entry_id__cover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -118,6 +135,38 @@ export interface components {
             notes?: string | null;
             /** Cover Image */
             cover_image?: string | null;
+        };
+        /** Body_upload_cover_image_api_v1_entries__entry_id__cover_post */
+        Body_upload_cover_image_api_v1_entries__entry_id__cover_post: {
+            /** Cover Image */
+            cover_image: string;
+        };
+        /**
+         * EntryListItem
+         * @description Schema para ítems del listado de colección.
+         *
+         *     Excluye user_id por decisión de diseño: en el listado propio del usuario
+         *     autenticado no es necesario exponer el identificador interno.
+         */
+        EntryListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["EntryType"];
+            status: components["schemas"]["EntryStatus"];
+            /** Rating */
+            rating: number | null;
+            /** Cover Image */
+            cover_image: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** EntryResponse */
         EntryResponse: {
@@ -168,7 +217,16 @@ export interface components {
         EntryUpdate: {
             /** Title */
             title?: string | null;
+            type?: components["schemas"]["EntryType"] | null;
             status?: components["schemas"]["EntryStatus"] | null;
+            /** Rating */
+            rating?: number | null;
+            /** Year */
+            year?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Cover Image */
+            cover_image?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -181,6 +239,19 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** PaginatedEntryResponse */
+        PaginatedEntryResponse: {
+            /** Entries */
+            entries: components["schemas"]["EntryListItem"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Limit */
+            limit: number;
+            /** Total Pages */
+            total_pages: number;
         };
         /** RegisterResponse */
         RegisterResponse: {
@@ -332,7 +403,11 @@ export interface operations {
     };
     list_entries_api_v1_entries__get: {
         parameters: {
-            query?: never;
+            query?: {
+                type?: components["schemas"]["EntryType"] | null;
+                page?: number;
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -345,7 +420,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EntryResponse"][];
+                    "application/json": components["schemas"]["PaginatedEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -414,6 +498,41 @@ export interface operations {
             };
         };
     };
+    update_entry_api_v1_entries__entry_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_entry_api_v1_entries__entry_id__delete: {
         parameters: {
             query?: never;
@@ -443,7 +562,7 @@ export interface operations {
             };
         };
     };
-    update_entry_api_v1_entries__entry_id__patch: {
+    upload_cover_image_api_v1_entries__entry_id__cover_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -454,7 +573,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EntryUpdate"];
+                "multipart/form-data": components["schemas"]["Body_upload_cover_image_api_v1_entries__entry_id__cover_post"];
             };
         };
         responses: {

@@ -5,99 +5,26 @@ y subida de imágenes. Todos los tests usan mocks — no requieren PostgreSQL.
 """
 
 import io
-from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from pydantic import ValidationError
 
-from app.core.dependencies import get_entry_service
-from app.core.security import get_current_user
-from app.main import app
-from app.models.entry import Entry, EntryStatus, EntryType
-from app.models.user import User
-from app.repositories.entry_repository import EntryRepository
+from app.models.entry import EntryStatus, EntryType
 from app.schemas.entry import EntryCreate
 from app.services.entry_service import EntryService
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_entry(
-    user_id: UUID | None = None,
-    rating: float | None = None,
-    year: int | None = None,
-    notes: str | None = None,
-    cover_image: str | None = None,
-) -> Entry:
-    """Crea una instancia de Entry en memoria (sin sesión de BD)."""
-    now = datetime.now(timezone.utc)
-    return Entry(
-        id=uuid4(),
-        user_id=user_id or uuid4(),
-        title="One Piece",
-        type=EntryType.anime,
-        status=EntryStatus.watching,
-        rating=rating,
-        year=year,
-        notes=notes,
-        cover_image=cover_image,
-        created_at=now,
-        updated_at=now,
-    )
-
-
-def _make_user() -> User:
-    """Crea una instancia de User en memoria para simular autenticación."""
-    from app.core.security import hash_password
-
-    return User(
-        id=uuid4(),
-        email="test@example.com",
-        hashed_password=hash_password("validpass1"),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def mock_entry_repo() -> AsyncMock:
-    return AsyncMock(spec=EntryRepository)
-
-
-@pytest.fixture
-def entry_service(mock_entry_repo: AsyncMock) -> EntryService:
-    return EntryService(entry_repo=mock_entry_repo)
-
-
-@pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-
-
-def _override_current_user(user: User) -> None:
-    app.dependency_overrides[get_current_user] = lambda: user
-
-
-def _override_entry_service(service: EntryService) -> None:
-    app.dependency_overrides[get_entry_service] = lambda: service
-
-
-def _clear_overrides() -> None:
-    app.dependency_overrides.clear()
+from tests.factories import (
+    make_entry,
+    make_user,
+    mock_entry_repo,  # noqa: F401  # fixture compartido
+    entry_service,  # noqa: F401  # fixture compartido
+    client,  # noqa: F401  # fixture compartido
+    override_current_user,
+    override_entry_service,
+    clear_overrides,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -289,8 +216,8 @@ class TestCreateEntryOptionalFieldsHTTP:
         self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
     ) -> None:
         """Crear entrada con todos los opcionales → 201 + campos en respuesta."""
-        user = _make_user()
-        entry = _make_entry(
+        user = make_user()
+        entry = make_entry(
             user_id=user.id,
             rating=8.5,
             year=1999,
@@ -298,8 +225,8 @@ class TestCreateEntryOptionalFieldsHTTP:
             cover_image="/uploads/covers/test.jpg",
         )
         mock_entry_repo.create.return_value = entry
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        override_current_user(user)
+        override_entry_service(entry_service)
 
         try:
             response = await client.post(
@@ -321,17 +248,17 @@ class TestCreateEntryOptionalFieldsHTTP:
             assert body["notes"] == "Clásico del anime"
             assert body["cover_image"] == "/uploads/covers/test.jpg"
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_without_optional_fields(
         self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
     ) -> None:
         """Crear entrada sin opcionales → 201 + campos null en respuesta."""
-        user = _make_user()
-        entry = _make_entry(user_id=user.id)
+        user = make_user()
+        entry = make_entry(user_id=user.id)
         mock_entry_repo.create.return_value = entry
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        override_current_user(user)
+        override_entry_service(entry_service)
 
         try:
             response = await client.post(
@@ -350,20 +277,20 @@ class TestCreateEntryOptionalFieldsHTTP:
             assert body["notes"] is None
             assert body["cover_image"] is None
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_cover_image(
         self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
     ) -> None:
         """Crear entrada con imagen → 201 + cover_image tiene ruta relativa."""
-        user = _make_user()
-        entry = _make_entry(
+        user = make_user()
+        entry = make_entry(
             user_id=user.id,
             cover_image="/uploads/covers/abc123.jpg",
         )
         mock_entry_repo.create.return_value = entry
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        override_current_user(user)
+        override_entry_service(entry_service)
 
         try:
             with patch("app.routers.entries.save_cover_image", new_callable=AsyncMock) as mock_save:
@@ -390,15 +317,15 @@ class TestCreateEntryOptionalFieldsHTTP:
             assert body["cover_image"] == "/uploads/covers/abc123.jpg"
             mock_save.assert_awaited_once()
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_image_over_5mb(
         self, client: AsyncClient, entry_service: EntryService
     ) -> None:
         """Imagen > 5MB → 422 con mensaje de error descriptivo."""
-        user = _make_user()
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        user = make_user()
+        override_current_user(user)
+        override_entry_service(entry_service)
 
         try:
             # 6MB de datos — supera el límite de 5MB.
@@ -425,15 +352,15 @@ class TestCreateEntryOptionalFieldsHTTP:
             assert response.status_code == 422
             assert "5MB" in response.json()["detail"]
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_invalid_image_mime(
         self, client: AsyncClient, entry_service: EntryService
     ) -> None:
         """Imagen con MIME inválido → 422 (validación de tipo MIME)."""
-        user = _make_user()
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        user = make_user()
+        override_current_user(user)
+        override_entry_service(entry_service)
 
         try:
             response = await client.post(
@@ -455,15 +382,15 @@ class TestCreateEntryOptionalFieldsHTTP:
             assert response.status_code == 422
             assert "no válido" in response.json()["detail"]
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_spoofed_mime(
         self, client: AsyncClient, entry_service: EntryService
     ) -> None:
         """Archivo no-imagen con Content-Type: image/jpeg → 422 (magic bytes lo detectan)."""
-        user = _make_user()
-        _override_current_user(user)
-        _override_entry_service(entry_service)
+        user = make_user()
+        override_current_user(user)
+        override_entry_service(entry_service)
         try:
             response = await client.post(
                 "/api/v1/entries/",
@@ -472,14 +399,14 @@ class TestCreateEntryOptionalFieldsHTTP:
             )
             assert response.status_code == 422
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_rating_out_of_range(
         self, client: AsyncClient
     ) -> None:
         """Rating fuera de rango vía HTTP → 422."""
-        user = _make_user()
-        _override_current_user(user)
+        user = make_user()
+        override_current_user(user)
 
         try:
             response = await client.post(
@@ -494,14 +421,14 @@ class TestCreateEntryOptionalFieldsHTTP:
 
             assert response.status_code == 422
         finally:
-            _clear_overrides()
+            clear_overrides()
 
     async def test_create_with_year_out_of_range(
         self, client: AsyncClient
     ) -> None:
         """Year fuera de rango vía HTTP → 422."""
-        user = _make_user()
-        _override_current_user(user)
+        user = make_user()
+        override_current_user(user)
 
         try:
             response = await client.post(
@@ -516,4 +443,4 @@ class TestCreateEntryOptionalFieldsHTTP:
 
             assert response.status_code == 422
         finally:
-            _clear_overrides()
+            clear_overrides()

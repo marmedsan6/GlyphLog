@@ -1,9 +1,10 @@
 from math import ceil
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 
+from app.core.uploads import save_cover_image
 from app.models.entry import EntryType
 from app.repositories.entry_repository import EntryRepository
 from app.schemas.entry import (
@@ -60,7 +61,13 @@ class EntryService:
         )
 
     async def get_by_id(self, entry_id: UUID, user_id: UUID) -> EntryResponse:
-        raise NotImplementedError
+        entry = await self.entry_repo.get_by_id(entry_id, user_id)
+        if entry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Entrada no encontrada",
+            )
+        return EntryResponse.model_validate(entry)
 
     async def create(self, user_id: UUID, data: EntryCreate) -> EntryResponse:
         try:
@@ -73,7 +80,47 @@ class EntryService:
         return EntryResponse.model_validate(entry)
 
     async def update(self, entry_id: UUID, user_id: UUID, data: EntryUpdate) -> EntryResponse:
-        raise NotImplementedError
+        try:
+            entry = await self.entry_repo.update(entry_id, user_id, data)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya tienes una entrada con ese título y tipo",
+            )
+        if entry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Entrada no encontrada",
+            )
+        return EntryResponse.model_validate(entry)
+
+    async def update_cover_image(
+        self, entry_id: UUID, user_id: UUID, file: UploadFile
+    ) -> EntryResponse:
+        entry = await self.entry_repo.get_by_id(entry_id, user_id)
+        if entry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Entrada no encontrada",
+            )
+
+        # save_cover_image valida magic bytes, formato y tamaño máximo (5MB)
+        # y lanza HTTPException 422 si falla alguna validación.
+        cover_image_path = await save_cover_image(file)
+        updated_entry = await self.entry_repo.update(
+            entry_id, user_id, EntryUpdate(cover_image=cover_image_path)
+        )
+        if updated_entry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Entrada no encontrada",
+            )
+        return EntryResponse.model_validate(updated_entry)
 
     async def delete(self, entry_id: UUID, user_id: UUID) -> None:
-        raise NotImplementedError
+        deleted = await self.entry_repo.delete(entry_id, user_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Entrada no encontrada",
+            )

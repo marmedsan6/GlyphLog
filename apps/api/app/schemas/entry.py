@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.entry import EntryStatus, EntryType
 
@@ -13,7 +14,8 @@ class EntryCreate(BaseModel):
     rating: float | None = Field(default=None, ge=1.0, le=10.0)
     year: int | None = Field(default=None, ge=1950, le=2100)
     notes: str | None = Field(default=None, max_length=5000)
-    cover_image: str | None = None  # Ruta relativa asignada por el servicio de uploads
+    # Ruta relativa asignada por el servicio de uploads
+    cover_image: str | None = Field(default=None, max_length=500)
 
     @field_validator("title")
     @classmethod
@@ -35,7 +37,12 @@ class EntryCreate(BaseModel):
 
 class EntryUpdate(BaseModel):
     title: str | None = None
+    type: EntryType | None = None
     status: EntryStatus | None = None
+    rating: float | None = Field(default=None, ge=1.0, le=10.0)
+    year: int | None = Field(default=None, ge=1950, le=2100)
+    notes: str | None = Field(default=None, max_length=5000)
+    cover_image: str | None = Field(default=None, max_length=500)
 
     @field_validator("title")
     @classmethod
@@ -44,8 +51,28 @@ class EntryUpdate(BaseModel):
             stripped = v.strip()
             if not stripped:
                 raise ValueError("El título no puede estar vacío")
+            if len(stripped) > 500:
+                raise ValueError("El título no puede superar los 500 caracteres")
             return stripped
         return v
+
+    @field_validator("notes")
+    @classmethod
+    def notes_strip(cls, v: str | None) -> str | None:
+        if v is not None:
+            return v.strip()
+        return v
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_for_required_enums(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """type y status son obligatorios en el modelo; permitimos omitirlos,
+        pero rechazamos explícitamente `null` para evitar errores 500 de BD.
+        """
+        for field in ("type", "status"):
+            if field in data and data[field] is None:
+                raise ValueError(f"{field} no puede ser nulo")
+        return data
 
 
 class EntryResponse(BaseModel):

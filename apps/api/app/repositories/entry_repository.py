@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +12,9 @@ class EntryRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    def _base_query(self, user_id: UUID, entry_type: EntryType | None = None) -> select:
+    def _base_query(
+        self, user_id: UUID, entry_type: EntryType | None = None
+    ) -> Select[tuple[Entry]]:
         """Construye la query base con filtro obligatorio por user_id."""
         stmt = select(Entry).where(Entry.user_id == user_id)
         if entry_type is not None:
@@ -45,7 +47,10 @@ class EntryRepository:
 
     async def get_by_id(self, entry_id: UUID, user_id: UUID) -> Entry | None:
         # SEGURIDAD: filtrar por entry_id Y user_id.
-        raise NotImplementedError
+        # Un usuario nunca debe poder acceder a entradas de otro usuario.
+        stmt = select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create(self, user_id: UUID, data: EntryCreate) -> Entry:
         entry = Entry(
@@ -68,7 +73,29 @@ class EntryRepository:
             raise
 
     async def update(self, entry_id: UUID, user_id: UUID, data: EntryUpdate) -> Entry | None:
-        raise NotImplementedError
+        # SEGURIDAD: cargar la entrada solo si pertenece al usuario autenticado.
+        entry = await self.get_by_id(entry_id, user_id)
+        if entry is None:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(entry, field, value)
+
+        try:
+            await self.db.commit()
+            await self.db.refresh(entry)
+            return entry
+        except IntegrityError:
+            await self.db.rollback()
+            raise
 
     async def delete(self, entry_id: UUID, user_id: UUID) -> bool:
-        raise NotImplementedError
+        # SEGURIDAD: eliminar solo si la entrada pertenece al usuario autenticado.
+        entry = await self.get_by_id(entry_id, user_id)
+        if entry is None:
+            return False
+
+        await self.db.delete(entry)
+        await self.db.commit()
+        return True

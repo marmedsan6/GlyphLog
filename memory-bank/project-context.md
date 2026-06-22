@@ -1,7 +1,7 @@
 # Contexto del Proyecto — GlyphLog
 
 > Documento de referencia rápida. Mantenerlo siempre actualizado al finalizar cada sesión de trabajo.
-> Última actualización: junio 2025
+> Última actualización: junio 2026
 
 ---
 
@@ -34,7 +34,7 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 
 ## Fase actual
 
-**Fase 0 — Setup completado; T-011-BE implementado** (junio 2026)
+**Fase 0 — Setup completado; CRUD completo de entradas implementado en backend y frontend** (junio 2026)
 
 - `apps/web` scaffoldeado: Vite + React 18 + TypeScript strict + Tailwind CSS + shadcn/ui
 - Sistema de auth con JWT en sessionStorage
@@ -42,7 +42,7 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 - TanStack Query v5 configurado
 - Cliente Axios centralizado con interceptores
 - Componentes shadcn/ui base instalados: Button, Input, Label, Card, Form, Toast, Dropdown, Avatar
-- Build de producción verificado (241 kB, 0 errores TypeScript, 0 errores ESLint)
+- Build de producción verificado (441 kB, 0 errores TypeScript, 0 errores ESLint)
 - `apps/api` scaffoldeado: FastAPI + estructura de carpetas (routers, services, repositories, schemas, models, core)
 - Modelos SQLAlchemy definidos: User (UUID, email, hashed_password) y Entry (UUID, user_id, title, type, status, rating, year, notes, cover_image)
 - `docker-compose.yml` creado: PostgreSQL 15 Alpine con healthcheck, volumen persistente y puerto restringido a 127.0.0.1
@@ -50,8 +50,27 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 - Backend implementado:
   - `POST /api/v1/entries/` — crear entrada con validaciones y manejo de duplicados
   - `GET /api/v1/entries/` — listar entradas del usuario autenticado con filtro por tipo y paginación (15 ítems por página, ordenadas por `created_at DESC`)
+  - `GET /api/v1/entries/{entry_id}` — consultar detalle de una entrada del usuario autenticado
+  - `PUT /api/v1/entries/{entry_id}` — actualizar campos editables de una entrada (todos opcionales); permite limpiar `rating`, `year`, `notes` y `cover_image` enviando `null`; rechaza `null` en `type` y `status` con 422
+  - `POST /api/v1/entries/{entry_id}/cover` — subir o cambiar la imagen de portada de una entrada propia; valida magic bytes, formato (JPG/PNG/WebP) y tamaño máximo de 5MB
+  - `DELETE /api/v1/entries/{entry_id}` — eliminar una entrada del usuario autenticado
   - Respuesta paginada: `entries`, `total`, `page`, `limit`, `total_pages`
-  - Tests de servicio e integración para listado con mocks
+  - Tests de servicio e integración para listado, creación, consulta, edición, eliminación y subida de portada con mocks
+  - Tests antiguos refactorizados para usar `tests/factories.py`
+  - Mypy pasa sin errores en `app/`
+- Frontend implementado:
+  - Página `/collection` con estados de carga, vacío, error y éxito
+  - Filtros por tipo (Todos, Anime, Manga, Juego) y paginación
+  - Componentes `EntryCard`, `EntryFilters`, `EntryPagination`
+  - Hook `useEntries` con TanStack Query y `useCreateEntry` con invalidación automática
+  - Tipos OpenAPI regenerados (`EntryResponse`, `EntryUpdate`, `PaginatedEntryResponse`, `EntryListItem`)
+  - Servicios `getEntry`, `updateEntry`, `deleteEntry` y `uploadCoverImage` en `entry.service.ts`
+  - Hooks `useEntry`, `useUpdateEntry`, `useDeleteEntry` con invalidación de queries
+  - Página `/entries/:id` con modo lectura, modo edición, cambio/eliminación de imagen de portada y diálogo de confirmación para eliminar
+  - Navegación desde `EntryCard` al detalle mediante `Link`
+  - Componentes de formulario compartidos extraídos a `components/shared/entry-form/`
+  - Utilidad `getApiErrorMessage` para parsear errores 422 tanto en string como en array de validación
+  - Tests para `useEntries`, `useEntry`, `useUpdateEntry`, `useDeleteEntry`, `EntryCard` y `EntryDetailPage`
 
 ---
 

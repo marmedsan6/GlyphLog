@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { isAxiosError } from 'axios'
 import { useAuth } from '@/hooks/use-auth'
 import { registerUser } from '@/services/auth.service'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -52,6 +53,9 @@ export function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="fixed right-4 top-4 z-50">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-sm mx-4">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Crear cuenta</CardTitle>

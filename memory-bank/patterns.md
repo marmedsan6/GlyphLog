@@ -362,3 +362,59 @@ alembic history --verbose
 | Tablas de BD | `snake_case` plural | `entries`, `user_entries` |
 | Columnas de BD | `snake_case` | `created_at`, `entry_type` |
 | Variables de entorno | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `SECRET_KEY` |
+
+---
+
+## 9. Patrones establecidos en T-011-FE
+
+### 9.1 Invalidación de queries tras mutación
+
+Las mutaciones de TanStack Query invalidan la query key raíz del recurso afectado para forzar una recarga automática de todas las vistas que dependen de él.
+
+```typescript
+// apps/web/src/hooks/use-create-entry.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { createEntry } from '@/services/entry.service'
+import { ENTRIES_QUERY_KEY } from './useEntries'
+
+export function useCreateEntry() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createEntry,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ENTRIES_QUERY_KEY] })
+    },
+  })
+}
+```
+
+**Reglas:**
+- Invalidar la query key raíz (`['entries']`) para cubrir todas las combinaciones de filtros y paginación.
+- El hook de mutación vive en `src/hooks/` y sigue la convención `use-{accion}.ts`.
+
+### 9.2 Redirección con aviso tras sesión expirada
+
+El interceptor de Axios redirige a `/login?sessionExpired=1` cuando recibe un 401 no autenticado. `LoginPage` lee el query param y muestra un banner informativo.
+
+**Reglas:**
+- Usar query params para comunicar estado transitorio entre redirecciones, no `sessionStorage`.
+- Excluir rutas de autenticación (`/auth/login`, `/auth/register`) del comportamiento de redirección forzada.
+
+### 9.3 URLs de recursos estáticos
+
+Cuando el backend sirve archivos estáticos desde la raíz del dominio (por ejemplo, `/uploads`), se usa una variable de entorno separada `VITE_API_BASE_URL` sin el prefijo `/api/v1`.
+
+```typescript
+// apps/web/src/utils/cover-image-url.ts
+export function getCoverImageUrl(coverImage: string | null): string | null {
+  if (!coverImage) return null
+  const normalizedPath = coverImage.startsWith('/') ? coverImage : `/${coverImage}`
+  return `${env.apiBaseUrl}${normalizedPath}`
+}
+```
+
+**Reglas:**
+- `VITE_API_URL` es para llamadas REST (`/api/v1`).
+- `VITE_API_BASE_URL` es para recursos estáticos (`/uploads`).
+- En desarrollo, añadir `/uploads` al proxy de Vite.
