@@ -18,5 +18,8 @@ function requireEnvVar(key: string): string {
 
 export const env = {
   apiUrl: requireEnvVar('VITE_API_URL'),
-  apiBaseUrl: requireEnvVar('VITE_API_BASE_URL'),
+  // En producción con mismo origen, VITE_API_BASE_URL puede estar vacío.
+  // requireEnvVar rechaza strings vacíos (son falsy), así que usamos
+  // una lectura directa con fallback a string vacío.
+  apiBaseUrl: (import.meta.env['VITE_API_BASE_URL'] as string) ?? '',
 } as const
