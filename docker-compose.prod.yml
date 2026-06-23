@@ -36,7 +36,7 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     container_name: glyphlog-api-prod
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'
     env_file: .env.production
     volumes:
       - uploads:/app/uploads
