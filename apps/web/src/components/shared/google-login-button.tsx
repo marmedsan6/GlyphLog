@@ -25,9 +25,17 @@ interface GoogleIdConfig {
   // aunque los tipos públicos aún no lo reflejen en algunas versiones.
   use_fedcm_for_button?: boolean
 }
+interface PromptNotification {
+  isNotDisplayed: () => boolean
+  isSkippedMoment: () => boolean
+  isDismissedMoment: () => boolean
+  getNotDisplayedReason: () => string
+  getSkippedReason: () => string
+  getDismissedReason: () => string
+}
 interface GoogleAccountsId {
   initialize: (config: GoogleIdConfig) => void
-  prompt: (callback?: (notification: unknown) => void) => void
+  prompt: (callback?: (notification: PromptNotification) => void) => void
   cancel: () => void
 }
 interface GoogleAccounts {
@@ -91,11 +99,10 @@ export function GoogleLoginButton({
           callback: handleCredentialResponse,
           cancel_on_tap_outside: false,
           itp_support: true,
-          // FedCM (Federated Credential Management) es el nuevo estándar de
-          // Chrome para login federado sin third-party cookies. GIS lo usa
-          // por defecto en Chrome moderno. use_fedcm_for_button habilita el
-          // flujo FedCM cuando el usuario hace click en un botón custom.
-          use_fedcm_for_button: true,
+          // use_fedcm_for_button NO se usa aquí: esa opción solo funciona con
+          // el botón oficial de Google (renderButton). En botones custom con
+          // prompt(), FedCM falla silenciosamente si no se cumplen condiciones
+          // muy específicas del navegador. Se usa el flujo estándar de One Tap.
         })
         return true
       }
@@ -182,18 +189,36 @@ export function GoogleLoginButton({
       })
       return
     }
-    // prompt() inicia el flujo de Google Sign-In. Con FedCM (activo por
-    // defecto en Chrome moderno) el navegador gestiona el popup y la
-    // selección de cuenta. El callback de initialize() recibe el id_token
-    // cuando el flujo tiene éxito.
-    //
-    // NOTA: no pasamos callback a prompt(). Los métodos de status moments
-    // (isDismissedMoment, isNotDisplayed, etc.) están deprecated con FedCM
-    // y pueden interferir con el flujo normal, especialmente cuando el
-    // usuario no tiene sesión activa en Google. Si el usuario cancela,
-    // simplemente no se invoca el callback de initialize().
-    // Ver: https://developers.google.com/identity/gsi/web/guides/fedcm-migration
-    gis.id.prompt()
+    // prompt() inicia el flujo de One Tap de Google. Se pasa un callback de
+    // notificación para detectar si el popup es suprimido por el navegador
+    // (ej. el origen no está autorizado en Google Cloud Console, cookies de
+    // terceros bloqueadas, o el usuario desestimó One Tap varias veces).
+    // En ese caso se muestra un toast descriptivo en lugar de fallar en silencio.
+    gis.id.prompt((notification) => {
+      if (notification.isNotDisplayed()) {
+        const reason = notification.getNotDisplayedReason()
+        // 'suppressed_by_user' y 'opt_out_or_no_session' son razones normales
+        // que indican que el usuario no tiene sesión de Google activa en el
+        // navegador — no es un error de configuración.
+        if (reason !== 'suppressed_by_user' && reason !== 'opt_out_or_no_session') {
+          toast({
+            title: 'Google no disponible',
+            description:
+              'No se pudo abrir el popup de Google. Asegúrate de estar conectado a una cuenta de Google en el navegador.',
+            variant: 'destructive',
+          })
+        } else {
+          // El navegador suprime One Tap cuando el usuario no tiene sesión
+          // activa. Se le indica que inicie sesión en Google primero.
+          toast({
+            title: 'Inicia sesión en Google primero',
+            description:
+              'Para continuar con Google, inicia sesión en tu cuenta de Google en el navegador e inténtalo de nuevo.',
+            variant: 'destructive',
+          })
+        }
+      }
+    })
   }
 
   return (
