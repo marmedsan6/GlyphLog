@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     debug: bool = False
     allowed_origins: list[str] = ["http://localhost:5173"]
 
+    # ── Google OAuth ───────────────────────────────────────────────────────────
+    # Client ID de Google para validar id_tokens emitidos por Google Sign-In.
+    # Si está vacío, el endpoint POST /api/v1/auth/google responde con 503
+    # (modo degradado). Esto permite desarrollar y testear el resto de la
+    # app sin necesidad de configurar Google Cloud Console.
+    google_client_id: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
