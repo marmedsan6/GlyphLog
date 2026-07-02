@@ -21,6 +21,9 @@ interface GoogleIdConfig {
   cancel_on_tap_outside?: boolean
   auto_select?: boolean
   itp_support?: boolean
+  // FedCM (Federated Credential Management). El SDK de Google lo soporta
+  // aunque los tipos públicos aún no lo reflejen en algunas versiones.
+  use_fedcm_for_button?: boolean
 }
 interface GoogleAccountsId {
   initialize: (config: GoogleIdConfig) => void
@@ -88,6 +91,11 @@ export function GoogleLoginButton({
           callback: handleCredentialResponse,
           cancel_on_tap_outside: false,
           itp_support: true,
+          // FedCM (Federated Credential Management) es el nuevo estándar de
+          // Chrome para login federado sin third-party cookies. GIS lo usa
+          // por defecto en Chrome moderno. use_fedcm_for_button habilita el
+          // flujo FedCM cuando el usuario hace click en un botón custom.
+          use_fedcm_for_button: true,
         })
         return true
       }
@@ -176,22 +184,29 @@ export function GoogleLoginButton({
     }
     // prompt() muestra el popup de Google Sign-In. Si el usuario ya
     // autorizó la app, omite el popup y devuelve el id_token directamente.
-    // El callback de prompt() recibe una `notification` con métodos
-    // para distinguir entre popup no mostrado, omitido por el SDK o
-    // descartado por el usuario (popup cerrado). Ver issue #17.
+    //
+    // NOTA SOBRE FedCM: con el nuevo estándar de Chrome, el callback de
+    // prompt() ya no reporta display moments (isNotDisplayed/isDisplayed).
+    // Solo isDismissedMoment() sigue siendo fiable para detectar que el
+    // usuario cerró el popup. isSkippedMoment() puede ocurrir si el SDK
+    // decide no mostrar el prompt (cooldown, One Tap suprimido, etc.).
+    // Ver: https://developers.google.com/identity/gsi/web/guides/fedcm-migration
     gis.id.prompt((notification) => {
       const n = notification as {
-        isNotDisplayed?: () => boolean
         isSkippedMoment?: () => boolean
         isDismissedMoment?: () => boolean
       }
-      if (n.isNotDisplayed?.() || n.isDismissedMoment?.()) {
+      if (n.isDismissedMoment?.()) {
         toast({
           title: 'Inicio de sesión cancelado',
           description: 'Cerraste la ventana de Google sin completar el inicio de sesión.',
           variant: 'destructive',
         })
       }
+      // No mostramos toast para isSkippedMoment porque la mayoría de las
+      // veces indica un estado transitorio del SDK (cooldown, FedCM no
+      // disponible, usuario no logueado en Google) y no una acción del
+      // usuario. Estos casos se manejan mejor con logs y reintentos.
     })
   }
 
