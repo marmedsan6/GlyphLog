@@ -22,6 +22,9 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 | T-011 | FEAT | HU: Listar colección | alta | completada | T-010a |
 | T-012 | FEAT | HU: Editar entrada | alta | completada | T-010a |
 | T-013 | FEAT | HU: Eliminar entrada | alta | completada | T-010a |
+| T-014a | FEAT | Google OAuth: infraestructura (Issue #15) | alta | completada | T-009 |
+| T-014b | FEAT | Google OAuth: endpoint backend POST /auth/google (Issue #16) | alta | completada | T-014a |
+| T-014c | FEAT | Google OAuth: botón frontend "Continuar con Google" (Issue #17) | alta | completada | T-014b |
 
 ---
 
@@ -42,7 +45,6 @@ Estado actualizado del backlog del proyecto. Las tareas se ordenan por prioridad
 
 | ID | Tipo | Título | Prioridad | Estado | Dependencias |
 |---|---|---|---|---|---|
-| T-014 | FEAT | Login social (Google OAuth) | media | backlog | T-009 |
 | T-015 | FEAT | Recuperación de contraseña por email | media | backlog | T-008 |
 | T-016 | FEAT | Campo de progreso en entradas (episodio actual, capítulo, horas) | media | backlog | T-010a |
 

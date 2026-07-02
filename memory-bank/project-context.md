@@ -1,7 +1,7 @@
 # Contexto del Proyecto — GlyphLog
 
 > Documento de referencia rápida. Mantenerlo siempre actualizado al finalizar cada sesión de trabajo.
-> Última actualización: junio 2026
+> Última actualización: julio 2026
 
 ---
 
@@ -34,7 +34,7 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 
 ## Fase actual
 
-**Fase 0 — Setup completado; CRUD completo de entradas implementado en backend y frontend** (junio 2026)
+**Fase 0 — Setup completado, CRUD completo de entradas implementado, y Google OAuth integrado en login y registro** (julio 2026)
 
 - `apps/web` scaffoldeado: Vite + React 18 + TypeScript strict + Tailwind CSS + shadcn/ui
 - Sistema de auth con JWT en sessionStorage
@@ -71,6 +71,17 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
   - Componentes de formulario compartidos extraídos a `components/shared/entry-form/`
   - Utilidad `getApiErrorMessage` para parsear errores 422 tanto en string como en array de validación
   - Tests para `useEntries`, `useEntry`, `useUpdateEntry`, `useDeleteEntry`, `EntryCard` y `EntryDetailPage`
+- Auth con Google OAuth implementada (issues #15, #16, #17):
+  - Columnas `provider` y `provider_id` en `users` con índice único parcial (migración Alembic)
+  - `POST /api/v1/auth/google` con verificación de `id_token` JWT (librería oficial `google-auth`)
+  - Validación de `iss`, `aud` y `email_verified` (defense in depth)
+  - NO auto-vinculación de cuentas locales con Google (devuelve 409 con instrucciones)
+  - 503 graceful cuando `GOOGLE_CLIENT_ID` no está configurado
+  - Botón "Continuar con Google" en `/login` y `/register` con Google Identity Services directo
+  - Documentación de setup en `docs/tasks/google-oauth-cloud-setup.md`
+  - Decisiones documentadas en ADR-006 (`memory-bank/decisions.md`)
+  - Tests: 157 backend + 49 frontend = **206 passing**
+  - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
 
 ---
 
@@ -199,8 +210,8 @@ Detalles completos en `memory-bank/decisions.md`.
 
 Estas decisiones están pendientes y deben documentarse en `decisions.md` cuando se tomen:
 
-- **Sistema de autenticación concreto:** JWT implementado manualmente vs. librería (python-jose, authlib). Cuándo expiran los tokens. Refresh tokens o no.
-- **Login social:** si se implementará Google OAuth u otros proveedores en el MVP o se deja para post-MVP.
+- **Sistema de autenticación concreto:** JWT implementado manualmente vs. librería (python-jose, authlib). Cuándo expiran los tokens. Refresh tokens o no. *(Resuelto: ver ADR-005. Login con JWT manual con PyJWT, tokens expiran en 60 min.)*
+- **Login social:** ~~si se implementará Google OAuth u otros proveedores en el MVP o se deja para post-MVP.~~ *(Resuelto: Google OAuth implementado, ver ADR-006. Otros proveedores pendientes.)*
 - **Estrategia de recuperación de contraseña:** email con enlace, código OTP, o simplemente no en MVP.
 - **Modelado del progreso por tipo de contenido:** si episodios/capítulos/horas se modelan en la tabla principal o en tablas separadas.
 - **Hosting del frontend:** Netlify, Vercel, GitHub Pages u otra opción.

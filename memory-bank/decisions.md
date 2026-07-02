@@ -15,6 +15,7 @@
 | [ADR-003](#adr-003) | shadcn/ui como sistema de componentes | Aceptada | junio 2025 |
 | [ADR-004](#adr-004) | JWT en sessionStorage | Aceptada | junio 2025 |
 | [ADR-005](#adr-005) | PyJWT en lugar de python-jose | Aceptada | junio 2025 |
+| [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend | Aceptada | julio 2026 |
 
 ---
 
@@ -198,6 +199,75 @@ Usar **PyJWT** para la firma y verificación de tokens JWT.
 
 - **python-jose:** Descartado por CVE-2024-33663 activa.
 - **authlib:** Más completo (OAuth 2.0, OIDC) pero con mayor superficie de ataque. Innecesario para el MVP.
+
+---
+
+## ADR-006
+
+### Google OAuth con `google-auth` (backend) y SDK directo en frontend
+
+**Fecha:** julio 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+GlyphLog necesita permitir login/registro con Google manteniendo email/password.
+Esto requiere:
+
+- **Backend**: verificar la firma de un `id_token` JWT emitido por Google.
+- **Frontend**: abrir un popup de Google Sign-In y obtener ese `id_token`.
+
+En el frontend se evaluaron tres opciones para obtener el `id_token`:
+
+1. `<GoogleLogin />` de `@react-oauth/google` (botón nativo de Google).
+2. `useGoogleLogin({ flow: 'implicit' })` (popup OAuth 2.0 Token Client).
+3. `google.accounts.id` directamente con botón custom (shadcn/ui).
+
+En el backend se evaluaron tres librerías para verificar el `id_token`:
+
+1. `google-auth` (oficial de Google).
+2. `python-jose` (descartado por CVE previa, ver ADR-005).
+3. `authlib` (más completo, pero overkill).
+
+#### Decisión
+
+- **Backend**: usar `google-auth` (oficial) y `verify_google_id_token()` aislado en `app/core/google_auth.py`.
+- **Frontend**: usar `google.accounts.id` directamente con un botón custom de shadcn/ui (opción 3).
+
+#### Razones
+
+**Backend (`google-auth`)**:
+- Es la librería **oficial** de Google para verificar tokens — recibe parches de seguridad oportunos.
+- `verify_oauth2_token()` valida firma, `aud` y `exp` automáticamente.
+- API directa y bien documentada; mucho más simple que `authlib`.
+- No almacena secretos ni hace flujos OAuth por sí sola — solo verifica.
+
+**Frontend (`google.accounts.id` directo)**:
+- `useGoogleLogin({ flow: 'implicit' })` devuelve un **`access_token`** OAuth 2.0, NO un `id_token` JWT. El backend espera `id_token` para verificarlo con `google.oauth2.id_token.verify_oauth2_token`. Usar `useGoogleLogin` requeriría cambiar el backend (llamar a `https://openidconnect.googleapis.com/v1/userinfo` con el access_token), añadiendo una llamada de red extra y un secreto (`client_secret`) que el frontend nunca debe tener.
+- `<GoogleLogin />` renderiza un botón nativo de Google (iframe) que no se puede estilizar consistentemente con shadcn/ui.
+- `google.accounts.id` directo da control total sobre el botón y devuelve un `CredentialResponse.credential` que es el `id_token` JWT esperado por el backend.
+
+**`@react-oauth/google` queda instalada como dependencia pero el código de aplicación no la usa** (se documenta en `App.tsx`). Razones:
+- El bundle pesa ~5 KB gzip — despreciable.
+- La usaremos más adelante (refresh tokens, hooks utilitarios como `useGoogleOAuth`).
+- Quitar la dependencia obligaría a reinstalar para cualquier experimento futuro.
+
+#### Consecuencias
+
+- **Seguridad**: NO se auto-vinculan cuentas locales existentes con Google. Si un email ya existe como `provider="local"`, el endpoint devuelve 409 con instrucciones para vincular desde el perfil. Esto previene el escenario de "atacante controla el email de Google → secuestra la cuenta local".
+- **Seguridad**: se valida `email_verified == True` y `iss ∈ {accounts.google.com, https://accounts.google.com}` además de lo que valida `google-auth` por defecto.
+- **Degradación graciosa**: si `GOOGLE_CLIENT_ID` (backend) o `VITE_GOOGLE_CLIENT_ID` (frontend) están vacíos, el botón no se renderiza y el endpoint devuelve 503.
+- **Sesgo de seguridad en login**: si un usuario OAuth intenta hacer login con email/password, el sistema responde 401 con el mismo error genérico que credenciales incorrectas (no se filtra la existencia de la cuenta).
+- **Migración futura**: añadir GitHub o Apple es cambiar `_GOOGLE_PROVIDER` a un Enum y replicar el patrón.
+- **Rate limiting compartido**: el endpoint `/auth/google` reutiliza `rate_limit_login` (5/minuto) como defense in depth, aunque Google ya limite en su lado. Esto añade una capa extra contra flooding. Decisión consciente de security over spec literal.
+
+#### Alternativas consideradas
+
+- **python-jose**: descartado por CVE (ADR-005).
+- **authlib**: overkill para verificar un único tipo de token.
+- **`useGoogleLogin`**: incompatible con el contrato `id_token` del backend.
+- **`<GoogleLogin />`**: renderiza botón nativo no estilizable.
+- **Auth Code Flow (`useGoogleLogin({ flow: 'auth-code' })`)**: requiere `client_secret` en el backend y un endpoint de canje — innecesario para este caso de uso.
 
 ---
 
