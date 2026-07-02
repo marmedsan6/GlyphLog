@@ -182,32 +182,18 @@ export function GoogleLoginButton({
       })
       return
     }
-    // prompt() muestra el popup de Google Sign-In. Si el usuario ya
-    // autorizó la app, omite el popup y devuelve el id_token directamente.
+    // prompt() inicia el flujo de Google Sign-In. Con FedCM (activo por
+    // defecto en Chrome moderno) el navegador gestiona el popup y la
+    // selección de cuenta. El callback de initialize() recibe el id_token
+    // cuando el flujo tiene éxito.
     //
-    // NOTA SOBRE FedCM: con el nuevo estándar de Chrome, el callback de
-    // prompt() ya no reporta display moments (isNotDisplayed/isDisplayed).
-    // Solo isDismissedMoment() sigue siendo fiable para detectar que el
-    // usuario cerró el popup. isSkippedMoment() puede ocurrir si el SDK
-    // decide no mostrar el prompt (cooldown, One Tap suprimido, etc.).
+    // NOTA: no pasamos callback a prompt(). Los métodos de status moments
+    // (isDismissedMoment, isNotDisplayed, etc.) están deprecated con FedCM
+    // y pueden interferir con el flujo normal, especialmente cuando el
+    // usuario no tiene sesión activa en Google. Si el usuario cancela,
+    // simplemente no se invoca el callback de initialize().
     // Ver: https://developers.google.com/identity/gsi/web/guides/fedcm-migration
-    gis.id.prompt((notification) => {
-      const n = notification as {
-        isSkippedMoment?: () => boolean
-        isDismissedMoment?: () => boolean
-      }
-      if (n.isDismissedMoment?.()) {
-        toast({
-          title: 'Inicio de sesión cancelado',
-          description: 'Cerraste la ventana de Google sin completar el inicio de sesión.',
-          variant: 'destructive',
-        })
-      }
-      // No mostramos toast para isSkippedMoment porque la mayoría de las
-      // veces indica un estado transitorio del SDK (cooldown, FedCM no
-      // disponible, usuario no logueado en Google) y no una acción del
-      // usuario. Estos casos se manejan mejor con logs y reintentos.
-    })
+    gis.id.prompt()
   }
 
   return (
