@@ -29,7 +29,9 @@ curl -s http://localhost:80/health && echo ""
 
 echo "→ API..."
 # /api/v1/entries sin auth devuelve 401, pero confirma que la API está viva
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80/api/v1/entries)
+# Usamos -k (insecure) porque localmente el certificado SSL puede no coincidir, y -L (follow redirect)
+# porque Nginx redirige HTTP a HTTPS (301) y FastAPI redirige /api/v1/entries a /api/v1/entries/ (307)
+HTTP_CODE=$(curl -k -s -L -o /dev/null -w "%{http_code}" https://localhost/api/v1/entries)
 if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "200" ]; then
     echo "✅ API responde (HTTP $HTTP_CODE)"
 else
