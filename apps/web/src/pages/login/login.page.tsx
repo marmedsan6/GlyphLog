@@ -132,16 +132,7 @@ export function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Contraseña</Label>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotPasswordOpen(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground underline hover:no-underline"
-                >
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </div>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -169,12 +160,23 @@ export function LoginPage() {
               <GoogleLoginButton disabled={isLoading} />
             </>
           )}
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-foreground underline hover:no-underline">
-              Regístrate
-            </Link>
-          </p>
+          <div className="mt-4 text-center text-sm space-y-2">
+            <p className="text-muted-foreground">
+              ¿No tienes cuenta?{' '}
+              <Link to="/register" className="text-foreground underline hover:no-underline">
+                Regístrate
+              </Link>
+            </p>
+            <p>
+              <button
+                type="button"
+                onClick={() => setIsForgotPasswordOpen(true)}
+                className="text-xs text-muted-foreground hover:text-foreground underline hover:no-underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </p>
+          </div>
         </CardContent>
       </Card>
 
