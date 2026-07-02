@@ -82,7 +82,8 @@ describe('GoogleLoginButton', () => {
     const config = mockInitialize.mock.calls[0][0]
     expect(config.client_id).toBe('test-client-id.apps.googleusercontent.com')
     expect(typeof config.callback).toBe('function')
-    expect(config.use_fedcm_for_button).toBe(true)
+    // use_fedcm_for_button no se usa en botones custom con prompt()
+    expect(config.use_fedcm_for_button).toBeUndefined()
   })
 
   it('opens the Google popup when clicked', async () => {
@@ -95,9 +96,9 @@ describe('GoogleLoginButton', () => {
     await user.click(screen.getByRole('button', { name: /continuar con google/i }))
 
     expect(mockPrompt).toHaveBeenCalledTimes(1)
-    // Con FedCM no pasamos callback a prompt(); los status moments están
-    // deprecated y pueden interferir con el flujo.
-    expect(mockPrompt).toHaveBeenCalledWith()
+    // prompt() recibe un callback de notificación para detectar supresiones;
+    // verificamos que se llama con una función (no sin argumentos).
+    expect(typeof mockPrompt.mock.calls[0][0]).toBe('function')
   })
 
   it('calls loginWithGoogle when Google returns a valid id_token', async () => {
