@@ -40,6 +40,13 @@ const router = createBrowserRouter([
   { path: '*', element: <NotFoundPage /> },
 ])
 
+// NOTA sobre Google OAuth:
+// @react-oauth/google está instalada como dependencia, pero el componente
+// GoogleLoginButton carga el script GSI directamente y usa el SDK
+// `google.accounts.id` (no `useGoogleLogin`, que devuelve access_token).
+// Ver comentario al inicio de google-login-button.tsx para el razonamiento
+// completo. Mantener la dependencia preparada para usos futuros (ej:
+// refresh tokens, hooks utilitarios como useGoogleOAuth).
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>

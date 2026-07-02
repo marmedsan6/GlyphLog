@@ -8,6 +8,8 @@ import { isAxiosError } from 'axios'
 import { useAuth } from '@/hooks/use-auth'
 import { registerUser } from '@/services/auth.service'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { GoogleLoginButton } from '@/components/shared/google-login-button'
+import { env } from '@/lib/env'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -17,6 +19,7 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const showGoogleButton = Boolean(env.googleClientId)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -107,6 +110,20 @@ export function RegisterPage() {
               {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
             </Button>
           </form>
+          {showGoogleButton && (
+            <>
+              <div
+                className="my-4 flex items-center gap-3"
+                role="separator"
+                aria-label="o regístrate con"
+              >
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs uppercase text-muted-foreground">o</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <GoogleLoginButton disabled={isLoading} />
+            </>
+          )}
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{' '}
             <Link to="/login" className="text-foreground underline hover:no-underline">
