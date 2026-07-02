@@ -95,6 +95,9 @@ describe('GoogleLoginButton', () => {
     await user.click(screen.getByRole('button', { name: /continuar con google/i }))
 
     expect(mockPrompt).toHaveBeenCalledTimes(1)
+    // Con FedCM no pasamos callback a prompt(); los status moments están
+    // deprecated y pueden interferir con el flujo.
+    expect(mockPrompt).toHaveBeenCalledWith()
   })
 
   it('calls loginWithGoogle when Google returns a valid id_token', async () => {
@@ -186,49 +189,6 @@ describe('GoogleLoginButton', () => {
     expect(authService.loginWithGoogle).not.toHaveBeenCalled()
   })
 
-  it('shows a cancellation toast when user dismisses the Google popup', async () => {
-    // Ver issue #17: si el usuario cierra el popup sin completar, debe
-    // mostrarse "Inicio de sesión cancelado". El callback de prompt()
-    // recibe una `notification` con isDismissedMoment() === true.
-    const user = userEvent.setup()
-    renderWithRouter(<GoogleLoginButton />)
-    await waitFor(() => expect(mockInitialize).toHaveBeenCalled())
-
-    // Capturamos el callback de prompt() para invocarlo manualmente y
-    // simular la notificación de dismissal del popup de Google.
-    let promptCallback: ((n: unknown) => void) | undefined
-    mockPrompt.mockImplementation((cb: (n: unknown) => void) => {
-      promptCallback = cb
-    })
-
-    await user.click(screen.getByRole('button', { name: /continuar con google/i }))
-
-    // El componente pasó un callback a prompt()
-    expect(promptCallback).toBeDefined()
-    expect(authService.loginWithGoogle).not.toHaveBeenCalled()
-
-    // Simulamos que Google notifica que el popup fue descartado por el
-    // usuario (cierre de ventana, click fuera, botón Cancelar, etc.).
-    // NOTA: isNotDisplayed() está deprecated con FedCM y no debe usarse.
-    await act(async () => {
-      promptCallback!({
-        isSkippedMoment: () => false,
-        isDismissedMoment: () => true,
-      })
-    })
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Inicio de sesión cancelado',
-          variant: 'destructive',
-        })
-      )
-    })
-    // Ningún token fue enviado al backend
-    expect(authService.loginWithGoogle).not.toHaveBeenCalled()
-  })
-
   it('cancels the Google popup on unmount to prevent orphan prompts', async () => {
     // Ver issue #17 (cleanup): si el componente se desmonta mientras el
     // popup de Google está abierto, debe llamar a google.accounts.id.cancel()
@@ -243,38 +203,6 @@ describe('GoogleLoginButton', () => {
     await waitFor(() => {
       expect(mockCancel).toHaveBeenCalledTimes(1)
     })
-  })
-
-  it('does not show a toast when Google skips the prompt (FedCM cooldown/no session)', async () => {
-    // Con FedCM, el SDK puede llamar al callback con isSkippedMoment() === true
-    // si hay cooldown, el usuario no tiene sesión en Google, o el prompt se
-    // suprime por políticas del navegador. No debe mostrar toast confuso.
-    const user = userEvent.setup()
-    renderWithRouter(<GoogleLoginButton />)
-    await waitFor(() => expect(mockInitialize).toHaveBeenCalled())
-
-    let promptCallback: ((n: unknown) => void) | undefined
-    mockPrompt.mockImplementation((cb: (n: unknown) => void) => {
-      promptCallback = cb
-    })
-
-    await user.click(screen.getByRole('button', { name: /continuar con google/i }))
-    expect(promptCallback).toBeDefined()
-
-    await act(async () => {
-      promptCallback!({
-        isSkippedMoment: () => true,
-        isDismissedMoment: () => false,
-      })
-    })
-
-    // No se muestra toast de cancelación; skipped no es una acción del usuario
-    const cancellationCalls = mockToast.mock.calls.filter((call) => {
-      const arg = call[0] as { title?: string }
-      return arg.title === 'Inicio de sesión cancelado'
-    })
-    expect(cancellationCalls).toHaveLength(0)
-    expect(authService.loginWithGoogle).not.toHaveBeenCalled()
   })
 
   it('disables the button when the disabled prop is true', () => {
