@@ -32,8 +32,10 @@ WORKDIR /app/apps/web
 # VITE_* se empaquetan en el bundle de JS — visibles en el navegador.
 ARG VITE_API_URL
 ARG VITE_API_BASE_URL
+ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Build de producción de Vite → dist/
 RUN pnpm build
