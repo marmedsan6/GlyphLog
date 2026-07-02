@@ -54,6 +54,12 @@ services:
       args:
         VITE_API_URL: /api/v1
         VITE_API_BASE_URL: ""
+        # Client ID de Google OAuth para inicializar Google Identity Services
+        # en el frontend. Se compila en el bundle en build-time. Si está vacío,
+        # el botón "Continuar con Google" no se renderiza (degradación graciosa).
+        # El MISMO valor debe estar en .env.production como GOOGLE_CLIENT_ID
+        # para que el backend pueda verificar los id_tokens.
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: glyphlog-nginx
     ports:
       - "80:80"
