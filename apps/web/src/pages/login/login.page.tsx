@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { isAxiosError } from 'axios'
 import { useAuth } from '@/hooks/use-auth'
-import { loginUser } from '@/services/auth.service'
+import { loginUser, loginWithGoogle } from '@/services/auth.service'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { GoogleLoginButton } from '@/components/shared/google-login-button'
 import { env } from '@/lib/env'
+import { useEffect } from 'react'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -22,6 +23,38 @@ export function LoginPage() {
 
   const sessionExpired = searchParams.get('sessionExpired') === '1'
   const showGoogleButton = Boolean(env.googleClientId)
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1))
+      const idToken = params.get('id_token')
+      if (idToken) {
+        // Limpiar el hash de la URL para seguridad
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        
+        handleGoogleCallback(idToken)
+      }
+    }
+  }, [])
+
+  async function handleGoogleCallback(idToken: string) {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await loginWithGoogle(idToken)
+      login(response.access_token)
+      navigate('/collection')
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.data?.detail) {
+        setError(err.response.data.detail)
+      } else {
+        setError('Error al iniciar sesión con Google. Inténtalo de nuevo.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

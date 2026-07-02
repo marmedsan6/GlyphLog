@@ -1,51 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { isAxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { useAuth } from '@/hooks/use-auth'
-import { loginWithGoogle } from '@/services/auth.service'
-
-// Tipos mínimos del SDK de Google Identity Services (`gsi/client`).
-// No declaramos `window.google` globalmente para evitar colisiones con
-// @react-oauth/google. Usamos un getter type-safe.
-interface GoogleIdCredential {
-  credential?: string
-  select_by?: string
-  clientId?: string
-}
-type GoogleIdPromptCallback = (response: GoogleIdCredential) => void
-interface GoogleIdConfig {
-  client_id: string
-  callback: GoogleIdPromptCallback
-  cancel_on_tap_outside?: boolean
-  auto_select?: boolean
-  itp_support?: boolean
-  // FedCM (Federated Credential Management). El SDK de Google lo soporta
-  // aunque los tipos públicos aún no lo reflejen en algunas versiones.
-  use_fedcm_for_button?: boolean
-}
-interface PromptNotification {
-  isNotDisplayed: () => boolean
-  isSkippedMoment: () => boolean
-  isDismissedMoment: () => boolean
-  getNotDisplayedReason: () => string
-  getSkippedReason: () => string
-  getDismissedReason: () => string
-}
-interface GoogleAccountsId {
-  initialize: (config: GoogleIdConfig) => void
-  prompt: (callback?: (notification: PromptNotification) => void) => void
-  cancel: () => void
-}
-interface GoogleAccounts {
-  id: GoogleAccountsId
-}
-function getGis(): GoogleAccounts | null {
-  if (typeof window === 'undefined') return null
-  const g = (window as unknown as { google?: { accounts?: GoogleAccounts } }).google
-  return g?.accounts ?? null
-}
 
 export interface GoogleLoginButtonProps {
   /** Deshabilita el botón sin deshabilitar visualmente el resto del formulario. */
@@ -55,170 +9,37 @@ export interface GoogleLoginButtonProps {
 }
 
 /**
- * Botón "Continuar con Google" reutilizable.
- *
- * Decisión de implementación:
- * `useGoogleLogin` de @react-oauth/google usa el flujo OAuth 2.0 Token Client
- * (`initTokenClient`) y devuelve un `access_token`, NO un `id_token` JWT.
- * Nuestro backend espera y verifica un `id_token` con
- * `google.oauth2.id_token.verify_oauth2_token`, por lo que necesitamos el
- * flujo de Google Identity Services (`google.accounts.id`).
- *
- * Por eso este componente carga el script GSI por su cuenta y usa
- * `google.accounts.id` directamente. No depende de `GoogleOAuthProvider`:
- * basta con tener `VITE_GOOGLE_CLIENT_ID` configurado.
- *
- * Resultado: el componente es testeable de forma aislada (sin wrapper) y
- * se puede usar en cualquier parte de la app.
- */
+50:  * Botón "Continuar con Google" que redirige al flujo oficial de OAuth2/OIDC.
+51:  *
+52:  * Ventajas de esta solución:
+53:  * 1. Totalmente independiente del script gsi/client de Google.
+54:  * 2. Evita problemas de cookies de terceros, bloqueadores de anuncios o el estado de sesión de Google.
+55:  * 3. Redirige limpiamente de vuelta a /login con el `id_token` en el fragmento hash de la URL.
+56:  * 4. Soporta todos los navegadores móviles y de escritorio de forma robusta.
+57:  */
 export function GoogleLoginButton({
   disabled = false,
   className = '',
 }: GoogleLoginButtonProps) {
-  const navigate = useNavigate()
-  const { login } = useAuth()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  // Evita inicializar `google.accounts.id` más de una vez (StrictMode en dev
-  // monta/desmonta componentes, lo que provocaría doble init).
-  const initialized = useRef(false)
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
-    if (!clientId) return
-
-    // Inicializa el client de Google cuando el script GSI esté disponible.
-    // El script puede estar ya cargado (otro componente lo inyectó antes)
-    // o estar pendiente de carga. Gestionamos ambos casos.
-    function tryInit(): boolean {
-      const gis = getGis()
-      if (gis && !initialized.current) {
-        initialized.current = true
-        gis.id.initialize({
-          client_id: clientId as string,
-          callback: handleCredentialResponse,
-          cancel_on_tap_outside: false,
-          itp_support: true,
-          // use_fedcm_for_button NO se usa aquí: esa opción solo funciona con
-          // el botón oficial de Google (renderButton). En botones custom con
-          // prompt(), FedCM falla silenciosamente si no se cumplen condiciones
-          // muy específicas del navegador. Se usa el flujo estándar de One Tap.
-        })
-        return true
-      }
-      return false
-    }
-
-    if (!tryInit()) {
-      // El script no está cargado todavía. Lo inyectamos una sola vez y nos
-      // suscribimos a su evento `load`. Esta forma es más limpia que un
-      // setInterval con polling: no necesitamos polling porque sabemos
-      // exactamente cuándo el script termina de cargar.
-      const SCRIPT_ID = 'google-gsi-client'
-      let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null
-      if (!script) {
-        script = document.createElement('script')
-        script.id = SCRIPT_ID
-        script.src = 'https://accounts.google.com/gsi/client'
-        script.async = true
-        script.defer = true
-        document.head.appendChild(script)
-      }
-      script.addEventListener('load', tryInit, { once: true })
-
-      return () => {
-        script?.removeEventListener('load', tryInit)
-      }
-    }
-
-    return () => {
-      // Cierra el popup pendiente si el componente se desmonta mientras
-      // el usuario está viendo el modal de Google. Sin esto, el popup
-      // queda huérfano y el usuario puede autenticarse en un componente
-      // que ya no existe (zombie auth). Ver issue #17.
-      getGis()?.id.cancel()
-    }
-    // handleCredentialResponse se redefine en cada render pero su
-    // comportamiento es estable; no la añadimos a deps para no reinicializar
-    // el SDK en cada render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function handleCredentialResponse(response: GoogleIdCredential) {
-    const idToken = response.credential
-    if (!idToken) {
-      toast({
-        title: 'Error con Google',
-        description: 'No se recibió un token válido. Inténtalo de nuevo.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const result = await loginWithGoogle(idToken)
-      login(result.access_token)
-      navigate('/collection')
-    } catch (err) {
-      if (isAxiosError(err) && err.response?.data?.detail) {
-        toast({
-          title: 'Error con Google',
-          description: err.response.data.detail,
-          variant: 'destructive',
-        })
-      } else {
-        toast({
-          title: 'Error con Google',
-          description: 'Error inesperado. Inténtalo de nuevo.',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   function handleClick() {
-    const gis = getGis()
-    if (!gis) {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+    if (!clientId) {
       toast({
-        title: 'Google no está disponible',
-        description: 'El script de Google no ha cargado. Recarga la página.',
+        title: 'Google no disponible',
+        description: 'El ID de cliente de Google no está configurado.',
         variant: 'destructive',
       })
       return
     }
-    // prompt() inicia el flujo de One Tap de Google. Se pasa un callback de
-    // notificación para detectar si el popup es suprimido por el navegador
-    // (ej. el origen no está autorizado en Google Cloud Console, cookies de
-    // terceros bloqueadas, o el usuario desestimó One Tap varias veces).
-    // En ese caso se muestra un toast descriptivo en lugar de fallar en silencio.
-    gis.id.prompt((notification) => {
-      if (notification.isNotDisplayed()) {
-        const reason = notification.getNotDisplayedReason()
-        // 'suppressed_by_user' y 'opt_out_or_no_session' son razones normales
-        // que indican que el usuario no tiene sesión de Google activa en el
-        // navegador — no es un error de configuración.
-        if (reason !== 'suppressed_by_user' && reason !== 'opt_out_or_no_session') {
-          toast({
-            title: 'Google no disponible',
-            description:
-              'No se pudo abrir el popup de Google. Asegúrate de estar conectado a una cuenta de Google en el navegador.',
-            variant: 'destructive',
-          })
-        } else {
-          // El navegador suprime One Tap cuando el usuario no tiene sesión
-          // activa. Se le indica que inicie sesión en Google primero.
-          toast({
-            title: 'Inicia sesión en Google primero',
-            description:
-              'Para continuar con Google, inicia sesión en tu cuenta de Google en el navegador e inténtalo de nuevo.',
-            variant: 'destructive',
-          })
-        }
-      }
-    })
+
+    const redirectUri = encodeURIComponent(`${window.location.origin}/login`)
+    // Generar un nonce aleatorio para cumplir con OIDC
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36)
+    
+    // Redirigir a Google OAuth2 Consent Screen (flujo implícito OpenID Connect)
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=id_token&scope=openid%20email%20profile&nonce=${nonce}`
   }
 
   return (
@@ -227,10 +48,10 @@ export function GoogleLoginButton({
       variant="outline"
       className={`w-full ${className}`}
       onClick={handleClick}
-      disabled={disabled || isLoading}
+      disabled={disabled}
       aria-label="Continuar con Google"
     >
-      {/* Ícono oficial de Google (SVG inline para evitar dependencias de imágenes). */}
+      {/* Ícono oficial de Google */}
       <svg
         className="mr-2 h-4 w-4"
         viewBox="0 0 24 24"
@@ -254,7 +75,7 @@ export function GoogleLoginButton({
           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         />
       </svg>
-      {isLoading ? 'Conectando con Google...' : 'Continuar con Google'}
+      Continuar con Google
     </Button>
   )
 }
