@@ -3,6 +3,30 @@
 > **Lee este archivo antes de comenzar cualquier tarea en GlyphLog.**
 > Es la fuente de verdad para agentes IA que trabajen en este proyecto. Contiene las convenciones, arquitectura, flujos de trabajo y contexto necesarios para operar correctamente.
 
+<!-- codebase-memory-mcp:start -->
+# Codebase Knowledge Graph (codebase-memory-mcp)
+
+This project uses codebase-memory-mcp to maintain a knowledge graph of the codebase.
+ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
+
+## Priority Order
+1. `search_graph` — find functions, classes, routes, variables by pattern
+2. `trace_path` — trace who calls a function or what it calls
+3. `get_code_snippet` — read specific function/class source code
+4. `query_graph` — run Cypher queries for complex patterns
+5. `get_architecture` — high-level project summary
+
+## When to fall back to grep/glob
+- Searching for string literals, error messages, config values
+- Searching non-code files (Dockerfiles, shell scripts, configs)
+- When MCP tools return insufficient results
+
+## Examples
+- Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
+- Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
+- Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
+<!-- codebase-memory-mcp:end -->
+
 ---
 
 ## 1. Propósito del documento
@@ -275,6 +299,7 @@ Los MCPs (Model Context Protocol servers) amplían las capacidades del agente co
 
 | MCP | Propósito | Cuándo usarlo |
 |-----|-----------|---------------|
+| **Codebase Memory MCP** | Grafo de conocimiento del código | Indexar funciones, clases, rutas; trazar llamadas; detectar código muerto; analizar impacto de cambios |
 | **Playwright** | Testing E2E y automatización de navegador | Validar flujos de usuario complejos, comprobar que una feature funciona end-to-end |
 | **PostgreSQL** | Consultas directas a la base de datos | Debuggear datos, verificar el resultado de migraciones, explorar el esquema actual |
 | **Filesystem** | Operaciones de archivos y directorios | Refactors de estructura de carpetas, generación de scaffolds, mover o renombrar archivos |
