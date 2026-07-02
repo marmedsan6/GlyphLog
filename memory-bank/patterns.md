@@ -418,3 +418,60 @@ export function getCoverImageUrl(coverImage: string | null): string | null {
 - `VITE_API_URL` es para llamadas REST (`/api/v1`).
 - `VITE_API_BASE_URL` es para recursos estáticos (`/uploads`).
 - En desarrollo, añadir `/uploads` al proxy de Vite.
+
+### 9.4 Google Identity Services directo (no `useGoogleLogin`)
+
+Cuando el backend espera un `id_token` JWT (no un `access_token` OAuth 2.0), el frontend debe usar `google.accounts.id` directamente, **NO** `useGoogleLogin` de `@react-oauth/google`.
+
+**Por qué:** `useGoogleLogin({ flow: 'implicit' })` devuelve un `access_token` (flujo OAuth 2.0 Token Client), NO un `id_token` JWT firmado por Google. Solo `google.accounts.id` (vía `prompt()` o `renderButton()`) devuelve el `CredentialResponse.credential` que es el `id_token` esperado por el backend.
+
+**Patrón usado en `GoogleLoginButton`:**
+
+```typescript
+// 1. Cargar el script GSI una sola vez (idempotente, safe en StrictMode)
+useEffect(() => {
+  function tryInit(): boolean {
+    const gis = (window as any).google?.accounts
+    if (gis && !initialized.current) {
+      initialized.current = true
+      gis.id.initialize({ client_id, callback: handleCredentialResponse, ... })
+      return true
+    }
+    return false
+  }
+
+  if (!tryInit()) {
+    // Inyectar el script <script src="https://accounts.google.com/gsi/client">
+    // y suscribirse a su evento `load`
+  }
+
+  // Cleanup: cancelar popup pendiente si el componente se desmonta
+  return () => { getGis()?.id.cancel() }
+}, [])
+
+// 2. Click en el botón → prompt() muestra el popup
+function handleClick() {
+  getGis()?.id.prompt((notification) => {
+    if (notification.isDismissedMoment?.() || notification.isNotDisplayed?.()) {
+      toast({ title: 'Inicio de sesión cancelado', ... })
+    }
+  })
+}
+
+// 3. Callback recibe el id_token JWT
+function handleCredentialResponse(response: { credential?: string }) {
+  if (!response.credential) return
+  authService.loginWithGoogle(response.credential)
+    .then(result => login(result.access_token))
+    .catch(err => toast({ title: 'Error con Google', ... }))
+}
+```
+
+**Reglas:**
+- El componente es self-contained: NO depende de `<GoogleOAuthProvider>` ni context global.
+- Carga el script GSI manualmente con un `id` estable (`google-gsi-client`) para que un segundo componente reutilice la misma carga.
+- El `id_token` se envía al backend vía `POST /auth/google` con `{ id_token: <jwt> }`.
+- El backend valida con `google.oauth2.id_token.verify_oauth2_token()` y devuelve un `access_token` propio (JWT) que se usa para las llamadas REST siguientes.
+- Degradación graciosa: si `VITE_GOOGLE_CLIENT_ID` está vacío, el botón no se renderiza.
+
+**Por qué `@react-oauth/google` queda instalada pero no se usa:** ocupa ~5 KB gzip, se usará en el futuro para refresh tokens o hooks utilitarios. Decisión documentada en ADR-006.
