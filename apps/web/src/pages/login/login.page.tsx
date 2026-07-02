@@ -21,8 +21,25 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Estados para recuperación de contraseña
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false)
+  const [isSubmittingForgotPassword, setIsSubmittingForgotPassword] = useState(false)
+
   const sessionExpired = searchParams.get('sessionExpired') === '1'
   const showGoogleButton = Boolean(env.googleClientId)
+
+  async function handleForgotPasswordSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!forgotPasswordEmail) return
+
+    setIsSubmittingForgotPassword(true)
+    // Simular latencia de red para dar feedback de carga premium
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    setIsSubmittingForgotPassword(false)
+    setForgotPasswordSent(true)
+  }
 
   useEffect(() => {
     const hash = window.location.hash
@@ -115,7 +132,16 @@ export function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Contraseña</Label>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground underline hover:no-underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -151,6 +177,73 @@ export function LoginPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Modal de simulación de restablecimiento de contraseña */}
+      {isForgotPasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg space-y-4">
+            <div className="space-y-2 text-center">
+              <h2 className="text-xl font-semibold tracking-tight">Recuperar contraseña</h2>
+              <p className="text-sm text-muted-foreground">
+                Introduce tu correo electrónico para enviarte un enlace de restablecimiento.
+              </p>
+            </div>
+            {!forgotPasswordSent ? (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsForgotPasswordOpen(false)
+                      setForgotPasswordEmail('')
+                    }}
+                    disabled={isSubmittingForgotPassword}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isSubmittingForgotPassword}>
+                    {isSubmittingForgotPassword ? 'Enviando...' : 'Enviar enlace'}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4 text-center">
+                <div className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
+                  <p className="font-medium">¡Enlace simulado enviado!</p>
+                  <p className="mt-1 text-xs">
+                    En un entorno de producción, recibirías un email en <strong>{forgotPasswordEmail}</strong>.
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Al tratarse de un MVP formativo, el backend de envío no está configurado. Si necesitas acceso manual, contacta al administrador en <span className="underline">soporte@glyphlog.com</span>.
+                </p>
+                <Button
+                  onClick={() => {
+                    setIsForgotPasswordOpen(false)
+                    setForgotPasswordSent(false)
+                    setForgotPasswordEmail('')
+                  }}
+                  className="w-full"
+                >
+                  Entendido
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
