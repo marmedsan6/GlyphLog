@@ -12,6 +12,23 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
+# ── Cargar variables de entorno de producción ─────────────────────────────────
+# docker-compose.prod.yml usa build args como ${VITE_GOOGLE_CLIENT_ID:-} para
+# compilar valores en el bundle del frontend en build-time (Vite). Estas vars
+# deben estar en el environment del shell cuando se ejecuta `docker compose`,
+# no solo en el env_file del contenedor (que solo aplica en runtime).
+if [ -f .env.production ]; then
+    echo "🔧 Cargando variables de entorno de producción..."
+    set -a
+    # shellcheck source=/dev/null
+    source .env.production
+    set +a
+else
+    echo "❌ No se encontró .env.production"
+    echo "Copia .env.production.example a .env.production y rellena los valores."
+    exit 1
+fi
+
 echo "🔄 Actualizando código..."
 git pull origin main
 
