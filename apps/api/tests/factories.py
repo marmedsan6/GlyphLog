@@ -54,12 +54,16 @@ def make_entry(
 def make_user(
     email: str = "test@example.com",
     hashed_password: str | None = None,
+    provider: str = "local",
+    provider_id: str | None = None,
 ) -> User:
     """Crea una instancia de User en memoria para simular autenticación."""
     return User(
         id=uuid4(),
         email=email,
         hashed_password=hashed_password or hash_password("validpass1"),
+        provider=provider,
+        provider_id=provider_id,
     )
 
 

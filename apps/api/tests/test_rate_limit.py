@@ -5,7 +5,7 @@ configurados y que otros endpoints no se ven afectados.
 Los límites bajos (2/minute) se configuran en conftest.py.
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -15,6 +15,14 @@ from app.main import app
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from tests.factories import make_user
+
+# Claims base para el test de rate limit en /auth/google.
+_VALID_CLAIMS = {
+    "sub": "google-sub-123",
+    "email": "user@example.com",
+    "email_verified": True,
+    "iss": "accounts.google.com",
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -234,3 +242,46 @@ class TestRateLimitIsolation:
             response = await client.get("/health")
             assert response.status_code == 200
             assert response.json() == {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Tests de rate limiting — Google OAuth (defense in depth)
+# ---------------------------------------------------------------------------
+
+
+class TestGoogleAuthRateLimit:
+    """Verifica que POST /api/v1/auth/google también respeta el rate limit
+    de `rate_limit_login`. Aunque Google ya limita en su lado, aplicamos
+    el mismo límite como defense in depth (ver ADR-006, Consecuencias)."""
+
+    async def test_google_rate_limit_exceeded(
+        self, client: AsyncClient, auth_service: AuthService, mock_user_repo: AsyncMock
+    ) -> None:
+        """Tras 2 peticiones, la tercera a /auth/google devuelve 429."""
+        new_user = make_user(
+            email="user@example.com", provider="google", provider_id="google-sub-123"
+        )
+        mock_user_repo.get_by_provider_and_id.return_value = None
+        mock_user_repo.get_by_email.return_value = None
+        mock_user_repo.create_oauth_user.return_value = new_user
+        _override_auth_service(auth_service)
+
+        try:
+            with patch(
+                "app.services.auth_service.verify_google_id_token",
+                return_value=_VALID_CLAIMS,
+            ):
+                # Las primeras 2 peticiones deben pasar (límite = 2/minute)
+                for _ in range(2):
+                    response = await client.post(
+                        "/api/v1/auth/google", json={"id_token": "any-token"}
+                    )
+                    assert response.status_code != 429
+
+                # La tercera petición debe ser rechazada
+                response = await client.post(
+                    "/api/v1/auth/google", json={"id_token": "any-token"}
+                )
+                assert response.status_code == 429
+        finally:
+            _clear_overrides()
