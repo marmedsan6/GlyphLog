@@ -28,8 +28,6 @@ class EntryRepository:
         limit: int = 15,
         offset: int = 0,
     ) -> list[Entry]:
-        # SEGURIDAD: siempre filtrar por user_id.
-        # Un usuario nunca debe poder leer entradas de otro usuario.
         stmt = (
             self._base_query(user_id, entry_type)
             .order_by(Entry.created_at.desc())

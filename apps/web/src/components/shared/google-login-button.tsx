@@ -9,14 +9,14 @@ export interface GoogleLoginButtonProps {
 }
 
 /**
-50:  * Botón "Continuar con Google" que redirige al flujo oficial de OAuth2/OIDC.
-51:  *
-52:  * Ventajas de esta solución:
-53:  * 1. Totalmente independiente del script gsi/client de Google.
-54:  * 2. Evita problemas de cookies de terceros, bloqueadores de anuncios o el estado de sesión de Google.
-55:  * 3. Redirige limpiamente de vuelta a /login con el `id_token` en el fragmento hash de la URL.
-56:  * 4. Soporta todos los navegadores móviles y de escritorio de forma robusta.
-57:  */
+ * Botón "Continuar con Google" que redirige al flujo oficial de OAuth2/OIDC.
+ *
+ * Ventajas de esta solución:
+ * 1. Totalmente independiente del script gsi/client de Google.
+ * 2. Evita problemas de cookies de terceros, bloqueadores de anuncios o el estado de sesión de Google.
+ * 3. Redirige limpiamente de vuelta a /login con el `id_token` en el fragmento hash de la URL.
+ * 4. Soporta todos los navegadores móviles y de escritorio de forma robusta.
+ */
 export function GoogleLoginButton({
   disabled = false,
   className = '',

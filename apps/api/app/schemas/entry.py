@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from fastapi import Form
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.entry import EntryStatus, EntryType
@@ -115,3 +116,41 @@ class PaginatedEntryResponse(BaseModel):
     page: int
     limit: int
     total_pages: int
+
+
+class EntryCreateForm:
+    """Clase de ayuda para parsear y validar campos multipart form de FastAPI
+
+    para la creación de entradas.
+    """
+
+    def __init__(
+        self,
+        title: str = Form(""),
+        type: str = Form(...),
+        status: str = Form(...),
+        rating: str | None = Form(None),
+        year: str | None = Form(None),
+        notes: str | None = Form(None),
+    ) -> None:
+        self.title = title
+        self.type = type
+        self.status = status
+        self.rating = rating
+        self.year = year
+        self.notes = notes
+
+    def to_entry_create(self) -> EntryCreate:
+        # Conversión segura y explícita de tipos de datos de formulario a Pydantic
+        rating_value = float(self.rating) if self.rating else None
+        year_value = int(self.year) if self.year else None
+        notes_value = self.notes if self.notes else None
+        return EntryCreate(
+            title=self.title,
+            type=EntryType(self.type),
+            status=EntryStatus(self.status),
+            rating=rating_value,
+            year=year_value,
+            notes=notes_value,
+            cover_image=None,
+        )

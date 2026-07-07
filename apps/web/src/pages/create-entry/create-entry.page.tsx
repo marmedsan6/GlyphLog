@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
-import { useCreateEntry } from '@/hooks/use-create-entry'
+import { useCreateEntry } from '@/hooks/useCreateEntry'
 import { getApiErrorMessage } from '@/utils/api-errors'
 import {
   EntryFormFields,

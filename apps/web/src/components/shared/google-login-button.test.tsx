@@ -16,17 +16,19 @@ describe('GoogleLoginButton', () => {
 
   beforeEach(() => {
     mockToast.mockReset()
-    
     // Mock de window.location para testear la redirección
     locationMock = { href: '' }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.location = locationMock as any
 
     vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-client-id.apps.googleusercontent.com')
   })
 
   afterEach(() => {
-    window.location = originalLocation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    window.location = originalLocation as any
   })
 
   function renderWithRouter(element: React.ReactElement) {

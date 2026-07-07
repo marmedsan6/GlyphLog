@@ -271,9 +271,17 @@ Decisiones, referencias, consideraciones a tener en cuenta.
 
 > ⚠️ **REQUISITO DE SEGURIDAD**: Nunca uses `gh` directamente. Siempre usa el wrapper `bash scripts/gh.sh`.
 
-El wrapper usa dos tokens con permisos mínimos:
-- **Operaciones de repo** (push, issues, PRs, etc.) → fine-grained PAT limitado solo a `marmedsan6/GlyphLog`
-- **Operaciones de project** (`gh project ...`) → classic PAT con solo scopes `project`, `read:org`, `read:discussion`
+El wrapper **no contiene tokens hardcodeados**. Lee las credenciales del entorno:
+- **Operaciones de repo** (push, issues, PRs, etc.) → usan `gh auth login` de la cuenta personal del usuario.
+- **Operaciones de project** (`gh project ...`) → usan `GH_PROJECT_TOKEN` (env var) si está definida; si no, hace fallback a `gh` con el auth del usuario.
+
+Configuración inicial (una sola vez):
+```bash
+gh auth login                                        # para operaciones de repo
+gh auth login --scopes project,read:org              # si también gestionas project boards
+# o bien, para mantener separación de privilegios:
+export GH_PROJECT_TOKEN="ghp_xxx"                    # token classic con scopes project,read:org,read:discussion, en ~/.bashrc
+```
 
 El wrapper **bloquea explícitamente** cualquier comando que mencione `turing-challenge`.
 
@@ -289,7 +297,7 @@ El wrapper **bloquea explícitamente** cualquier comando que mencione `turing-ch
 
 El proyecto **#2 "Backlog del proyecto"** (privado, `marmedsan6`) contiene las tareas y el backlog del desarrollo de GlyphLog. Es el tablero principal del proyecto. El proyecto **#1** es otro proyecto personal no relacionado.
 
-Los tokens están en `scripts/gh.sh` (ignorado por git). Si caducan, regenerarlos y actualizar el script.
+Los tokens **no** viven en el repositorio. `scripts/gh.sh` está gitignored y solo lee `GH_PROJECT_TOKEN` del entorno. Si caduca, regenerar en GitHub y actualizar el `export` en `~/.bashrc`.
 
 ---
 
