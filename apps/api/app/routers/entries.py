@@ -1,15 +1,20 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.core.dependencies import get_entry_service
 from app.core.security import get_current_user
 from app.core.uploads import save_cover_image
-from app.models.entry import EntryStatus, EntryType
+from app.models.entry import EntryType
 from app.models.user import User
-from app.schemas.entry import EntryCreate, EntryResponse, EntryUpdate, PaginatedEntryResponse
+from app.schemas.entry import (
+    EntryCreateForm,
+    EntryResponse,
+    EntryUpdate,
+    PaginatedEntryResponse,
+)
 from app.services.entry_service import EntryService, InvalidPaginationError
 
 router = APIRouter()
@@ -39,35 +44,15 @@ async def list_entries(
 
 @router.post("/", response_model=EntryResponse, status_code=status.HTTP_201_CREATED)
 async def create_entry(
-    title: str = Form(""),
-    type: str = Form(...),
-    status: str = Form(...),
-    rating: str | None = Form(None),
-    year: str | None = Form(None),
-    notes: str | None = Form(None),
+    form_data: EntryCreateForm = Depends(),
     cover_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse | JSONResponse:
-    # Conversión explícita str → float/int.
-    # Los formularios multipart envían todos los valores como strings;
-    # declarar str | None es honesto con los tipos y evita type: ignore.
-    rating_value: float | None = float(rating) if rating else None
-    year_value: int | None = int(year) if year else None
-    notes_value: str | None = notes if notes else None
-
     # Validar datos del formulario PRIMERO (antes de guardar archivos)
     # para evitar archivos huérfanos en disco si la validación falla.
     try:
-        data = EntryCreate(
-            title=title,
-            type=EntryType(type),
-            status=EntryStatus(status),
-            rating=rating_value,
-            year=year_value,
-            notes=notes_value,
-            cover_image=None,
-        )
+        data = form_data.to_entry_create()
     except (ValidationError, ValueError) as exc:
         if isinstance(exc, ValidationError):
             messages = [err.get("msg", "Error de validación") for err in exc.errors()]

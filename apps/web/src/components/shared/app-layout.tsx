@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuth } from '@/hooks/useAuth'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 // Layout principal para las páginas protegidas.

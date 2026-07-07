@@ -174,7 +174,6 @@ El enfoque será crecer en testing a medida que aumente la complejidad del produ
 ## Estructura inicial propuesta del monorepo
 - `apps/web` → frontend React + Vite
 - `apps/api` → backend FastAPI
-- `packages/` → librerías compartidas si en el futuro hacen falta
 - `docs/` → documentación de producto y técnica
 - `docs/skills/` → skills para asistentes
 - `AGENTS.md` → contexto global del proyecto

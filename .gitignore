@@ -57,6 +57,9 @@ nosetests.xml
 coverage.xml
 *.cover
 
+# ─── Frontend: testing y coverage ──────────────────────────────────────────────
+apps/web/coverage/
+
 # ─── Python: mypy / type checking ──────────────────────────────────────────────
 .mypy_cache/
 .dmypy.json

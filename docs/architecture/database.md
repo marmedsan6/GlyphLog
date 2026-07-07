@@ -17,7 +17,9 @@ erDiagram
     users {
         UUID id PK
         VARCHAR email UK
-        VARCHAR hashed_password
+        VARCHAR hashed_password "NULL"
+        VARCHAR provider
+        VARCHAR provider_id "NULL"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -28,6 +30,10 @@ erDiagram
         VARCHAR title
         entry_type type
         entry_status status
+        DECIMAL rating "NULL"
+        INTEGER year "NULL"
+        TEXT notes "NULL"
+        VARCHAR cover_image "NULL"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -41,15 +47,17 @@ erDiagram
 
 ### `users`
 
-Almacena las cuentas de usuario de la aplicación.
+Almacena las cuentas de usuario de la aplicación. Admite tanto registro/login local como login social (Google OAuth).
 
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `id` | `UUID` | PK, default `gen_random_uuid()` | Identificador único del usuario |
-| `email` | `VARCHAR(255)` | NOT NULL, UNIQUE | Dirección de email, usada como identificador de login |
-| `hashed_password` | `VARCHAR(255)` | NOT NULL | Contraseña hasheada con bcrypt (nunca en texto plano) |
+| `email` | `VARCHAR(255)` | NOT NULL, UNIQUE, INDEX | Dirección de email, usada como identificador de login |
+| `hashed_password` | `VARCHAR(255)` | NULL | Contraseña hasheada con bcrypt (NULL para usuarios OAuth de Google) |
+| `provider` | `VARCHAR(20)` | NOT NULL, default `'local'` | Proveedor de identidad: `'local'`, `'google'`, etc. |
+| `provider_id` | `VARCHAR(255)` | NULL | ID único en el proveedor OAuth (`sub` de Google) |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL, default `now()` | Fecha y hora de creación del registro |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL, default `now()` | Fecha y hora de última modificación (se actualiza automáticamente) |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL, default `now()` | Fecha y hora de última modificación |
 
 ### `entries`
 
@@ -62,6 +70,10 @@ Almacena cada ítem registrado en la colección de un usuario (anime, manga o vi
 | `title` | `VARCHAR(500)` | NOT NULL | Título del anime, manga o videojuego |
 | `type` | `entry_type` (enum) | NOT NULL | Tipo de entrada: `anime`, `manga` o `game` |
 | `status` | `entry_status` (enum) | NOT NULL | Estado actual de seguimiento |
+| `rating` | `NUMERIC(3,1)` | NULL | Puntuación personal de 1.0 a 10.0 |
+| `year` | `INTEGER` | NULL | Año de publicación/lanzamiento |
+| `notes` | `TEXT` | NULL | Notas personales y reseñas del usuario |
+| `cover_image` | `VARCHAR(500)` | NULL | Ruta relativa de la imagen de portada |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL, default `now()` | Fecha y hora de creación del registro |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL, default `now()` | Fecha y hora de última modificación |
 
@@ -95,12 +107,15 @@ Los enums se definen como tipos nativos de PostgreSQL y como `Enum` de Python us
 
 ---
 
-## Índices previstos
+## Índices y Restricciones de Unicidad
 
-| Tabla | Columna(s) | Tipo | Justificación |
-|---|---|---|---|
-| `users` | `email` | UNIQUE INDEX | Garantiza unicidad y acelera el lookup en login |
-| `entries` | `user_id` | INDEX | Acelera el filtrado de entradas por usuario (consulta más frecuente) |
+| Tabla | Nombre del Índice / Restricción | Columnas | Tipo | Justificación |
+|---|---|---|---|---|
+| `users` | `ix_users_email` | `email` | UNIQUE INDEX | Lookup ultrarrápido en login y garantía de unicidad. |
+| `users` | `ix_users_provider_provider_id` | `provider`, `provider_id` | UNIQUE PARTIAL INDEX | Unicidad para cuentas vinculadas a OAuth (donde `provider_id IS NOT NULL`). |
+| `entries` | `uq_entries_user_title_type` | `user_id`, `title`, `type` | UNIQUE CONSTRAINT | Evita que un mismo usuario duplique una entrada del mismo tipo. |
+| `entries` | `ix_entries_user_id_created_at` | `user_id`, `created_at` | COMPOSITE INDEX | Optimiza los listados paginados ordenados por fecha de creación descendente. |
+| `entries` | `ix_entries_user_id` | `user_id` | INDEX | Acelera búsquedas y cargas relacionadas por usuario. |
 
 ---
 

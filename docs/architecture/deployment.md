@@ -81,10 +81,15 @@ alembic upgrade head
 | Variable | Development | Production |
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8000/api/v1` | `https://api.glyphlog.app/api/v1` |
+| `VITE_API_BASE_URL` | `http://localhost:8000` | `https://api.glyphlog.app` |
+| `VITE_GOOGLE_CLIENT_ID` | Client ID de Google (opcional) | Client ID de Google (secreto/público) |
 | `DATABASE_URL` | `postgresql+asyncpg://glyphlog:glyphlog@localhost:5432/glyphlog` | DSN de Oracle Cloud (secreto) |
-| `SECRET_KEY` | Cualquier valor largo (p. ej. `dev-secret-key-not-for-production`) | Cadena aleatoria de 64+ caracteres (secreto) |
+| `SECRET_KEY` | Cualquier valor largo | Cadena aleatoria de 64+ caracteres (secreto) |
 | `ALGORITHM` | `HS256` | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24h, cómodo en dev) | `60` |
+| `DEBUG` | `True` | `False` |
+| `GOOGLE_CLIENT_ID` | Client ID de Google (opcional) | Client ID de Google (secreto) |
+| `ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `["https://glyphlog.app"]` |
 
 Las variables de producción se configuran en el panel del proveedor (Railway/Render) y nunca se commitean al repositorio.
 
@@ -102,14 +107,15 @@ El backend debe permitir únicamente los orígenes legítimos. Se configura en `
 ```python
 # apps/api/app/main.py
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,  # cargado desde variable de entorno
+    allow_origins=settings.allowed_origins,  # cargado desde variable de entorno
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 ```
 
-`CORS_ORIGINS` se define en `core/config.py` como una lista parseada desde la variable de entorno `CORS_ORIGINS` (valores separados por coma).
+`allowed_origins` se define en `core/config.py` y es parseado automáticamente por Pydantic-settings como una lista de strings a partir de una cadena JSON o lista en el `.env`.

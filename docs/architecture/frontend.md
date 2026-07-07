@@ -90,11 +90,11 @@ export function DeleteButton({ onDelete }: DeleteButtonProps) {
 
 | Tipo de estado | Solución | Justificación |
 |---|---|---|
-| Estado local de componente | `useState` | Simple y suficiente para formularios e interacciones locales |
-| Estado global de UI | `useContext` + `useState` | Suficiente para el MVP (tema, usuario autenticado) sin añadir dependencias |
-| Server state (datos de la API) | TanStack Query | Gestiona caché, loading/error states, refetching y sincronización de forma declarativa |
+| Estado local de componente | `useState` / `useForm` | Simple y suficiente para formularios, modales y lógica interna local |
+| Estado global de UI / Auth | **Zustand** | Centraliza la autenticación (`useAuthStore`) y el tema visual (`useThemeStore`), eliminando re-renders del árbol de componentes y simplificando el acceso global. |
+| Server state (datos de la API) | TanStack Query | Gestiona caché, loading/error states, invalidación de queries y sincronización automática. |
 
-No se añade Redux u otras librerías de estado global hasta que la complejidad lo justifique.
+Se prefiere Zustand y TanStack Query sobre Context API o Redux para optimizar renders y simplificar la API.
 
 ---
 
@@ -124,18 +124,25 @@ Las rutas protegidas están envueltas en un componente `ProtectedRoute` que veri
 Todas las llamadas HTTP se centralizan en `src/services/`. Los componentes y hooks nunca usan `fetch` o `axios` directamente.
 
 ```typescript
-// src/services/entries.service.ts
+// src/services/entry.service.ts
 import { apiClient } from "@/lib/api-client";
-import type { Entry, CreateEntryInput } from "@/types";
+import type { EntryCreate, EntryResponse, PaginatedEntryResponse } from "@/types";
 
-export async function getEntries(): Promise<Entry[]> {
-  const { data } = await apiClient.get("/entries");
-  return data;
+export async function getEntries(params?: any): Promise<PaginatedEntryResponse> {
+  const response = await apiClient.get<PaginatedEntryResponse>("/entries/", {
+    params,
+  });
+  return response.data;
 }
 
-export async function createEntry(input: CreateEntryInput): Promise<Entry> {
-  const { data } = await apiClient.post("/entries", input);
-  return data;
+export async function createEntry(data: EntryCreate): Promise<EntryResponse> {
+  const formData = new FormData();
+  formData.append('title', data.title);
+  // ...
+  const response = await apiClient.post<EntryResponse>("/entries", formData, {
+    headers: { 'Content-Type': undefined },
+  });
+  return response.data;
 }
 ```
 
@@ -144,12 +151,12 @@ Los hooks de TanStack Query consumen estos servicios:
 ```typescript
 // src/hooks/useEntries.ts
 import { useQuery } from "@tanstack/react-query";
-import { getEntries } from "@/services/entries.service";
+import { getEntries } from "@/services/entry.service";
 
 export function useEntries() {
   return useQuery({
     queryKey: ["entries"],
-    queryFn: getEntries,
+    queryFn: () => getEntries(),
   });
 }
 ```
@@ -160,6 +167,8 @@ export function useEntries() {
 
 | Variable | Descripción | Ejemplo |
 |---|---|---|
-| `VITE_API_URL` | URL base de la API REST | `http://localhost:8000/api/v1` |
+| `VITE_API_URL` | URL base de la API REST para axios | `http://localhost:8000/api/v1` |
+| `VITE_API_BASE_URL` | URL base sin prefijo (para recursos estáticos) | `http://localhost:8000` |
+| `VITE_GOOGLE_CLIENT_ID` | Client ID de Google Console para el Login Social (opcional) | `123456-abcdef.apps.googleusercontent.com` |
 
 Las variables de entorno de Vite deben tener el prefijo `VITE_` para ser accesibles en el cliente. Se definen en `.env.local` (no commiteado) y `.env.example` (commiteado como referencia).

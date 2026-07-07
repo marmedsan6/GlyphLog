@@ -50,7 +50,6 @@ graph TD
     subgraph Monorepo - Turborepo
         B
         C
-        F[packages/\nLibrerías compartidas]
     end
 
     subgraph Infraestructura local
@@ -67,40 +66,44 @@ graph TD
 ```
 GlyphLog/
 ├── apps/
-│   ├── web/                  # Frontend — React + Vite + TypeScript
+│   ├── web/                  # Frontend — React 18 + Vite + TypeScript
 │   │   ├── src/
-│   │   │   ├── components/   # Componentes reutilizables
-│   │   │   ├── pages/        # Vistas / rutas
-│   │   │   ├── hooks/        # Custom hooks
-│   │   │   ├── lib/          # Utilidades y clientes API
-│   │   │   └── types/        # Tipos TypeScript compartidos
+│   │   │   ├── components/   # Componentes reutilizables (ui/ y shared/)
+│   │   │   ├── pages/        # Vistas / rutas (home, collection, login, etc.)
+│   │   │   ├── hooks/        # Custom hooks (useAuth, useEntries, etc.)
+│   │   │   ├── services/     # Servicios de llamada a la API (auth, entry)
+│   │   │   ├── stores/       # Stores globales con Zustand (auth, theme)
+│   │   │   ├── lib/          # Clientes y utilidades (api-client, env)
+│   │   │   ├── utils/        # Utilidades puras (formatters, errors)
+│   │   │   └── types/        # Tipos autogenerados y manuales de TypeScript
 │   │   ├── public/
 │   │   └── vite.config.ts
 │   │
 │   └── api/                  # Backend — FastAPI + Python
 │       ├── app/
-│       │   ├── routers/      # Endpoints por dominio
+│       │   ├── core/         # Config, seguridad, base de datos y utilidades
 │       │   ├── models/       # Modelos SQLAlchemy
-│       │   ├── schemas/      # Schemas Pydantic
-│       │   ├── services/     # Lógica de negocio
-│       │   └── core/         # Config, seguridad, DB
+│       │   ├── schemas/      # Schemas Pydantic In/Out
+│       │   ├── repositories/ # Queries SQL y persistencia a BD
+│       │   ├── services/     # Lógica de negocio (casos de uso)
+│       │   ├── routers/      # Enpoints e interfaces HTTP
+│       │   └── main.py       # Entrada de la app FastAPI
 │       ├── alembic/          # Migraciones de base de datos
 │       └── requirements.txt
 │
-├── packages/                 # Librerías compartidas (futuro)
-│
 ├── docs/
-│   └── architecture/         # Decisiones técnicas (ADRs)
+│   ├── architecture/         # Documentación de diseño y decisiones técnicas (ADRs)
+│   └── tasks/                # Tareas del backlog y guías de configuración
 │
-├── memory-bank/              # Contexto persistente para agentes IA
-│   ├── projectbrief.md
-│   ├── techContext.md
-│   └── ...
+├── memory-bank/              # Contexto persistente para desarrollo asistido por IA
+│   ├── project-context.md    # Estado actual y alcance del proyecto
+│   ├── decisions.md          # Historial de decisiones de arquitectura (ADRs)
+│   └── patterns.md           # Patrones de desarrollo y convenciones
 │
-├── docker-compose.yml        # Servicios locales (API + BD)
-├── turbo.json                # Configuración Turborepo
-├── pnpm-workspace.yaml       # Workspaces pnpm
-├── AGENTS.md                 # Instrucciones para agentes IA
+├── docker-compose.yml        # Infraestructura local (PostgreSQL)
+├── turbo.json                # Configuración de Turborepo
+├── pnpm-workspace.yaml       # Configuración de pnpm workspaces
+├── AGENTS.md                 # Guía para asistentes IA
 └── README.md
 ```
 
@@ -126,7 +129,7 @@ Asegúrate de tener instaladas las siguientes herramientas antes de continuar:
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/GlyphLog.git
+git clone https://github.com/marmedsan6/GlyphLog.git
 cd GlyphLog
 ```
 
@@ -151,7 +154,7 @@ Edita los archivos `.env` con tus valores locales. Consulta los comentarios dent
 ### 4. Levantar los servicios con Docker Compose
 
 ```bash
-# Inicia la base de datos PostgreSQL y la API en contenedores
+# Inicia la base de datos PostgreSQL local
 docker compose up -d
 ```
 
@@ -163,11 +166,13 @@ docker compose ps
 
 ### 5. Instalar dependencias Python (entorno virtual)
 
+El proyecto utiliza `uv` para una gestión rápida y eficiente de dependencias en el backend:
+
 ```bash
 cd apps/api
-python3 -m venv .venv
+uv venv
 source .venv/bin/activate      # En Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### 6. Aplicar migraciones de base de datos
@@ -177,7 +182,7 @@ pip install -r requirements.txt
 alembic upgrade head
 ```
 
-### 7. Iniciar el frontend en modo desarrollo
+### 7. Iniciar el frontend y backend en modo desarrollo
 
 ```bash
 # Desde la raíz del monorepo
@@ -204,44 +209,41 @@ La aplicación estará disponible en `http://localhost:5173` y la API en `http:/
 
 | Comando | Descripción |
 |---|---|
-| `docker compose up -d` | Levanta los servicios en segundo plano |
-| `docker compose down` | Detiene y elimina los contenedores |
+| `docker compose up -d` | Levanta los servicios de infraestructura (PostgreSQL) en segundo plano |
+| `docker compose down` | Detiene y elimina los contenedores de base de datos |
 | `docker compose logs -f` | Muestra los logs en tiempo real |
 | `docker compose ps` | Lista el estado de los servicios |
-| `docker compose exec api bash` | Abre una shell en el contenedor de la API |
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Fase 0 — Setup *(actual, en progreso)*
+### ✅ Fase 0 — Setup
 - [x] Definición de arquitectura y stack
 - [x] Configuración del monorepo con Turborepo
 - [x] Estructura base del proyecto
-- [ ] Docker Compose con PostgreSQL
-- [ ] Scaffolding inicial de `apps/web` y `apps/api`
-- [ ] CI básico
+- [x] Docker Compose con PostgreSQL
+- [x] Scaffolding inicial de `apps/web` y `apps/api`
+- [x] CI básico
 
-### 🔲 Fase 1 — MVP
-- [ ] Registro e inicio de sesión (JWT)
-- [ ] CRUD de entradas: anime, manga, videojuego
-- [ ] Campos básicos: título, tipo, estado (pendiente / en progreso / completado)
-- [ ] Interfaz mínima funcional
+### ✅ Fase 1 — MVP
+- [x] Registro e inicio de sesión local (JWT)
+- [x] Google OAuth: integración en frontend y backend (popup consent screen)
+- [x] CRUD completo de entradas: anime, manga, videojuego (incluyendo campos opcionales)
+- [x] Subida, actualización y eliminación de imágenes de portada
+- [x] Interfaz de colección paginada con filtros interactivos
 
-### 🔲 Fase 2 — Progreso
-- [ ] Tracking de episodios vistos / capítulos leídos / horas jugadas
+### 🔲 Fase 2 — Progreso (Próxima)
+- [ ] Tracking de progreso detallado (episodio actual, capítulo, horas de juego)
 - [ ] Historial de actualizaciones por entrada
 
 ### 🔲 Fase 3 — Enriquecimiento
-- [ ] Sistema de puntuaciones (rating)
 - [ ] Tags y categorías personalizadas
-- [ ] Notas y reseñas privadas por entrada
+- [ ] Reseñas privadas y valoraciones avanzadas
 
-### 🔲 Fase 4 — Mejoras UX
-- [ ] Filtros avanzados y búsqueda
-- [ ] Estadísticas personales (entradas por tipo, tiempo estimado, etc.)
-- [ ] Modo oscuro / temas
-- [ ] Exportación de datos
+### 🔲 Fase 4 — Mejoras UX & Analytics
+- [ ] Estadísticas personales (dashboard visual de consumo)
+- [ ] Exportación completa de datos de la colección
 
 ---
 
@@ -260,9 +262,24 @@ Resumen de las decisiones más relevantes:
 
 ## 🤖 Trabajo con IA
 
-GlyphLog está preparado para flujos de desarrollo **asistidos por agentes IA**. El repositorio incluye:
+Resumen de las herramientas para agentes IA en el proyecto:
 
-- [`AGENTS.md`](./AGENTS.md): instrucciones y convenciones para agentes IA que trabajen en el proyecto (Zed Agent, Cursor, Claude, etc.).
+- [`AGENTS.md`](./AGENTS.md): instrucciones y convenciones para agentes IA que trabajen en el proyecto (convenciones de código, arquitectura).
+- [`memory-bank/`](./memory-bank/): contexto persistente del proyecto (brief, contexto técnico, decisiones activas, progreso) para mantener coherencia entre sesiones de trabajo con IA.
+
+Si utilizas un agente IA en este proyecto, lee `AGENTS.md` primero.
+
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia [MIT](./LICENSE).
+
+---
+
+<p align="center">
+  Hecho con ☕ por <a href="https://github.com/marmedsan6">mariobox</a>
+</p>).
 - [`memory-bank/`](./memory-bank/): contexto persistente del proyecto (brief, contexto técnico, decisiones activas, progreso) para mantener coherencia entre sesiones de trabajo con IA.
 
 Si utilizas un agente IA en este proyecto, lee `AGENTS.md` primero.

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EntryCard } from '@/components/shared/entry-card'
 import { EntryFilters } from '@/components/shared/entry-filters'
 import { EntryPagination } from '@/components/shared/entry-pagination'
+import { ErrorState } from '@/components/shared/error-state'
 import { useEntries } from '@/hooks/useEntries'
 
 function EntryCardSkeleton() {
@@ -42,23 +43,6 @@ function EmptyCollection() {
   )
 }
 
-interface ErrorStateProps {
-  onRetry: () => void
-}
-
-function ErrorState({ onRetry }: ErrorStateProps) {
-  return (
-    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-8 text-center">
-      <p className="text-destructive mb-4">
-        No se pudo cargar tu colección. Inténtalo de nuevo.
-      </p>
-      <Button type="button" variant="outline" onClick={onRetry}>
-        Reintentar
-      </Button>
-    </div>
-  )
-}
-
 export function CollectionPage() {
   const {
     entries,
@@ -91,7 +75,12 @@ export function CollectionPage() {
 
       {isLoading && <CollectionSkeleton />}
 
-      {isError && !isLoading && <ErrorState onRetry={refetch} />}
+      {isError && !isLoading && (
+        <ErrorState
+          message="No se pudo cargar tu colección. Inténtalo de nuevo."
+          onRetry={refetch}
+        />
+      )}
 
       {!isLoading && !isError && entries.length === 0 && <EmptyCollection />}
 

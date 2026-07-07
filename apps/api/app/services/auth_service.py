@@ -1,9 +1,9 @@
-from email_validator import EmailNotValidError, validate_email
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
 from app.core.google_auth import GoogleAuthError, verify_google_id_token
 from app.core.security import create_access_token, hash_password, verify_password
+from app.core.validators import normalize_email
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest, RegisterResponse, TokenResponse
 from app.schemas.user import UserCreate, UserResponse
@@ -22,10 +22,9 @@ def _normalize_email(email: str) -> str:
     # y validación de formato. Reutilizado para emails que vienen de Google
     # porque aunque Google ya devuelve un email en minúsculas, defendemos
     # contra futuras regresiones del proveedor.
-    email = email.strip().lower()
     try:
-        return validate_email(email, check_deliverability=False).normalized
-    except EmailNotValidError:
+        return normalize_email(email)
+    except ValueError:
         # El token de Google ya pasó por verify_google_id_token, así que
         # un email inválido aquí sería una inconsistencia muy rara. Fallamos
         # genérico para no filtrar información.

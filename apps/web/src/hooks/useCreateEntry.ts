@@ -11,7 +11,7 @@ export function useCreateEntry() {
     onSuccess: () => {
       // Invalidamos todas las queries de listado para que, al volver a la
       // colección, la nueva entrada aparezca sin necesidad de refrescar.
-      queryClient.invalidateQueries({ queryKey: [ENTRIES_QUERY_KEY] })
+      void queryClient.invalidateQueries({ queryKey: [ENTRIES_QUERY_KEY] })
     },
   })
 }

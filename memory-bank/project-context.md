@@ -80,7 +80,15 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
   - Botón "Continuar con Google" en `/login` y `/register` con Google Identity Services directo
   - Documentación de setup en `docs/tasks/google-oauth-cloud-setup.md`
   - Decisiones documentadas en ADR-006 (`memory-bank/decisions.md`)
-  - Tests: 157 backend + 49 frontend = **206 passing**
+  - Refactoring y limpieza general completada:
+    - Eliminados archivos temporales/caché (`tsconfig.*.tsbuildinfo`) y carpetas `uploads/` duplicadas en la raíz y en `apps/web/`.
+    - Descompuesto el componente pesado `entry-detail.page.tsx` (~380 líneas) en subcomponentes atómicos (`EntryDetailView`, `EntryEditForm`, `EntryDetailSkeleton`).
+    - Creado componente compartido `ErrorState` en `components/shared/` para unificar renders de error.
+    - Extraído modal simulado de recuperación de contraseña a `forgot-password-modal.tsx`.
+    - Renombrados hooks a camelCase (`useAuth`, `useCreateEntry`) para seguir convenciones.
+    - Creado validador centralizado `normalize_email` en backend y limpiadas conversiones de tipos en el router `entries.py` usando `EntryCreateForm`.
+    - Corregida documentación de arquitectura y README del proyecto con datos exactos y vigentes.
+  - Tests: 157 backend + 43 frontend = **200 passing**
   - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
 
 ---
@@ -112,16 +120,14 @@ GlyphLog/
 ├── apps/
 │   ├── web/               # Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui
 │   └── api/               # Backend: FastAPI + SQLAlchemy + Alembic
-├── packages/              # Paquetes compartidos (tipos, utils — pendiente de definir)
-├── docker/                # Dockerfiles y configuración de Docker
 ├── docs/
 │   ├── architecture/      # Diagramas y documentación de arquitectura técnica
 │   ├── mcps/              # Documentación de MCPs (Playwright, PostgreSQL, Filesystem, Git)
 │   ├── tasks/             # Tareas del backlog y documentación de features
+│   ├── SETUP.md           # Decisiones originales del proyecto
 │   └── README.md          # Índice de la documentación
 ├── memory-bank/           # Contexto persistente para agentes IA (este directorio)
 ├── AGENTS.md              # Guía de trabajo para agentes IA
-├── SETUP.md               # Decisiones originales del proyecto
 ├── README.md              # Documentación principal del proyecto
 ├── turbo.json             # Configuración de Turborepo
 ├── pnpm-workspace.yaml    # Configuración de workspaces de pnpm
@@ -224,7 +230,7 @@ Estas decisiones están pendientes y deben documentarse en `decisions.md` cuando
 | Recurso | Ruta | Para qué |
 |---------|------|---------|
 | Guía de inicio rápido | `README.md` | Documentación principal del proyecto |
-| Setup detallado | `SETUP.md` | Decisiones originales y configuración del entorno |
+| Setup detallado | `docs/SETUP.md` | Decisiones originales y configuración del entorno |
 | Guía para agentes | `AGENTS.md` | Convenciones, flujo de trabajo y principios |
 | Arquitectura técnica | `docs/architecture/` | Diagramas y decisiones de arquitectura |
 | Backlog de tareas | `docs/tasks/backlog.md` | Tareas pendientes y en progreso |

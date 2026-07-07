@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.core.validators import normalize_email
 
 
 class UserCreate(BaseModel):
@@ -11,12 +12,7 @@ class UserCreate(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_and_normalize_email(cls, v: str) -> str:
-        v = v.strip().lower()
-        try:
-            validated = validate_email(v, check_deliverability=False)
-            return validated.normalized
-        except EmailNotValidError:
-            raise ValueError("El formato del email no es válido")
+        return normalize_email(v)
 
     @field_validator("password")
     @classmethod

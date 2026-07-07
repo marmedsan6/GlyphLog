@@ -27,9 +27,13 @@ apps/api/app/
 ├── core/
 │   ├── config.py      # Settings desde variables de entorno (pydantic-settings)
 │   ├── security.py    # JWT, hashing, dependencias de autenticación
-│   └── database.py    # Session factory y dependencia get_db
-└── main.py            # Entry point, instancia FastAPI, registro de routers
-```
+│   ├── database.py    # Session factory y dependencia get_db
+│   ├── dependencies.py# Inyección de dependencias para repos/servicios
+│   ├── google_auth.py # Integración y validación de tokens de Google OAuth
+│   ├── rate_limiter.py# Configuración de SlowAPI para rate limiting
+│   ├── uploads.py     # Manejo de subida y validación de imágenes
+│   └── validators.py  # Validadores reutilizables (como normalización de emails)
+└── main.py            # Entry point, instancia FastAPI, registro de routers y middlewares
 
 ---
 
@@ -85,10 +89,12 @@ sequenceDiagram
 # routers/entries.py
 @router.post("/", response_model=EntryResponse, status_code=201)
 async def create_entry(
-    data: CreateEntrySchema,
+    form_data: EntryCreateForm = Depends(),
+    cover_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse:
+    data = form_data.to_entry_create()
     return await service.create(user_id=current_user.id, data=data)
 
 
@@ -97,7 +103,7 @@ class EntryService:
     def __init__(self, repo: EntryRepository) -> None:
         self.repo = repo
 
-    async def create(self, user_id: UUID, data: CreateEntrySchema) -> Entry:
+    async def create(self, user_id: UUID, data: EntryCreate) -> Entry:
         return await self.repo.create(user_id=user_id, data=data)
 
 
@@ -106,8 +112,17 @@ class EntryRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def create(self, user_id: UUID, data: CreateEntrySchema) -> Entry:
-        entry = Entry(user_id=user_id, **data.model_dump())
+    async def create(self, user_id: UUID, data: EntryCreate) -> Entry:
+        entry = Entry(
+            user_id=user_id,
+            title=data.title,
+            type=data.type,
+            status=data.status,
+            rating=data.rating,
+            year=data.year,
+            notes=data.notes,
+            cover_image=data.cover_image,
+        )
         self.db.add(entry)
         await self.db.commit()
         await self.db.refresh(entry)
@@ -132,28 +147,34 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    payload = decode_token(token)  # lanza 401 si inválido
-    user = await user_repo.get_by_id(db, payload["sub"])
+    payload = decode_access_token(token)  # lanza 401 si inválido
+    user_id = payload.get("sub")
+    ...
+    repo = UserRepository(db)
+    user = await repo.get_by_id(UUID(user_id))
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
 ```
 
 ---
 
-## Endpoints previstos
+## Endpoints de la API
 
 | Método | Ruta | Descripción | Autenticación |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/register` | Registro de nuevo usuario | No |
-| `POST` | `/api/v1/auth/login` | Login, devuelve JWT | No |
-| `GET` | `/api/v1/entries` | Lista entradas del usuario autenticado | Sí |
-| `POST` | `/api/v1/entries` | Crea una nueva entrada | Sí |
+| `POST` | `/api/v1/auth/register` | Registro de nuevo usuario local | No |
+| `POST` | `/api/v1/auth/login` | Login local (devuelve JWT) | No |
+| `POST` | `/api/v1/auth/google` | Login/Registro con Google OAuth | No |
+| `GET` | `/api/v1/entries` | Lista entradas del usuario autenticado (con filtros y paginación) | Sí |
+| `POST` | `/api/v1/entries` | Crea una nueva entrada (multipart form) | Sí |
 | `GET` | `/api/v1/entries/{id}` | Detalle de una entrada | Sí |
-| `PUT` | `/api/v1/entries/{id}` | Actualiza una entrada | Sí |
+| `PUT` | `/api/v1/entries/{id}` | Actualiza metadatos de una entrada | Sí |
+| `POST` | `/api/v1/entries/{id}/cover` | Sube/actualiza la imagen de portada de una entrada | Sí |
 | `DELETE` | `/api/v1/entries/{id}` | Elimina una entrada | Sí |
+| `GET` | `/health` | Endpoint de salud de la API | No |
 
-La documentación interactiva (Swagger UI) está disponible en `/docs` y el esquema OpenAPI en `/openapi.json`.
+La documentación interactiva (Swagger UI) está disponible en `/docs` (cuando `DEBUG=true`) y el esquema OpenAPI en `/openapi.json`.
 
 ---
 
@@ -165,5 +186,10 @@ La documentación interactiva (Swagger UI) está disponible en `/docs` y el esqu
 | `SECRET_KEY` | Clave secreta para firmar JWT (mínimo 32 caracteres aleatorios) | `supersecretkey...` |
 | `ALGORITHM` | Algoritmo de firma JWT | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Tiempo de expiración del token en minutos | `60` |
+| `DEBUG` | Booleano para activar el modo de depuración y las UIs de documentación | `True` o `False` |
+| `ALLOWED_ORIGINS` | Orígenes CORS permitidos (lista JSON en el `.env`) | `["http://localhost:5173"]` |
+| `GOOGLE_CLIENT_ID` | Identificador de cliente de Google Cloud Console (Google OAuth) | `123456-abcdef.apps.googleusercontent.com` |
+| `RATE_LIMIT_LOGIN` | Límite de login por IP | `5/minute` |
+| `RATE_LIMIT_REGISTER` | Límite de registro por IP | `3/minute` |
 
-Se gestionan mediante `pydantic-settings` en `core/config.py`, que carga los valores desde el archivo `.env` del directorio raíz de la app.
+Se gestionan mediante `pydantic-settings` en `core/config.py`, que carga los valores desde el archivo `.env` del directorio raíz de la app (apps/api/.env).

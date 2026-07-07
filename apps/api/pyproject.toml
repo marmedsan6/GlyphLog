@@ -2,6 +2,14 @@
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*", "app/alembic/*"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["pragma: no cover", "if __name__", "raise NotImplementedError"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
