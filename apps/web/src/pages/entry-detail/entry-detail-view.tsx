@@ -13,7 +13,7 @@ export function EntryDetailView({ entry }: EntryDetailViewProps) {
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="grid gap-6 md:grid-cols-[300px_1fr]">
+        <div className="grid gap-6 md:grid-cols-[360px_1fr]">
           <div className="relative aspect-[3/4] overflow-hidden rounded-md bg-muted">
             {coverUrl ? (
               <img
