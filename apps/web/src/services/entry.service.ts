@@ -93,8 +93,13 @@ export async function createEntry(data: EntryCreate): Promise<EntryResponse> {
   if (data.notes != null && data.notes !== '') {
     formData.append('notes', data.notes)
   }
+  
   if (data.cover_image != null) {
-    formData.append('cover_image', data.cover_image)
+    if (data.cover_image instanceof File) {
+      formData.append('cover_image', data.cover_image)
+    } else if (typeof data.cover_image === 'string') {
+      formData.append('cover_image_url', data.cover_image)
+    }
   }
 
   // FormData necesita que NO se envíe Content-Type header,

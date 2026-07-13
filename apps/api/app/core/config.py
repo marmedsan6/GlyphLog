@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # app sin necesidad de configurar Google Cloud Console.
     google_client_id: str = ""
 
+    # ── RAWG API ───────────────────────────────────────────────────────────────
+    # API Key para realizar búsquedas externas en el catálogo de videojuegos.
+    # Si está vacía, se omitirá la búsqueda en RAWG degradándose graciosamente.
+    rawg_api_key: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

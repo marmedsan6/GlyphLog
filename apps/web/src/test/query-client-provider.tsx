@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { createTestQueryClient } from './create-test-query-client'
 
 interface TestQueryProviderProps {
@@ -7,5 +8,9 @@ interface TestQueryProviderProps {
 
 export function TestQueryProvider({ children }: TestQueryProviderProps) {
   const queryClient = createTestQueryClient()
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </MemoryRouter>
+  )
 }
