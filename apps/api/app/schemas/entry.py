@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -6,6 +7,17 @@ from fastapi import Form
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.entry import EntryStatus, EntryType
+
+
+class SortField(str, enum.Enum):
+    created_at = "created_at"
+    title = "title"
+    rating = "rating"
+
+
+class SortOrder(str, enum.Enum):
+    asc = "asc"
+    desc = "desc"
 
 
 class EntryCreate(BaseModel):
@@ -132,6 +144,7 @@ class EntryCreateForm:
         rating: str | None = Form(None),
         year: str | None = Form(None),
         notes: str | None = Form(None),
+        cover_image_url: str | None = Form(None),
     ) -> None:
         self.title = title
         self.type = type
@@ -139,12 +152,14 @@ class EntryCreateForm:
         self.rating = rating
         self.year = year
         self.notes = notes
+        self.cover_image_url = cover_image_url
 
     def to_entry_create(self) -> EntryCreate:
         # Conversión segura y explícita de tipos de datos de formulario a Pydantic
         rating_value = float(self.rating) if self.rating else None
         year_value = int(self.year) if self.year else None
         notes_value = self.notes if self.notes else None
+        cover_image_value = self.cover_image_url if self.cover_image_url else None
         return EntryCreate(
             title=self.title,
             type=EntryType(self.type),
@@ -152,5 +167,5 @@ class EntryCreateForm:
             rating=rating_value,
             year=year_value,
             notes=notes_value,
-            cover_image=None,
+            cover_image=cover_image_value,
         )

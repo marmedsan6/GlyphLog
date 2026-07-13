@@ -1,5 +1,6 @@
 import { useFormContext } from 'react-hook-form'
 import { Input } from '@/components/ui/input'
+import { bgOpacity } from '@/lib/tailwind-opacity'
 import {
   FormControl,
   FormField,
@@ -16,7 +17,11 @@ import {
   type EntryFormValues,
 } from './entry-form-schema'
 
-export function OptionalFields() {
+interface OptionalFieldsProps {
+  disabledYear?: boolean
+}
+
+export function OptionalFields({ disabledYear = false }: OptionalFieldsProps) {
   const { control } = useFormContext<EntryFormValues>()
 
   return (
@@ -59,6 +64,8 @@ export function OptionalFields() {
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   placeholder="Ej: 2024"
+                  readOnly={disabledYear}
+                  className={disabledYear ? `${bgOpacity.muted[0.5]} cursor-not-allowed opacity-80` : ''}
                   {...field}
                   value={field.value ?? ''}
                 />

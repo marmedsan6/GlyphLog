@@ -14,6 +14,8 @@ from app.schemas.entry import (
     EntryResponse,
     EntryUpdate,
     PaginatedEntryResponse,
+    SortField,
+    SortOrder,
 )
 from app.services.entry_service import EntryService, InvalidPaginationError
 
@@ -23,6 +25,9 @@ router = APIRouter()
 @router.get("/", response_model=PaginatedEntryResponse)
 async def list_entries(
     type: EntryType | None = None,
+    search: str | None = None,
+    sort_by: SortField = SortField.created_at,
+    sort_order: SortOrder = SortOrder.desc,
     page: int = 1,
     limit: int = 15,
     current_user: User = Depends(get_current_user),
@@ -32,6 +37,9 @@ async def list_entries(
         return await service.get_all(
             user_id=current_user.id,
             entry_type=type,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
             page=page,
             limit=limit,
         )

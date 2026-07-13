@@ -13,6 +13,8 @@ from app.schemas.entry import (
     EntryResponse,
     EntryUpdate,
     PaginatedEntryResponse,
+    SortField,
+    SortOrder,
 )
 
 
@@ -32,6 +34,9 @@ class EntryService:
         self,
         user_id: UUID,
         entry_type: EntryType | None = None,
+        search: str | None = None,
+        sort_by: SortField = SortField.created_at,
+        sort_order: SortOrder = SortOrder.desc,
         page: int = 1,
         limit: int = DEFAULT_LIMIT,
     ) -> PaginatedEntryResponse:
@@ -46,10 +51,13 @@ class EntryService:
         entries = await self.entry_repo.get_all(
             user_id=user_id,
             entry_type=entry_type,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
             limit=limit,
             offset=offset,
         )
-        total = await self.entry_repo.count(user_id=user_id, entry_type=entry_type)
+        total = await self.entry_repo.count(user_id=user_id, entry_type=entry_type, search=search)
         total_pages = ceil(total / limit) if total > 0 else 0
 
         return PaginatedEntryResponse(
