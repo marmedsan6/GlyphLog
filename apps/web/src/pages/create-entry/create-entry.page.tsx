@@ -12,6 +12,7 @@ import {
   entryFormSchema,
   ImageUploader,
   validateImageFile,
+  ExternalSearchAutocomplete,
   type EntryFormValues,
 } from '@/components/shared/entry-form'
 
@@ -19,6 +20,8 @@ export function CreateEntryPage() {
   const navigate = useNavigate()
   const { mutateAsync: createEntryAsync, isPending, error: mutationError } = useCreateEntry()
   const [coverImage, setCoverImage] = useState<File | null>(null)
+  const [remoteCoverUrl, setRemoteCoverUrl] = useState<string | null>(null)
+  const [isAutocompleted, setIsAutocompleted] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -38,6 +41,9 @@ export function CreateEntryPage() {
     const error = validateImageFile(file)
     setImageError(error)
     setCoverImage(error ? null : file)
+    if (file) {
+      setRemoteCoverUrl(null)
+    }
   }
 
   async function onSubmit(values: EntryFormValues) {
@@ -57,7 +63,7 @@ export function CreateEntryPage() {
         rating: values.rating ? parseFloat(values.rating) : null,
         year: values.year ? parseInt(values.year, 10) : null,
         notes: values.notes?.trim() || null,
-        cover_image: coverImage,
+        cover_image: coverImage || remoteCoverUrl,
       })
       navigate('/collection')
     } catch (err) {
@@ -66,12 +72,12 @@ export function CreateEntryPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background py-8">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle className="text-2xl">Nueva entrada</CardTitle>
+          <CardTitle className="text-2xl font-bold">Nueva entrada</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {(apiError || mutationError) && (
@@ -80,14 +86,31 @@ export function CreateEntryPage() {
                 </div>
               )}
 
-              <EntryFormFields />
-              <ImageUploader
-                selectedImage={coverImage}
-                onChange={handleImageChange}
-                error={imageError}
+              <ExternalSearchAutocomplete
+                onSelectCover={(url) => {
+                  setRemoteCoverUrl(url)
+                  setCoverImage(null)
+                }}
+                onClearCover={() => {
+                  setRemoteCoverUrl(null)
+                  setCoverImage(null)
+                }}
+                isAutocompleted={isAutocompleted}
+                setIsAutocompleted={setIsAutocompleted}
               />
 
-              <div className="flex gap-2">
+              <EntryFormFields isAutocompleted={isAutocompleted} />
+              
+              <ImageUploader
+                currentImageUrl={remoteCoverUrl}
+                selectedImage={coverImage}
+                onChange={handleImageChange}
+                onRemove={() => setRemoteCoverUrl(null)}
+                error={imageError}
+                allowChange={!isAutocompleted}
+              />
+
+              <div className="flex gap-2 pt-2">
                 <Button type="submit" className="flex-1" disabled={isPending}>
                   {isPending ? 'Creando...' : 'Crear entrada'}
                 </Button>

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/auth-token'
+import { getAccessToken, setAccessToken } from '@/lib/auth-token'
+import { clearSession } from '@/lib/session'
 
 /**
  * Store global de autenticación con Zustand.
@@ -30,7 +31,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    clearAccessToken()
+    clearSession()
     set({ isAuthenticated: false })
   },
 }))

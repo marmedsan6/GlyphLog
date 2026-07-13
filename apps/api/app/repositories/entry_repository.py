@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.entry import Entry, EntryType
-from app.schemas.entry import EntryCreate, EntryUpdate
+from app.schemas.entry import EntryCreate, EntryUpdate, SortField, SortOrder
 
 
 class EntryRepository:
@@ -13,33 +13,63 @@ class EntryRepository:
         self.db = db
 
     def _base_query(
-        self, user_id: UUID, entry_type: EntryType | None = None
+        self,
+        user_id: UUID,
+        entry_type: EntryType | None = None,
+        search: str | None = None,
     ) -> Select[tuple[Entry]]:
         """Construye la query base con filtro obligatorio por user_id."""
         stmt = select(Entry).where(Entry.user_id == user_id)
         if entry_type is not None:
             stmt = stmt.where(Entry.type == entry_type)
+        if search is not None and search.strip() != "":
+            stmt = stmt.where(Entry.title.ilike(f"%{search.strip()}%"))
         return stmt
 
     async def get_all(
         self,
         user_id: UUID,
         entry_type: EntryType | None = None,
+        search: str | None = None,
+        sort_by: SortField = SortField.created_at,
+        sort_order: SortOrder = SortOrder.desc,
         limit: int = 15,
         offset: int = 0,
     ) -> list[Entry]:
+        # Construir ordenamiento dinámico
+        sort_field_map = {
+            SortField.created_at: Entry.created_at,
+            SortField.title: func.lower(Entry.title),
+            SortField.rating: Entry.rating,
+        }
+
+        column = sort_field_map.get(sort_by, Entry.created_at)
+
+        if sort_order == SortOrder.desc:
+            order_expr = column.desc()
+        else:
+            order_expr = column.asc()
+
+        if sort_by == SortField.rating:
+            order_expr = order_expr.nulls_last()
+
         stmt = (
-            self._base_query(user_id, entry_type)
-            .order_by(Entry.created_at.desc())
+            self._base_query(user_id, entry_type, search)
+            .order_by(order_expr)
             .limit(limit)
             .offset(offset)
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def count(self, user_id: UUID, entry_type: EntryType | None = None) -> int:
-        """Cuenta el total de entradas del usuario, aplicando filtro por tipo si aplica."""
-        stmt = self._base_query(user_id, entry_type).with_only_columns(func.count(Entry.id))
+    async def count(
+        self,
+        user_id: UUID,
+        entry_type: EntryType | None = None,
+        search: str | None = None,
+    ) -> int:
+        """Cuenta el total de entradas del usuario, aplicando filtros si aplica."""
+        stmt = self._base_query(user_id, entry_type, search).with_only_columns(func.count(Entry.id))
         result = await self.db.execute(stmt)
         return result.scalar_one()
 

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { ImageOff, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { ImageCropper } from './image-cropper'
 
 export interface ImageUploaderProps {
   currentImageUrl?: string | null
@@ -21,6 +22,10 @@ export function ImageUploader({
   allowChange = true,
 }: ImageUploaderProps) {
   const [newPreview, setNewPreview] = useState<string | null>(null)
+  const [cropperSrc, setCropperSrc] = useState<string | null>(null)
+  const [tempFileName, setTempFileName] = useState<string>('cover.jpg')
+  const inputRef = useRef<HTMLInputElement>(null)
+
   const hasImage = Boolean(currentImageUrl) || Boolean(selectedImage)
   const previewUrl = newPreview || currentImageUrl || null
 
@@ -43,7 +48,34 @@ export function ImageUploader({
   }, [selectedImage])
 
   function handleFileChange(file: File | null) {
-    onChange?.(file)
+    if (file) {
+      setTempFileName(file.name)
+      const objectUrl = URL.createObjectURL(file)
+      setCropperSrc(objectUrl)
+    } else {
+      onChange?.(null)
+    }
+  }
+
+  function handleCropperConfirm(croppedFile: File) {
+    if (cropperSrc) {
+      URL.revokeObjectURL(cropperSrc)
+      setCropperSrc(null)
+    }
+    onChange?.(croppedFile)
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+  }
+
+  function handleCropperCancel() {
+    if (cropperSrc) {
+      URL.revokeObjectURL(cropperSrc)
+      setCropperSrc(null)
+    }
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
   }
 
   function handleRemove() {
@@ -72,6 +104,7 @@ export function ImageUploader({
 
       {allowChange && (
         <Input
+          ref={inputRef}
           id="cover_image"
           type="file"
           accept=".jpg,.jpeg,.png,.webp"
@@ -107,6 +140,16 @@ export function ImageUploader({
           <ImageOff className="h-10 w-10" />
           <span className="text-xs">Sin imagen</span>
         </div>
+      )}
+
+      {cropperSrc && (
+        <ImageCropper
+          imageSrc={cropperSrc}
+          open={cropperSrc !== null}
+          fileName={tempFileName}
+          onConfirm={handleCropperConfirm}
+          onCancel={handleCropperCancel}
+        />
       )}
     </div>
   )

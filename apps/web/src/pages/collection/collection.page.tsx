@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { EntryCard } from '@/components/shared/entry-card'
 import { EntryFilters } from '@/components/shared/entry-filters'
 import { EntryPagination } from '@/components/shared/entry-pagination'
+import { EntrySortSelector } from '@/components/shared/entry-sort-selector'
 import { ErrorState } from '@/components/shared/error-state'
 import { useEntries } from '@/hooks/useEntries'
 
@@ -50,10 +51,15 @@ export function CollectionPage() {
     page,
     totalPages,
     type,
+    search,
+    sortBy,
+    sortOrder,
     isLoading,
     isError,
     setPage,
     setType,
+    setSearch,
+    setSort,
     refetch,
   } = useEntries()
 
@@ -71,7 +77,26 @@ export function CollectionPage() {
         </Button>
       </div>
 
-      <EntryFilters activeType={type} onChange={setType} />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/40 pb-4">
+        <EntryFilters activeType={type} onChange={setType} />
+        <EntrySortSelector sortBy={sortBy} sortOrder={sortOrder} onSortChange={setSort} />
+      </div>
+
+      {search && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30 border border-border/50 text-sm animate-in fade-in-50 duration-200">
+          <p className="text-muted-foreground">
+            Resultados de búsqueda para "<span className="font-semibold text-foreground">{search}</span>"
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearch('')}
+            className="h-8 px-2.5 text-xs gap-1 text-muted-foreground hover:text-foreground"
+          >
+            Limpiar búsqueda
+          </Button>
+        </div>
+      )}
 
       {isLoading && <CollectionSkeleton />}
 

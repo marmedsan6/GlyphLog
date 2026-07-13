@@ -191,8 +191,52 @@ Todavía hay que cerrar:
 - estrategia de despliegue inicial de frontend y backend
 
 ---
+## Google OAuth en local
+
+El botón **"Continuar con Google"** necesita el Client ID en **dos sitios**: el backend lo usa para validar los `id_token`, y el frontend lo usa para renderizar el botón. Ambas variables deben tener **el mismo valor**.
+
+### Desarrollo con `pnpm dev` (host)
+
+Si ejecutas el frontend directamente en el host con `pnpm --filter web dev`, Vite lee `VITE_GOOGLE_CLIENT_ID` en runtime desde `apps/web/.env.local`:
+
+```bash
+# apps/web/.env.local (no versionado)
+VITE_GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+```
+
+El backend, si también lo ejecutas fuera de Docker, necesita la misma variable como `GOOGLE_CLIENT_ID` en su entorno.
+
+### Desarrollo con Docker Compose
+
+Si levantas la app con `docker compose up -d`, lo más cómodo es crear un archivo `.env` en la raíz del proyecto (este archivo está excluido en el `.gitignore` para evitar commitear secretos):
+
+```bash
+# .env (en la raíz del proyecto)
+GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+VITE_GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+```
+
+Docker Compose leerá este archivo automáticamente y pasará los valores correctos a los contenedores de frontend y backend en runtime. Tras crearlo, simplemente arranca los contenedores:
+
+```bash
+docker compose up -d
+```
+
+`docker-compose.yml` inyecta `GOOGLE_CLIENT_ID` en el servicio `api` y `VITE_GOOGLE_CLIENT_ID` en el servicio `web`. Como el servicio `web` ejecuta Vite en modo desarrollo dentro del contenedor, la variable se lee en runtime y el botón aparece en local.
+
+### Modo degradado y buenas prácticas
+
+Si no configuras estas variables (o las dejas vacías), la aplicación sigue funcionando, pero:
+- el botón "Continuar con Google" **no aparece** en `/login`;
+- el endpoint `POST /api/v1/auth/google` responde **503 Service Unavailable**.
+
+**No incluyas el Client ID real en archivos commiteados** (`docker-compose.yml`, `.env.*.example`, etc.). Usa el archivo `.env` en la raíz del proyecto (no versionado) o un `.env.local` en `apps/web/`. Para obtener el Client ID, consulta [`docs/tasks/google-oauth-cloud-setup.md`](./tasks/google-oauth-cloud-setup.md).
+
+
+---
 
 ## Criterios de aceptación del setup
+
 Este setup se considerará completado cuando:
 - la visión del proyecto esté documentada
 - el MVP esté definido

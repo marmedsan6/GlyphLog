@@ -42,16 +42,23 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - DEBUG=true
       - ALLOWED_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
+      # Client ID de Google OAuth para validar id_tokens en el backend.
+      # Si está vacío, POST /api/v1/auth/google responde 503 (modo degradado).
+      # El MISMO valor debe inyectarse en el servicio web como VITE_GOOGLE_CLIENT_ID.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
   web:
-    build:
-      context: .
-      dockerfile: ./apps/web/Dockerfile
+    image: node:20-alpine
     container_name: glyphlog-web
+    working_dir: /app
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             pnpm --filter web exec vite --host"
     ports:
       - "5173:5173"
     volumes:
@@ -60,6 +67,10 @@ services:
       - /app/apps/web/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1
+      # Client ID de Google OAuth para el botón "Continuar con Google".
+      # Si está vacío, el botón no se renderiza (modo degradado).
+      # Debe coincidir con GOOGLE_CLIENT_ID del servicio api.
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
     depends_on:
       - api
     restart: unless-stopped
