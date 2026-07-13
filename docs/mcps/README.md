@@ -12,6 +12,8 @@ Los **MCPs (Model Context Protocol servers)** son servidores que amplían las ca
 | **PostgreSQL** | Consultas directas a la base de datos | Debuggear datos, verificar migraciones, explorar el esquema | [postgresql.md](./postgresql.md) |
 | **Filesystem** | Operaciones de sistema de archivos | Refactors de estructura, generación de scaffolds, búsqueda en múltiples archivos | [filesystem.md](./filesystem.md) |
 | **Git** | Análisis del repositorio | Revisar historial de cambios, obtener contexto antes de un refactor | [git.md](./git.md) |
+| **Context7** | Documentación actualizada de librerías | Obtener APIs actuales de FastAPI, SQLAlchemy, React, Tailwind, etc. | [context7.md](./context7.md) |
+| **Codebase Memory** | Grafo de conocimiento del código | Indexar funciones, clases, rutas; trazar llamadas; análisis de impacto | [Ver SKILL.md](../../.opencode/skills/codebase-memory/SKILL.md) |
 
 ---
 
