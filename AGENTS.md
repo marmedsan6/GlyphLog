@@ -312,6 +312,7 @@ Los MCPs (Model Context Protocol servers) amplían las capacidades del agente co
 | **PostgreSQL** | Consultas directas a la base de datos | Debuggear datos, verificar el resultado de migraciones, explorar el esquema actual |
 | **Filesystem** | Operaciones de archivos y directorios | Refactors de estructura de carpetas, generación de scaffolds, mover o renombrar archivos |
 | **Git** | Análisis del repositorio | Revisar historial de cambios, entender contexto de commits anteriores, comparar ramas |
+| **Context7** | Documentación actualizada de librerías | Obtener APIs actuales de FastAPI, SQLAlchemy, React, Tailwind, etc. Añade `use context7` al prompt |
 
 ---
 
@@ -445,4 +446,69 @@ Términos específicos del dominio de GlyphLog. Usarlos de forma consistente en 
 
 ---
 
-*Última actualización: fase Setup — ver `memory-bank/project-context.md` para el estado actual del proyecto.*
+## 15. Estrategia de ahorro de tokens
+
+Para minimizar el gasto de tokens en cada sesión, sigue estas reglas en orden de prioridad:
+
+### Antes de leer cualquier archivo
+
+1. **¿`codebase-memory-mcp` ya tiene esta información?** → Usa `search_graph` o `get_code_snippet` en lugar de `read` o `grep`. El grafo de conocimiento indexa funciones, clases, rutas y sus relaciones.
+2. **¿`engram` ya guardó esto en una sesión anterior?** → Usa `mem_search` para recuperar decisiones, bugs, patrones sin re-explorar.
+3. **¿`AGENTS.md` ya lo documenta?** → Ya está en tu contexto, no necesitas releerlo.
+
+### Al iniciar una tarea nueva
+
+1. Usa la skill **`quick-context`** para obtener un resumen de 40 líneas del proyecto (stack, últimos cambios, decisiones, issues activos)
+2. Usa `get_architecture` de codebase-memory-mcp para entender la estructura de carpetas y módulos
+3. **NO** hagas `read` del árbol de directorios — `get_architecture` es más eficiente en tokens
+
+### Al escribir código que usa librerías
+
+1. Si la tarea involucra FastAPI, SQLAlchemy, Pydantic, React, Tailwind, shadcn/ui → añade **`use context7`** al prompt
+2. No adivines APIs — Context7 inyecta la documentación actualizada directamente
+
+### Al explorar código existente
+
+| En vez de... | Usa... |
+|---|---|
+| `grep` para buscar definiciones | `search_graph` (name_pattern) |
+| `glob` para encontrar archivos | `search_graph` (file_pattern) |
+| `read` de archivos grandes | `get_code_snippet` (solo la función/clase relevante) |
+| Leer varios archivos para trazar dependencias | `trace_path` (inbound/outbound) |
+| `grep` para buscar usos de una función | `trace_path` con direction="inbound" |
+
+### Uso de subagentes
+
+Cada subagente tiene contexto acotado y gasta menos tokens que el agente principal explorando:
+
+| Subagente | Cuándo usarlo |
+|---|---|
+| `senior-dev` | Implementar features completas (React + FastAPI) |
+| `tech-lead` | Revisar código, evaluar arquitectura, detectar smells |
+| `qa-senior` | Testing E2E con Playwright, reportes de bugs |
+
+### Skills disponibles para tareas específicas
+
+| Skill | Cuándo usarla |
+|---|---|
+| `quick-context` | Al iniciar sesión — resumen del proyecto en 40 líneas |
+| `thermo-nuclear-review` | Code review ultra-estricto (calidad, abstracciones, spaghetti) |
+| `qa-senior` | Planes de prueba, templates de bug reports, testing E2E |
+| `fix-issue` | Crear issues con formato INVEST, clasificar bugs |
+| `deploy-to-prod` | Deploy a producción (Oracle Cloud + Cloudflare) |
+
+### Flujo ideal de una tarea
+
+```
+quick-context → resumen de 40 líneas
+engram mem_search → ¿ya se trabajó en esto?
+codebase-memory-mcp → explorar código sin grep/read
+context7 (si se usan librerías) → docs actualizadas
+senior-dev → implementar
+thermo-nuclear-review → revisar calidad
+qa-senior → testear
+```
+
+---
+
+*Última actualización: Julio 2026 — ver `memory-bank/project-context.md` para el estado actual del proyecto.*

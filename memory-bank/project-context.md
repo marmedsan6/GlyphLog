@@ -20,6 +20,7 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 | Frontend | TypeScript | 5+ |
 | Frontend | Tailwind CSS | 3+ |
 | Frontend | shadcn/ui | última estable |
+| Frontend | reicon-react | última estable (experimental) |
 | Backend | FastAPI | última estable |
 | Backend | Python | 3.11+ |
 | Backend | SQLAlchemy | 2.x |
@@ -90,6 +91,27 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
     - Corregida documentación de arquitectura y README del proyecto con datos exactos y vigentes.
   - Tests: 157 backend + 43 frontend = **200 passing**
   - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
+
+**Fase 1 — Búsqueda, ordenamiento e integración de catálogos externos completada** (julio 2026)
+
+- Búsqueda y ordenamiento en colección propia (Track A):
+  - Modificado el endpoint del backend (`GET /api/v1/entries/`) para soportar los parámetros query `search`, `sort_by` y `sort_order`.
+  - Aplicada búsqueda case-insensitive con `ILIKE` en `EntryRepository`, y ordenamiento dinámico con cláusula `.nulls_last()` en ratings nulos.
+  - Desarrollados los hooks frontend `useDebounce` y `useSearchEntries`.
+  - Diseñada la barra de búsqueda global `SearchBar` en el header con dropdown rápido, estados de carga y navegación.
+  - Creado el selector de orden `EntrySortSelector` en `/collection` y sincronizado el estado completo con la URL (`useSearchParams`).
+- Catálogos externos y autocompletado (Track B):
+  - Integrada la API de Jikan (animes/mangas) y RAWG (videojuegos, con key `RAWG_API_KEY`) concurrentemente con `asyncio.gather(return_exceptions=True)`.
+  - Diseñada una caché en memoria (`MemoryCache`) con un TTL de 5 minutos para rate limits.
+  - Expuesto el endpoint JWT `/api/v1/external/search?q=`.
+  - Creado el componente frontend `ExternalSearchAutocomplete` para rellenar automáticamente campos y la portada remota (`cover_image_url`), con opción a desvincular para edición manual.
+- Calidad:
+  - Tests totales: 167 backend + 43 frontend = **210 passing**
+  - Tipos OpenAPI regenerados y tipado estricto al 100%.
+- Theme Toggle Premium (historias #23 y #24):
+  - Integrada la **View Transitions API** nativa en el cambio de tema, permitiendo una animación circular con desenfoque (blur) desde el botón al cambiar.
+  - Implementado fallback gracioso para navegadores que no soportan la API nativa de transición.
+  - Integrada la dependencia `reicon-react` de forma aislada, utilizando sus iconos `Sun` y `Moon` en `ThemeToggle` para evaluar la biblioteca.
 
 ---
 

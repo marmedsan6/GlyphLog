@@ -16,6 +16,7 @@
 | [ADR-004](#adr-004) | JWT en sessionStorage | Aceptada | junio 2025 |
 | [ADR-005](#adr-005) | PyJWT en lugar de python-jose | Aceptada | junio 2025 |
 | [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend | Aceptada | julio 2026 |
+| [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada | julio 2026 |
 
 ---
 
@@ -268,6 +269,42 @@ En el backend se evaluaron tres librerías para verificar el `id_token`:
 - **`useGoogleLogin`**: incompatible con el contrato `id_token` del backend.
 - **`<GoogleLogin />`**: renderiza botón nativo no estilizable.
 - **Auth Code Flow (`useGoogleLogin({ flow: 'auth-code' })`)**: requiere `client_secret` en el backend y un endpoint de canje — innecesario para este caso de uso.
+
+---
+
+## ADR-007
+
+### Reicon para theme toggle + View Transitions API para transición de tema
+
+**Fecha:** julio 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+El botón de theme toggle alternaba entre los modos claro y oscuro de manera inmediata sin transición visual. Se evaluaron opciones para mejorar la experiencia de usuario (UX) ofreciendo una animación sutil pero premium al alternar los modos.
+
+A su vez, se evaluó adoptar la biblioteca de iconos `reicon-react` (basada en SVG y pixel-perfect) para reemplazar los iconos de sol y luna provistos por `lucide-react`, con la intención de evaluar de forma aislada la calidad y las capacidades de tree-shaking de Reicon antes de considerar una migración de iconos global.
+
+#### Decisión
+
+1. Utilizar la **View Transitions API** nativa del navegador para animar la transición del tema con un efecto circular difuso (CSS mask con blur) al invocar `toggleTheme()`.
+2. Instalar `reicon-react` y utilizar sus iconos `Sun` y `Moon` exclusivamente en el componente `ThemeToggle`, manteniendo `lucide-react` para el resto de la aplicación por el momento.
+
+#### Razones
+
+- **Rendimiento nativo y 0KB de JS extra**: La View Transitions API es una primitiva web. La animación se calcula en el compositor del navegador (GPU), lo que ofrece fluidez impecable y evita añadir librerías pesadas como Framer Motion.
+- **Progressive Enhancement**: Si el navegador no soporta la API, se realiza un fallback automático que cambia el tema instantáneamente (como antes), sin romper la aplicación.
+- **Estrategia Strangler Fig para Dependencias**: Incorporar `reicon-react` de forma aislada permite comprobar su compatibilidad de tipos, DX y bundle-size antes de refactorizar todo el proyecto. Al ser tree-shakeable, solo añade los ~2-3KB de los iconos utilizados.
+
+#### Consecuencias
+
+- Se debe declarar la interfaz de tipo global para `document.startViewTransition` ya que TypeScript no la incluye de forma estándar todavía.
+- El componente `ThemeToggle` queda acoplado a la coexistencia de `lucide-react` (principal) y `reicon-react` (aislado), lo cual se resolverá en futuras fases si se aprueba la migración completa a Reicon.
+
+#### Alternativas consideradas
+
+- **Framer Motion**: Descartado por añadir más de 30KB de JavaScript al bundle y no poder animar las capturas globales del DOM de manera nativa.
+- **Migración completa a Reicon inmediatamente**: Descartada para mitigar el riesgo de breaking changes o problemas de inconsistencia visual en las vistas existentes antes de validar la librería.
 
 ---
 
