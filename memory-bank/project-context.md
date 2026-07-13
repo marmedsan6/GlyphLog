@@ -94,6 +94,13 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 
 **Fase 1 — Búsqueda, ordenamiento e integración de catálogos externos completada** (julio 2026)
 
+**Despliegue de Batch de Fixes y Mejoras** (13 de Julio de 2026)
+- **Fuga de datos (P0)**: Corregido el leak de caché de TanStack Query limpiando la caché en el logout y mediante el interceptor 401.
+- **OAuth local (P1)**: Configurado Google OAuth en Compose local.
+- **Dropdown modo oscuro (P2)**: Arreglada la visibilidad de resultados del catálogo en dark mode utilizando variables CSS de opacidad centralizadas.
+- **Recortador de portadas (P3)**: Integrado `react-easy-crop` para zoom y arrastre de portadas locales.
+- **Producción**: Todo compilado, probado y desplegado con éxito en Oracle Cloud VM + Cloudflare (HTTPS) con healthchecks exitosos.
+
 - Búsqueda y ordenamiento en colección propia (Track A):
   - Modificado el endpoint del backend (`GET /api/v1/entries/`) para soportar los parámetros query `search`, `sort_by` y `sort_order`.
   - Aplicada búsqueda case-insensitive con `ILIKE` en `EntryRepository`, y ordenamiento dinámico con cláusula `.nulls_last()` en ratings nulos.
