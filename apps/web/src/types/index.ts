@@ -22,6 +22,10 @@ export type EntryStatus = components['schemas']['EntryStatus']
 export type EntryResponse = components['schemas']['EntryResponse']
 export type EntryListItem = components['schemas']['EntryListItem']
 export type PaginatedEntryResponse = components['schemas']['PaginatedEntryResponse']
+export type SortField = components['schemas']['SortField']
+export type SortOrder = components['schemas']['SortOrder']
+export type ExternalSearchResult = components['schemas']['ExternalSearchResult']
+export type ExternalSearchResponse = components['schemas']['ExternalSearchResponse']
 
 export type User = components['schemas']['UserResponse']
 
@@ -44,7 +48,7 @@ export interface EntryCreate {
   rating?: number | null
   year?: number | null
   notes?: string | null
-  cover_image?: File | null
+  cover_image?: File | string | null
 }
 
 // Entry es un alias de la respuesta de la API para uso interno del frontend.

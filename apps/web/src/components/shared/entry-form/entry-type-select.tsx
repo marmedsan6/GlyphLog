@@ -6,6 +6,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { cn } from '@/lib/utils'
+import { disabledBgOpacity } from '@/lib/tailwind-opacity'
 import type { EntryType } from '@/types'
 import type { EntryFormValues } from './entry-form-schema'
 
@@ -15,7 +17,11 @@ const TYPE_OPTIONS: { value: EntryType; label: string }[] = [
   { value: 'game', label: 'Videojuego' },
 ]
 
-export function EntryTypeSelect() {
+interface EntryTypeSelectProps {
+  disabled?: boolean
+}
+
+export function EntryTypeSelect({ disabled = false }: EntryTypeSelectProps) {
   const { control, setValue } = useFormContext<EntryFormValues>()
 
   return (
@@ -29,6 +35,7 @@ export function EntryTypeSelect() {
             <select
               id={field.name}
               value={field.value}
+              disabled={disabled}
               onChange={(e) => {
                 const newType = e.target.value as EntryType
                 field.onChange(newType)
@@ -36,7 +43,10 @@ export function EntryTypeSelect() {
                 // coherencia con las labels traducidas.
                 setValue('status', 'watching')
               }}
-              className="w-full rounded-md border border-input bg-background px-3 py-2"
+              className={cn(
+                'w-full rounded-md border border-input bg-background px-3 py-2 disabled:cursor-not-allowed disabled:opacity-80',
+                disabledBgOpacity.muted[0.5]
+              )}
             >
               {TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
