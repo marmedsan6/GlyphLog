@@ -14,8 +14,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.core.rate_limiter import limiter
 from app.routers.auth import router as auth_router
+from app.routers.devices import router as devices_router
 from app.routers.entries import router as entries_router
 from app.routers.external_search import router as external_search_router
+from app.routers.profile import router as profile_router
 
 
 @asynccontextmanager
@@ -114,7 +116,9 @@ async def health_check() -> dict[str, str]:
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(entries_router, prefix="/api/v1/entries", tags=["entries"])
+app.include_router(profile_router, prefix="/api/v1/users", tags=["profile"])
 app.include_router(external_search_router, prefix="/api/v1", tags=["external-search"])
+app.include_router(devices_router, prefix="/api/v1/devices", tags=["devices"])
 
 # Servir archivos subidos estáticamente.
 # El mount va DESPUÉS de los routers para no interceptar rutas de la API.
