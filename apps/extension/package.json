@@ -1,0 +1,20 @@
+{
+  "name": "glyphlog-companion-extension",
+  "version": "0.1.0",
+  "description": "GlyphLog Companion — Chrome Extension con WXT",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:profile": "wxt build --profile",
+    "zip": "wxt zip",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "happy-dom": "^15.11.6",
+    "vitest": "^2.1.8",
+    "wxt": "^0.19.0",
+    "typescript": "^5.3.3"
+  }
+}
