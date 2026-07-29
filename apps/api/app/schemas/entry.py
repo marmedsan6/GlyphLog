@@ -1,23 +1,54 @@
-import enum
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from fastapi import Form
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.entry import EntryStatus, EntryType
+from app.models.entry import FIXED_UNIT_BY_TYPE, EntryStatus, EntryType
+from app.models.enums import ProgressUnit
 
 
-class SortField(str, enum.Enum):
+class SortField(Enum):
     created_at = "created_at"
     title = "title"
     rating = "rating"
 
 
-class SortOrder(str, enum.Enum):
+class SortOrder(Enum):
     asc = "asc"
     desc = "desc"
+
+
+def _validate_progress_unit_for_type(entry_type: EntryType, unit: ProgressUnit | None) -> None:
+    """Valida que la unidad de progreso sea compatible con el tipo de entrada.
+
+    Raises:
+        ValueError: si la unidad no está permitida para el tipo.
+    """
+    if unit is None:
+        return
+    expected = FIXED_UNIT_BY_TYPE.get(entry_type)
+    if expected is not None and unit != expected:
+        raise ValueError(
+            f"La unidad '{unit.value}' no es válida para el tipo '{entry_type.value}'. "
+            f"Unidad fija: {expected.value}"
+        )
+
+
+def _require_integer_total_for_unit(
+    progress_total: float | None,
+    progress_unit: ProgressUnit | None,
+) -> None:
+    if progress_total is None:
+        return
+    if progress_unit is None:
+        return
+    if progress_unit != ProgressUnit.hours and progress_total != int(progress_total):
+        raise ValueError(
+            f"El total de progreso para '{progress_unit.value}' debe ser un número entero"
+        )
 
 
 class EntryCreate(BaseModel):
@@ -29,6 +60,9 @@ class EntryCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=5000)
     # Ruta relativa asignada por el servicio de uploads
     cover_image: str | None = Field(default=None, max_length=500)
+    # Configuración de seguimiento de progreso (ADR-008)
+    progress_unit: ProgressUnit | None = Field(default=None)
+    progress_total: float | None = Field(default=None, ge=0)
 
     @field_validator("title")
     @classmethod
@@ -47,6 +81,17 @@ class EntryCreate(BaseModel):
             return v.strip()
         return v
 
+    @model_validator(mode="after")
+    def validate_progress_configuration(self) -> "EntryCreate":
+        """Valida que la unidad de progreso sea compatible con el tipo y que
+        el total no sea menor que el progreso implícito (0 al crear).
+        """
+        _validate_progress_unit_for_type(self.type, self.progress_unit)
+        if self.progress_total is not None and self.progress_total < 0:
+            raise ValueError("El total de progreso no puede ser negativo")
+        _require_integer_total_for_unit(self.progress_total, self.progress_unit)
+        return self
+
 
 class EntryUpdate(BaseModel):
     title: str | None = None
@@ -56,6 +101,10 @@ class EntryUpdate(BaseModel):
     year: int | None = Field(default=None, ge=1950, le=2100)
     notes: str | None = Field(default=None, max_length=5000)
     cover_image: str | None = Field(default=None, max_length=500)
+    # Configuración de seguimiento de progreso (ADR-008)
+    progress_unit: ProgressUnit | None = None
+    progress_total: float | None = Field(default=None, ge=0)
+    current_progress: float | None = Field(default=None, ge=0)
 
     @field_validator("title")
     @classmethod
@@ -87,6 +136,22 @@ class EntryUpdate(BaseModel):
                 raise ValueError(f"{field} no puede ser nulo")
         return data
 
+    @model_validator(mode="after")
+    def validate_progress_configuration(self) -> "EntryUpdate":
+        """Valida compatibilidad de unidad con tipo (cuando ambos se envían) y
+        coherencia entre progreso actual y total.
+        """
+        if self.type is not None and self.progress_unit is not None:
+            _validate_progress_unit_for_type(self.type, self.progress_unit)
+        if (
+            self.progress_total is not None
+            and self.current_progress is not None
+            and self.current_progress > self.progress_total
+        ):
+            raise ValueError("El progreso actual no puede ser mayor que el total de progreso")
+        _require_integer_total_for_unit(self.progress_total, self.progress_unit)
+        return self
+
 
 class EntryResponse(BaseModel):
     id: UUID
@@ -98,6 +163,11 @@ class EntryResponse(BaseModel):
     year: int | None
     notes: str | None
     cover_image: str | None
+    # Configuración de seguimiento de progreso (ADR-008)
+    progress_unit: ProgressUnit | None
+    progress_total: float | None
+    current_progress: float | None
+    has_history: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -117,6 +187,9 @@ class EntryListItem(BaseModel):
     status: EntryStatus
     rating: float | None
     cover_image: str | None
+    progress_unit: ProgressUnit | None = None
+    progress_total: float | None = None
+    current_progress: float | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -145,6 +218,8 @@ class EntryCreateForm:
         year: str | None = Form(None),
         notes: str | None = Form(None),
         cover_image_url: str | None = Form(None),
+        progress_unit: str | None = Form(None),
+        progress_total: str | None = Form(None),
     ) -> None:
         self.title = title
         self.type = type
@@ -153,6 +228,8 @@ class EntryCreateForm:
         self.year = year
         self.notes = notes
         self.cover_image_url = cover_image_url
+        self.progress_unit = progress_unit
+        self.progress_total = progress_total
 
     def to_entry_create(self) -> EntryCreate:
         # Conversión segura y explícita de tipos de datos de formulario a Pydantic
@@ -160,6 +237,8 @@ class EntryCreateForm:
         year_value = int(self.year) if self.year else None
         notes_value = self.notes if self.notes else None
         cover_image_value = self.cover_image_url if self.cover_image_url else None
+        progress_total_value = float(self.progress_total) if self.progress_total else None
+        progress_unit_value = ProgressUnit(self.progress_unit) if self.progress_unit else None
         return EntryCreate(
             title=self.title,
             type=EntryType(self.type),
@@ -168,4 +247,6 @@ class EntryCreateForm:
             year=year_value,
             notes=notes_value,
             cover_image=cover_image_value,
+            progress_unit=progress_unit_value,
+            progress_total=progress_total_value,
         )

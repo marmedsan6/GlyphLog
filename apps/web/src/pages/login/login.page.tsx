@@ -53,7 +53,7 @@ export function LoginPage() {
       if (idToken) {
         // Limpiar el hash de la URL para seguridad
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
-        
+
         void handleGoogleCallback(idToken)
       }
     }
@@ -89,7 +89,7 @@ export function LoginPage() {
       <div className="fixed right-4 top-4 z-50">
         <ThemeToggle />
       </div>
-      <Card className="w-full max-w-sm mx-4">
+      <Card className="mx-4 w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
           <p className="text-sm text-muted-foreground">Accede a tu colección</p>
@@ -102,7 +102,7 @@ export function LoginPage() {
               </div>
             )}
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="bg-destructive/10 rounded-md p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -146,7 +146,7 @@ export function LoginPage() {
               <GoogleLoginButton disabled={isLoading} />
             </>
           )}
-          <div className="mt-4 text-center text-sm space-y-2">
+          <div className="mt-4 space-y-2 text-center text-sm">
             <p className="text-muted-foreground">
               ¿No tienes cuenta?{' '}
               <Link to="/register" className="text-foreground underline hover:no-underline">
@@ -157,7 +157,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsForgotPasswordOpen(true)}
-                className="text-xs text-muted-foreground hover:text-foreground underline hover:no-underline"
+                className="text-xs text-muted-foreground underline hover:text-foreground hover:no-underline"
               >
                 ¿Olvidaste tu contraseña?
               </button>

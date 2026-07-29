@@ -6,9 +6,7 @@ import { App } from './App'
 const rootElement = document.getElementById('root')
 
 if (!rootElement) {
-  throw new Error(
-    '[GlyphLog] No se encontró el elemento #root en el DOM. Verifica index.html.'
-  )
+  throw new Error('[GlyphLog] No se encontró el elemento #root en el DOM. Verifica index.html.')
 }
 
 createRoot(rootElement).render(

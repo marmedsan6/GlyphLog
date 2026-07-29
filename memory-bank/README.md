@@ -28,7 +28,8 @@ memory-bank/
 └── knowledge/             # Conocimiento técnico acumulado por área
     ├── frontend.md        # React, Vite, componentes, hooks
     ├── backend.md         # FastAPI, servicios, endpoints
-    └── database.md        # Esquema, migraciones, queries
+    ├── database.md        # Esquema, migraciones, queries
+    └── interview-qa.md    # Preguntas de entrevista y conceptos clave (Q&A)
 ```
 
 ### Descripción de cada archivo
@@ -41,6 +42,7 @@ memory-bank/
 | `knowledge/frontend.md` | Lo aprendido sobre la capa frontend | Al trabajar en `apps/web` |
 | `knowledge/backend.md` | Lo aprendido sobre la capa backend | Al trabajar en `apps/api` |
 | `knowledge/database.md` | Esquema, migraciones y queries relevantes | Al trabajar con BD o Alembic |
+| `knowledge/interview-qa.md` | Repaso rápido de conceptos y preguntas estrella de entrevistas | Preparación de entrevistas / Onboarding |
 | `sessions/` | Historial de trabajo pasado | Cuando se necesita contexto de sesiones anteriores |
 
 ---

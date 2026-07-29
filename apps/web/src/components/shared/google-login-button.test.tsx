@@ -37,9 +37,7 @@ describe('GoogleLoginButton', () => {
 
   it('renders the button with accessible label', () => {
     renderWithRouter(<GoogleLoginButton />)
-    expect(
-      screen.getByRole('button', { name: /continuar con google/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continuar con google/i })).toBeInTheDocument()
   })
 
   it('redirects to Google OAuth URL on click', async () => {
@@ -59,7 +57,7 @@ describe('GoogleLoginButton', () => {
   it('shows error toast if VITE_GOOGLE_CLIENT_ID is missing', async () => {
     vi.stubEnv('VITE_GOOGLE_CLIENT_ID', '')
     const user = userEvent.setup()
-    
+
     renderWithRouter(<GoogleLoginButton />)
     await user.click(screen.getByRole('button', { name: /continuar con google/i }))
 

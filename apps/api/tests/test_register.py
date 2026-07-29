@@ -6,7 +6,6 @@ Todos los tests usan mocks — no requieren PostgreSQL corriendo.
 
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock
-from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -21,7 +20,6 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate
 from app.services.auth_service import AuthService
 from tests.factories import make_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

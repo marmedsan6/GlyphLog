@@ -19,10 +19,8 @@ export function ErrorState({ message, onRetry, showBackButton = false }: ErrorSt
           Volver a la colección
         </Button>
       )}
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-8 text-center">
-        <p className="text-destructive mb-4">
-          {message || 'Ha ocurrido un error inesperado.'}
-        </p>
+      <div className="border-destructive/50 bg-destructive/10 rounded-md border p-8 text-center">
+        <p className="mb-4 text-destructive">{message || 'Ha ocurrido un error inesperado.'}</p>
         <Button type="button" variant="outline" onClick={onRetry}>
           Reintentar
         </Button>

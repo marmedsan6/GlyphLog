@@ -17,10 +17,7 @@ export interface GoogleLoginButtonProps {
  * 3. Redirige limpiamente de vuelta a /login con el `id_token` en el fragmento hash de la URL.
  * 4. Soporta todos los navegadores móviles y de escritorio de forma robusta.
  */
-export function GoogleLoginButton({
-  disabled = false,
-  className = '',
-}: GoogleLoginButtonProps) {
+export function GoogleLoginButton({ disabled = false, className = '' }: GoogleLoginButtonProps) {
   const { toast } = useToast()
 
   function handleClick() {
@@ -37,7 +34,7 @@ export function GoogleLoginButton({
     const redirectUri = encodeURIComponent(`${window.location.origin}/login`)
     // Generar un nonce aleatorio para cumplir con OIDC
     const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36)
-    
+
     // Redirigir a Google OAuth2 Consent Screen (flujo implícito OpenID Connect)
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=id_token&scope=openid%20email%20profile&nonce=${nonce}`
   }
@@ -52,12 +49,7 @@ export function GoogleLoginButton({
       aria-label="Continuar con Google"
     >
       {/* Ícono oficial de Google */}
-      <svg
-        className="mr-2 h-4 w-4"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-      >
+      <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path
           fill="#4285F4"
           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

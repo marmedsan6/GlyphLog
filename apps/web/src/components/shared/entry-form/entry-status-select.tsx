@@ -1,11 +1,5 @@
 import { useFormContext } from 'react-hook-form'
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { STATUS_LABELS } from '@/utils/entry-labels'
 import type { EntryStatus } from '@/types'
 import type { EntryFormValues } from './entry-form-schema'

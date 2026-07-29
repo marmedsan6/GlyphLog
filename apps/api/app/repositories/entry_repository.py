@@ -90,6 +90,9 @@ class EntryRepository:
             year=data.year,
             notes=data.notes,
             cover_image=data.cover_image,
+            progress_unit=data.progress_unit,
+            progress_total=data.progress_total,
+            current_progress=0,
         )
         self.db.add(entry)
         try:
@@ -117,6 +120,12 @@ class EntryRepository:
         except IntegrityError:
             await self.db.rollback()
             raise
+
+    async def get_by_id_for_update(self, entry_id: UUID, user_id: UUID) -> Entry | None:
+        """Carga la entrada con bloqueo de fila (SELECT FOR UPDATE)."""
+        stmt = select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id).with_for_update()
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def delete(self, entry_id: UUID, user_id: UUID) -> bool:
         # SEGURIDAD: eliminar solo si la entrada pertenece al usuario autenticado.

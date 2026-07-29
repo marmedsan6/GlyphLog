@@ -129,6 +129,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entries/{entry_id}/progress/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Progress */
+        post: operations["reset_progress_api_v1_entries__entry_id__progress_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entries/{entry_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Progress */
+        post: operations["update_progress_api_v1_entries__entry_id__progress_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entries/{entry_id}/progress/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Progress History */
+        get: operations["get_progress_history_api_v1_entries__entry_id__progress_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_api_v1_users_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Profile */
+        patch: operations["update_profile_api_v1_users_me_patch"];
+        trace?: never;
+    };
+    "/api/v1/users/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Avatar */
+        post: operations["upload_avatar_api_v1_users_me_avatar_post"];
+        /** Delete Avatar */
+        delete: operations["delete_avatar_api_v1_users_me_avatar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/external/search": {
         parameters: {
             query?: never;
@@ -146,10 +233,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/external/games/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Game Detail
+         * @description Obtiene el detalle de un juego desde RAWG.
+         *
+         *     El listado de búsqueda (`/external/search`) no trae el `playtime` de RAWG,
+         *     así que el frontend hace esta llamada adicional cuando el usuario
+         *     selecciona un juego de los resultados de autocompletado (lazy fetch).
+         *     El objetivo es precargar `progress_total` para el tipo `game`.
+         *
+         *     El endpoint degrada con elegancia: si RAWG no está configurado o el
+         *     juego no existe, devuelve `playtime_raw=None` y `playtime_hours=None`
+         *     para que el frontend no rompa el flujo de autocompletado.
+         */
+        get: operations["get_game_detail_api_v1_external_games__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/pair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Pairing Code
+         * @description Genera un código de emparejamiento para vincular un dispositivo externo.
+         *
+         *     El código tiene 6 caracteres alfanuméricos y expira en 5 minutos.
+         *     Requiere autenticación JWT desde la SPA.
+         */
+        post: operations["generate_pairing_code_api_v1_devices_pair_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Device
+         * @description Activa un dispositivo usando un código de emparejamiento.
+         *
+         *     No requiere autenticación (el código es el mecanismo de autenticación).
+         *     Devuelve el device_token que se debe guardar en el dispositivo.
+         *     El token solo se muestra UNA VEZ.
+         */
+        post: operations["activate_device_api_v1_devices_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Devices
+         * @description Lista todos los dispositivos emparejados activos del usuario.
+         *
+         *     Requiere autenticación JWT desde la SPA.
+         */
+        get: operations["list_devices_api_v1_devices__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Device
+         * @description Revoca un dispositivo emparejado. El token dejará de funcionar inmediatamente.
+         *
+         *     Requiere autenticación JWT desde la SPA.
+         */
+        delete: operations["revoke_device_api_v1_devices__device_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActivateDeviceRequest
+         * @description Solicitud para activar un dispositivo con un código de emparejamiento.
+         */
+        ActivateDeviceRequest: {
+            /** Pairing Code */
+            pairing_code: string;
+            /** Device Name */
+            device_name: string;
+        };
+        /**
+         * ActivateDeviceResponse
+         * @description Respuesta al activar un dispositivo. Contiene el token en texto plano (única vez).
+         */
+        ActivateDeviceResponse: {
+            /**
+             * Device Token
+             * @description Token de acceso. Solo se muestra una vez.
+             */
+            device_token: string;
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /** Device Name */
+            device_name: string;
+        };
+        /** AvatarUploadResponse */
+        AvatarUploadResponse: {
+            /** Avatar Url */
+            avatar_url: string;
+        };
         /** Body_create_entry_api_v1_entries__post */
         Body_create_entry_api_v1_entries__post: {
             /** Cover Image */
@@ -171,11 +411,55 @@ export interface components {
             notes?: string | null;
             /** Cover Image Url */
             cover_image_url?: string | null;
+            /** Progress Unit */
+            progress_unit?: string | null;
+            /** Progress Total */
+            progress_total?: string | null;
+        };
+        /** Body_upload_avatar_api_v1_users_me_avatar_post */
+        Body_upload_avatar_api_v1_users_me_avatar_post: {
+            /** Avatar */
+            avatar: string;
         };
         /** Body_upload_cover_image_api_v1_entries__entry_id__cover_post */
         Body_upload_cover_image_api_v1_entries__entry_id__cover_post: {
             /** Cover Image */
             cover_image: string;
+        };
+        /**
+         * DeviceListResponse
+         * @description Lista de dispositivos emparejados del usuario.
+         */
+        DeviceListResponse: {
+            /** Devices */
+            devices: components["schemas"]["DeviceResponse"][];
+        };
+        /**
+         * DeviceResponse
+         * @description Respuesta con información de un dispositivo emparejado.
+         */
+        DeviceResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Device Name */
+            device_name: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Is Revoked */
+            is_revoked: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * EntryListItem
@@ -198,6 +482,11 @@ export interface components {
             rating: number | null;
             /** Cover Image */
             cover_image: string | null;
+            progress_unit?: components["schemas"]["ProgressUnit"] | null;
+            /** Progress Total */
+            progress_total?: number | null;
+            /** Current Progress */
+            current_progress?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -228,6 +517,16 @@ export interface components {
             notes: string | null;
             /** Cover Image */
             cover_image: string | null;
+            progress_unit: components["schemas"]["ProgressUnit"] | null;
+            /** Progress Total */
+            progress_total: number | null;
+            /** Current Progress */
+            current_progress: number | null;
+            /**
+             * Has History
+             * @default false
+             */
+            has_history: boolean;
             /**
              * Created At
              * Format: date-time
@@ -263,6 +562,11 @@ export interface components {
             notes?: string | null;
             /** Cover Image */
             cover_image?: string | null;
+            progress_unit?: components["schemas"]["ProgressUnit"] | null;
+            /** Progress Total */
+            progress_total?: number | null;
+            /** Current Progress */
+            current_progress?: number | null;
         };
         /** ExternalSearchResponse */
         ExternalSearchResponse: {
@@ -280,6 +584,26 @@ export interface components {
             type: components["schemas"]["EntryType"];
             /** Source */
             source: string;
+            /** Progress Total */
+            progress_total?: string | null;
+            /** Slug */
+            slug?: string | null;
+        };
+        /**
+         * GameDetailResponse
+         * @description Respuesta del endpoint de detalle de un juego externo (RAWG).
+         *
+         *     `playtime_raw` es el campo original de RAWG en minutos.
+         *     `playtime_hours` es la conversión a Decimal con 2 decimales para usar
+         *     directamente como `progress_total` en horas (unidad fija de games).
+         */
+        GameDetailResponse: {
+            /** Slug */
+            slug: string;
+            /** Playtime Raw */
+            playtime_raw?: number | null;
+            /** Playtime Hours */
+            playtime_hours?: string | null;
         };
         /** GoogleLoginRequest */
         GoogleLoginRequest: {
@@ -310,6 +634,109 @@ export interface components {
             limit: number;
             /** Total Pages */
             total_pages: number;
+        };
+        /**
+         * PaginatedProgressHistoryResponse
+         * @description Schema para la respuesta paginada del historial de progreso.
+         */
+        PaginatedProgressHistoryResponse: {
+            /** Events */
+            events: components["schemas"]["ProgressEventResponse"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
+        };
+        /**
+         * PairingCodeResponse
+         * @description Respuesta al generar un código de emparejamiento.
+         */
+        PairingCodeResponse: {
+            /** Pairing Code */
+            pairing_code: string;
+            /**
+             * Expires In
+             * @description Segundos hasta que expire el código
+             */
+            expires_in: number;
+        };
+        /**
+         * ProgressEventResponse
+         * @description Schema de respuesta para un evento de progreso.
+         */
+        ProgressEventResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Entry Id
+             * Format: uuid
+             */
+            entry_id: string;
+            /** Previous Value */
+            previous_value: number | null;
+            /** Current Value */
+            current_value: number;
+            unit: components["schemas"]["ProgressUnit"];
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Note */
+            note: string | null;
+            /** Source */
+            source: string;
+            event_type: components["schemas"]["ProgressEventType"];
+            /** User Id */
+            user_id: string | null;
+            /**
+             * Delta
+             * @description Diferencia entre el valor actual y el anterior.
+             */
+            readonly delta: number | null;
+        };
+        /**
+         * ProgressEventType
+         * @enum {string}
+         */
+        ProgressEventType: "update" | "reset";
+        /**
+         * ProgressResetRequest
+         * @description Schema para solicitar el reinicio del seguimiento de una entrada.
+         */
+        ProgressResetRequest: {
+            /** Reason */
+            reason?: string | null;
+            /** New Type */
+            new_type?: string | null;
+            /** New Progress Total */
+            new_progress_total?: number | null;
+        };
+        /**
+         * ProgressUnit
+         * @enum {string}
+         */
+        ProgressUnit: "episodes" | "chapters" | "volumes" | "minutes" | "percentage" | "hours";
+        /**
+         * ProgressUpdateRequest
+         * @description Schema para actualizar manualmente el progreso.
+         */
+        ProgressUpdateRequest: {
+            /** New Value */
+            new_value: number;
+            /** Note */
+            note?: string | null;
+            /**
+             * Mark Completed
+             * @default false
+             */
+            mark_completed: boolean;
         };
         /** RegisterResponse */
         RegisterResponse: {
@@ -348,6 +775,35 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** UserProfileResponse */
+        UserProfileResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Username */
+            username: string | null;
+            /** Avatar Url */
+            avatar_url: string;
+            /** Bio */
+            bio: string | null;
+        };
+        /** UserProfileUpdate */
+        UserProfileUpdate: {
+            /**
+             * Username
+             * @description Nombre de usuario público. Alfanumérico + underscore, 3-20 chars.
+             */
+            username?: string | null;
+            /**
+             * Bio
+             * @description Biografía pública del usuario. Máximo 500 caracteres.
+             */
+            bio?: string | null;
         };
         /** UserResponse */
         UserResponse: {
@@ -701,6 +1157,216 @@ export interface operations {
             };
         };
     };
+    reset_progress_api_v1_entries__entry_id__progress_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_progress_api_v1_entries__entry_id__progress_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_progress_history_api_v1_entries__entry_id__progress_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedProgressHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_api_v1_users_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+        };
+    };
+    update_profile_api_v1_users_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_avatar_api_v1_users_me_avatar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_avatar_api_v1_users_me_avatar_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_avatar_api_v1_users_me_avatar_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+        };
+    };
     search_external_api_v1_external_search_get: {
         parameters: {
             query: {
@@ -721,6 +1387,139 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ExternalSearchResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_game_detail_api_v1_external_games__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_pairing_code_api_v1_devices_pair_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairingCodeResponse"];
+                };
+            };
+        };
+    };
+    activate_device_api_v1_devices_activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivateDeviceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_devices_api_v1_devices__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceListResponse"];
+                };
+            };
+        };
+    };
+    revoke_device_api_v1_devices__device_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

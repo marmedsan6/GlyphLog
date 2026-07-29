@@ -59,17 +59,15 @@ export function RegisterPage() {
       <div className="fixed right-4 top-4 z-50">
         <ThemeToggle />
       </div>
-      <Card className="w-full max-w-sm mx-4">
+      <Card className="mx-4 w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Crear cuenta</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Empieza a gestionar tu colección
-          </p>
+          <p className="text-sm text-muted-foreground">Empieza a gestionar tu colección</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="bg-destructive/10 rounded-md p-3 text-sm text-destructive">
                 {error}
               </div>
             )}

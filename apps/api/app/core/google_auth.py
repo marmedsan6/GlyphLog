@@ -5,6 +5,7 @@ Este módulo aísla toda la dependencia con `google-auth` en un único punto.
 - Es trivial de mockear en tests monkeypatchando `verify_google_id_token`.
 - Migrar a otro proveedor (Auth0, Cognito) en el futuro solo toca este archivo.
 """
+
 from __future__ import annotations
 
 from typing import Any

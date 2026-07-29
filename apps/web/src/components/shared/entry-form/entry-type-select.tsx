@@ -1,11 +1,5 @@
 import { useFormContext } from 'react-hook-form'
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { cn } from '@/lib/utils'
 import { disabledBgOpacity } from '@/lib/tailwind-opacity'
 import type { EntryType } from '@/types'
@@ -42,6 +36,7 @@ export function EntryTypeSelect({ disabled = false }: EntryTypeSelectProps) {
                 // Al cambiar el tipo, resetear estado a 'watching' para mantener
                 // coherencia con las labels traducidas.
                 setValue('status', 'watching')
+                // La unidad de progreso se deriva automáticamente del tipo.
               }}
               className={cn(
                 'w-full rounded-md border border-input bg-background px-3 py-2 disabled:cursor-not-allowed disabled:opacity-80',

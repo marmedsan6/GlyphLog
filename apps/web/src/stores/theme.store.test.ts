@@ -49,10 +49,7 @@ describe('useThemeStore', () => {
     })
 
     expect(result.current.theme).toBe('dark')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'glyphlog-theme',
-      'dark',
-    )
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('glyphlog-theme', 'dark')
   })
 
   it('should toggle theme between light and dark', () => {
@@ -63,20 +60,14 @@ describe('useThemeStore', () => {
     })
 
     expect(result.current.theme).toBe('dark')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'glyphlog-theme',
-      'dark',
-    )
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('glyphlog-theme', 'dark')
 
     act(() => {
       result.current.toggleTheme()
     })
 
     expect(result.current.theme).toBe('light')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'glyphlog-theme',
-      'light',
-    )
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('glyphlog-theme', 'light')
   })
 
   it('should toggle from dark to light on second call', () => {

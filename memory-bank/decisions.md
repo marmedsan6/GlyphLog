@@ -17,6 +17,9 @@
 | [ADR-005](#adr-005) | PyJWT en lugar de python-jose | Aceptada | junio 2025 |
 | [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend | Aceptada | julio 2026 |
 | [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada | julio 2026 |
+| [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables | Aceptada | julio 2026 |
+| [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada | Aceptada | julio 2026 |
+| [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>` | Aceptada | julio 2026 |
 
 ---
 
@@ -308,6 +311,124 @@ A su vez, se evaluó adoptar la biblioteca de iconos `reicon-react` (basada en S
 
 ---
 
+## ADR-008
+
+### Seguimiento de progreso con unidades fijas y eventos inmutables
+
+**Fecha:** julio 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+GlyphLog permite registrar entradas de tipo anime, manga y juego. La historia de usuario #32 requiere configurar cómo se mide el progreso de una entrada (episodios, capítulos, volúmenes, minutos o porcentaje) y establecer un total opcional. También se requiere que, cuando exista historial de progreso, se bloqueen cambios incompatibles de tipo o unidad para evitar inconsistencias semánticas.
+
+Se evaluaron las opciones para modelar el progreso:
+
+1. **Solo campos en `Entry`**: `current_progress` y `progress_total` sin tabla de historial.
+2. **Tabla de eventos `progress_events`**: registros inmutables de cada cambio de progreso con `previous_value`, `current_value`, `unit`, `recorded_at`, `note`, `source` y `event_type`.
+3. **Modelo híbrido**: campos en `Entry` para estado actual + tabla de eventos para auditoría.
+
+#### Decisión
+
+Adoptar el **modelo híbrido** con las siguientes reglas:
+
+1. La tabla `entries` añade tres campos: `progress_unit`, `progress_total` y `current_progress`.
+2. Se crea la tabla `progress_events` para registrar eventos inmutables de progreso.
+3. Las unidades de progreso son **fijas por tipo de entrada**:
+   - `anime`: `episodes`
+   - `manga`: `chapters` o `volumes`
+   - `game`: `minutes` o `percentage`
+4. El progreso total es opcional y editable en cualquier momento.
+5. Si una entrada tiene al menos un evento en `progress_events`, se considera que tiene historial.
+6. Cuando hay historial, se bloquean cambios incompatibles (tipo o unidad) con respuesta **409 Conflict**.
+7. Para cambiar unidad o tipo con historial se provee una operación explícita de **reset** (`POST /api/v1/entries/{entry_id}/progress/reset`) que:
+   - Inserta un evento de tipo `reset` documentando el valor previo.
+   - Establece `current_progress = 0` y actualiza la unidad/tipo.
+   - No elimina ni modifica eventos históricos.
+8. El reset se ejecuta en una transacción con `SELECT FOR UPDATE` para evitar condiciones de carrera.
+
+#### Razones
+
+- **Inmutabilidad del historial**: conservar cada evento permite auditoría completa, gráficos de progreso futuros y evita pérdida de significado de datos históricos.
+- **Consistencia semántica**: bloquear cambios incompatibles evita que un capítulo de manga se convierta en un episodio de anime sin un proceso explícito.
+- **Operación de reset explícita**: separa la acción de "cambiar configuración" de "reiniciar seguimiento", haciendo visible para el usuario que está perdiendo continuidad de progreso actual.
+- **Unidades fijas por tipo**: simplifica la UI y reduce combinaciones inválidas. El usuario no puede elegir una unidad incompatible.
+- **Total independiente del progreso actual**: `progress_total` puede quedar vacío y se puede editar sin afectar el historial.
+
+#### Consecuencias
+
+- Mayor complejidad en el modelo de datos: nueva tabla, nuevos enums, validaciones adicionales.
+- Toda modificación de tipo o unidad debe consultar existencia de eventos en `progress_events`.
+- El frontend debe detectar el error 409 y mostrar un modal de confirmación de reset.
+- Se introduce una dependencia de transacción y bloqueo de fila en la operación de reset.
+
+#### Actualizaciones de implementación
+
+- **Campo `has_history` en `EntryResponse`**: se añadió un campo booleano calculado al schema de respuesta para que el frontend pueda mostrar el estado de historial sin necesidad de un endpoint adicional. El cálculo se realiza en `EntryService` consultando `progress_event_repo.has_events(entry_id)`. Esto simplifica la UI y mantiene la responsabilidad de negocio en el servicio.
+
+#### Alternativas consideradas
+
+- **Solo campos en `Entry`**: Descartado porque no permite detectar "historial" de forma fiable. Sin eventos inmutables, bloquear cambios sería arbitrario o imposible.
+- **Unidades libres para cualquier tipo**: Descartado porque genera combinaciones semánticamente inválidas (por ejemplo, "porcentaje" para un anime) y complica la UI.
+- **Permitir cambios incompatibles con conversión manual**: Descartado por complejidad. Convertir capítulos a volúmenes requiere reglas de negocio que no existen en el MVP.
+- **Borrar historial al cambiar unidad**: Descartado por pérdida de auditoría y datos de usuario.
+
+---
+
+## ADR-009
+
+### Unidades de progreso fijas y únicas por tipo de entrada
+
+**Fecha:** julio 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+Tras implementar el seguimiento de progreso (ADR-008), surgió la necesidad de simplificar la experiencia de usuario y eliminar combinaciones semánticamente inconsistentes. El modelo anterior permitía elegir entre varias unidades para un mismo tipo (por ejemplo, `chapters` o `volumes` para manga, `minutes` o `percentage` para juegos). La issue #37 propone fijar una única unidad de medida por tipo de entrada.
+
+#### Decisión
+
+Cada tipo de entrada tiene una **única unidad de progreso obligatoria**, gestionada íntegramente por el backend:
+
+| Tipo de entrada | Unidad fija |
+|-----------------|-------------|
+| `anime`         | `episodes`  |
+| `manga`         | `chapters`  |
+| `game`          | `hours`     |
+
+Reglas del sistema:
+
+1. El backend deriva la unidad a partir del `entry_type` (`FIXED_UNIT_BY_TYPE`).
+2. El campo `progress_unit` se mantiene en BD para poder escalar en el futuro, pero los schemas de creación/actualización ya no lo aceptan.
+3. Las unidades `minutes` y `percentage` quedan **obsoletas para entradas nuevas**; se conservan en el enum de BD para compatibilidad con datos históricos y timeline.
+4. Anime y manga solo admiten valores enteros (`int`). Los juegos admiten decimales con precisión de 0.25 h.
+5. La migración de datos legacy transforma progresos en `minutes` a `hours` dividiendo por 60, y crea eventos de tipo `reset` para preservar el historial.
+6. Los valores de progreso se almacenan en columnas `Numeric(10,2)` para evitar errores de precisión con decimales.
+
+#### Razones
+
+- **Simplicidad de UX**: el usuario no elige unidad; elige tipo y la unidad se infiere.
+- **Consistencia semántica**: evita que un anime se mida en capítulos o un manga en minutos.
+- **Modelo de datos preparado para el futuro**: `progress_unit` sigue existiendo por si más adelante se permiten opciones como `volumes` para manga.
+- **Evita redondeos extraños**: `Numeric(10,2)` soporta decimales exactos en lugar de `float`.
+- **Migración no destructiva**: los datos legacy se migran a la nueva unidad y se documenta el cambio con eventos `reset` en lugar de borrar historial.
+
+#### Consecuencias
+
+- Los schemas `EntryCreate`, `EntryUpdate`, `EntryCreateForm` y `EntryUpdateForm` ya no incluyen `progress_unit`.
+- El frontend elimina el selector de unidad y muestra labels descriptivos fijos.
+- Los tests existentes que enviaban `progress_unit` deben actualizarse.
+- Se añade validación en backend para rechazar unidades incompatibles explícitas con 422.
+- Los juegos muestran incrementos rápidos de `+0.5 h` y un step de input de `0.25`.
+
+#### Alternativas consideradas
+
+- **Eliminar `progress_unit` de la BD**: Descartado porque limitaría futuras extensiones (por ejemplo, volúmenes para manga). Se prefirió mantener la columna y forzar el valor desde la aplicación.
+- **Permitir múltiples unidades por tipo**: Descartado por ser la situación previa que causaba inconsistencias.
+- **Convertir minutos a horas redondeando a entero**: Descartado para no perder precisión en el historial migrado. Se usó división exacta y se documentó el cambio con eventos `reset`.
+
+---
+
 ## Template para nuevas decisiones
 
 Copiar y rellenar para cada nueva decisión:
@@ -345,3 +466,94 @@ Copiar y rellenar para cada nueva decisión:
 - **Alternativa A:** Por qué se descartó.
 - **Alternativa B:** Por qué se descartó.
 ```
+
+---
+
+## ADR-010
+
+### Extensión: Permisos limitados a Crunchyroll, NO `<all_urls>`
+
+**Fecha:** julio 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+En la issue #40, se implementó una extensión de Chrome que detecta media (anime/manga/juegos) en sitios web e integra la UI de GlyphLog directamente en la página con un overlay discreto.
+
+Al definir los permisos en el manifest de la extensión, surgió la pregunta: ¿debería la extensión solicitar permiso para acceder a todas las URLs (`<all_urls>`) o solo a sitios específicos como Crunchyroll?
+
+#### Decisión
+
+La extensión solicita **host_permissions solo para Crunchyroll** y la API de GlyphLog, **rechazando explícitamente `<all_urls>`**.
+
+```javascript
+"host_permissions": [
+  "http://localhost:8000/*",
+  "https://www.crunchyroll.com/*"
+]
+```
+
+Los adaptadores para futuras plataformas (Netflix, etc.) se agregarán con ADRs y cambios explícitos del manifest.
+
+#### Razones
+
+1. **Privacidad y seguridad:** Reducir permisos minimiza el surface de ataque y el impacto potencial si la extensión es comprometida. Una extensión con `<all_urls>` podría acceder a cualquier página (emails, banca, redes sociales).
+
+2. **Confianza del usuario:** Los permisos explícitos y limitados generan confianza. Los usuarios de Chrome recibirán una notificación clara: "Esta extensión puede acceder a crunchyroll.com".
+
+3. **Transparencia:** Cada nuevo sitio es una decisión consciente, no una escalada oculta de permisos.
+
+4. **Mantenibilidad:** Los adapters están diseñados para ser modulares. Agregar Netflix = agregar uno nuevo adapter + actualizar manifest + nueva ADR. No hay sorpresas.
+
+#### Consecuencias
+
+- **Primer lanzamiento:** Solo Crunchyroll. Las issues #41 (Netflix) y #42 (otros sitios) requieren updates explícitas del manifest y aprobación del usuario.
+- **UX negativa si se instala con múltiples sites:** Si una futura versión aguanta 10 plataformas, Chrome mostrará 10 advertencias de permisos. Es aceptable porque cada una fue revisada.
+- **Alternativa rechazada (peor UX):** Hacer que `<all_urls>` sea en install-time y cada adapter nuevo sea un update silencioso que el usuario nunca ve.
+
+#### Alternativas consideradas
+
+- **`<all_urls>` desde el inicio:** Rechazado. Viola privacidad y genera desconfianza. Aunque es "más flexible", no vale la pena.
+- **Solicitar `<all_urls>` dinámicamente en runtime:** Rechazado. Chrome no permite esto. Los permisos deben estar en el manifest.
+- **Content script inyectado solo en Crunchyroll, `<all_urls>` para la background API:** Rechazado. El background también solo necesita localhost para pairing, no acceso a todas las URLs.
+
+---
+
+## Template para nuevas decisiones
+
+Copiar y rellenar para cada nueva decisión:
+
+```markdown
+## ADR-XXX
+
+### Título de la decisión
+
+**Fecha:** [mes año]
+**Estado:** [Propuesta | Aceptada | Rechazada | Reemplazada por ADR-XXX]
+
+#### Contexto
+
+¿Qué situación llevó a tomar esta decisión? ¿Qué opciones existían?
+
+#### Decisión
+
+¿Qué se decidió hacer exactamente?
+
+#### Razones
+
+- Razón 1
+- Razón 2
+- Razón 3
+
+#### Consecuencias
+
+- ¿Qué implica esta decisión? ¿Qué se gana y qué se pierde?
+- ¿Hay deuda técnica introducida?
+- ¿Hay pasos de seguimiento necesarios?
+
+#### Alternativas consideradas
+
+- **Alternativa A:** Por qué se descartó.
+- **Alternativa B:** Por qué se descartó.
+```
+

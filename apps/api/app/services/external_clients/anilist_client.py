@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from decimal import Decimal, InvalidOperation
 
 import httpx
 
@@ -10,12 +11,15 @@ logger = logging.getLogger(__name__)
 
 # Consulta GraphQL que obtiene anime y manga en una sola petición.
 # Usamos alias (anime/manga) para diferenciar los dos bloques de resultados.
+# Pedimos `episodes` (anime) y `chapters` (manga) para precargar el total
+# esperado del progreso desde el catálogo (issue #38).
 SEARCH_QUERY = """
 query ($search: String) {
   anime: Page(perPage: 5) {
     media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
       title { english romaji }
       seasonYear
+      episodes
       coverImage { large }
     }
   }
@@ -23,11 +27,22 @@ query ($search: String) {
     media(search: $search, type: MANGA, sort: SEARCH_MATCH) {
       title { english romaji }
       startDate { year }
+      chapters
       coverImage { large }
     }
   }
 }
 """
+
+
+def _to_decimal_or_none(value: int | None) -> Decimal | None:
+    """Convierte un int de AniList a Decimal, devolviendo None si es None o 0."""
+    if value is None or value == 0:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
 
 
 class AniListClient:
@@ -65,9 +80,7 @@ class AniListClient:
 
                     # AniList retorna errores GraphQL en el body con campo "errors"
                     if "errors" in body and "data" not in body:
-                        logger.warning(
-                            f"AniList returned GraphQL errors: {body['errors']}"
-                        )
+                        logger.warning(f"AniList returned GraphQL errors: {body['errors']}")
                         return None
 
                     return self._parse_response(body.get("data", {}))
@@ -97,17 +110,13 @@ class AniListClient:
                     await asyncio.sleep(delay)
                     delay *= 2
                     continue
-                logger.error(
-                    f"Network error querying AniList after {attempt + 1} attempts: {e}"
-                )
+                logger.error(f"Network error querying AniList after {attempt + 1} attempts: {e}")
                 return None
             except Exception as e:
                 logger.error(f"Unexpected error querying AniList: {e}")
                 return None
 
-    def _parse_response(
-        self, data: dict
-    ) -> list[ExternalSearchResult]:
+    def _parse_response(self, data: dict) -> list[ExternalSearchResult]:
         """Convierte la respuesta GraphQL de AniList en ExternalSearchResult."""
         results: list[ExternalSearchResult] = []
 
@@ -126,6 +135,7 @@ class AniListClient:
                     cover_image=item.get("coverImage", {}).get("large"),
                     type=EntryType.anime,
                     source="AniList",
+                    progress_total=_to_decimal_or_none(item.get("episodes")),
                 )
             )
 
@@ -149,6 +159,7 @@ class AniListClient:
                     cover_image=item.get("coverImage", {}).get("large"),
                     type=EntryType.manga,
                     source="AniList",
+                    progress_total=_to_decimal_or_none(item.get("chapters")),
                 )
             )
 

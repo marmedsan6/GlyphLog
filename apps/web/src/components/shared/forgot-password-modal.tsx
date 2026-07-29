@@ -34,10 +34,12 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg space-y-4 animate-in fade-in zoom-in-95 duration-150">
+    <div className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-6 shadow-lg duration-150 animate-in fade-in zoom-in-95">
         <div className="space-y-2 text-center">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">Recuperar contraseña</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Recuperar contraseña
+          </h2>
           <p className="text-sm text-muted-foreground">
             Introduce tu correo electrónico para enviarte un enlace de restablecimiento.
           </p>
@@ -55,13 +57,8 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
                 required
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -77,13 +74,12 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
                 En un entorno de producción, recibirías un email en <strong>{email}</strong>.
               </p>
             </div>
-            <p className="text-xs text-muted-foreground leading-normal">
-              Al tratarse de un MVP formativo, el backend de envío no está configurado. Si necesitas acceso manual, contacta al administrador en <span className="underline">soporte@glyphlog.com</span>.
+            <p className="text-xs leading-normal text-muted-foreground">
+              Al tratarse de un MVP formativo, el backend de envío no está configurado. Si necesitas
+              acceso manual, contacta al administrador en{' '}
+              <span className="underline">soporte@glyphlog.com</span>.
             </p>
-            <Button
-              onClick={handleClose}
-              className="w-full"
-            >
+            <Button onClick={handleClose} className="w-full">
               Entendido
             </Button>
           </div>

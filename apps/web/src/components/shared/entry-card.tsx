@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCoverImageUrl } from '@/utils/cover-image-url'
 import { getStatusLabel, getTypeLabel } from '@/utils/entry-labels'
 import type { EntryListItem } from '@/types'
+import { QuickProgressButton } from './quick-progress-button'
+import { InlineProgressEditor } from './inline-progress-editor'
 
 interface EntryCardProps {
   entry: EntryListItem
@@ -16,8 +18,11 @@ export function EntryCard({ entry }: EntryCardProps) {
   const typeLabel = getTypeLabel(entry.type)
 
   return (
-    <Link to={`/entries/${entry.id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
-      <Card className="overflow-hidden h-full transition-shadow hover:shadow-md">
+    <Link
+      to={`/entries/${entry.id}`}
+      className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
         <div className="relative aspect-[3/4] bg-muted">
           {coverUrl ? (
             <img
@@ -32,6 +37,7 @@ export function EntryCard({ entry }: EntryCardProps) {
               <span className="text-xs">Sin imagen</span>
             </div>
           )}
+          <QuickProgressButton entry={entry} />
         </div>
         <CardHeader className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -40,6 +46,11 @@ export function EntryCard({ entry }: EntryCardProps) {
           </div>
           <CardTitle className="mt-2 text-lg leading-tight">{entry.title}</CardTitle>
         </CardHeader>
+        {(entry.progress_unit || entry.current_progress != null) && (
+          <CardContent className="px-4 pt-0 pb-2">
+            <InlineProgressEditor entry={entry} />
+          </CardContent>
+        )}
         {entry.rating != null && (
           <CardContent className="p-4 pt-0">
             <p className="text-sm text-muted-foreground">

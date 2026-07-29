@@ -7,21 +7,19 @@ No requiere PostgreSQL corriendo.
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-import pytest
 from httpx import AsyncClient
 
 from app.services.entry_service import EntryService
 from tests.factories import (
-    make_entry,
-    make_user,
+    clear_overrides,
     client,  # noqa: F401  # fixture compartido
     entry_service,  # noqa: F401  # fixture compartido
+    make_entry,
+    make_user,
     mock_entry_repo,  # noqa: F401  # fixture compartido
     override_current_user,
     override_entry_service,
-    clear_overrides,
 )
-
 
 # Bytes mínimos válidos de una imagen PNG (magic bytes + chunk IHDR vacío)
 VALID_PNG_BYTES = (

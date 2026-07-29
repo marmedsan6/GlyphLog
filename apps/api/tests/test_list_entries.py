@@ -12,26 +12,24 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from app.models.entry import EntryStatus, EntryType
-from app.repositories.entry_repository import EntryRepository
+from app.models.entry import EntryType
 from app.schemas.entry import (
     EntryListItem,
     PaginatedEntryResponse,
     SortField,
     SortOrder,
 )
-from app.services.entry_service import InvalidPaginationError, EntryService
+from app.services.entry_service import EntryService, InvalidPaginationError
 from tests.factories import (
+    clear_overrides,
+    client,  # noqa: F401  # fixture compartido
+    entry_service,  # noqa: F401  # fixture compartido
     make_entry,
     make_user,
     mock_entry_repo,  # noqa: F401  # fixture compartido
-    entry_service,  # noqa: F401  # fixture compartido
-    client,  # noqa: F401  # fixture compartido
     override_current_user,
     override_entry_service,
-    clear_overrides,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
