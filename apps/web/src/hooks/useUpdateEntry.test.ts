@@ -20,15 +20,17 @@ function makeEntry(overrides: Partial<EntryResponse> = {}): EntryResponse {
     year: 1999,
     notes: 'Notas',
     cover_image: null,
+    progress_unit: null,
+    progress_total: null,
+    current_progress: null,
+    has_history: false,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
     ...overrides,
   }
 }
 
-function makeFormData(
-  overrides: Partial<EntryUpdateFormData> = {}
-): EntryUpdateFormData {
+function makeFormData(overrides: Partial<EntryUpdateFormData> = {}): EntryUpdateFormData {
   return {
     title: 'One Piece',
     type: 'anime',
@@ -36,6 +38,7 @@ function makeFormData(
     rating: '9.5',
     year: '1999',
     notes: 'Notas',
+    progress_total: null,
     ...overrides,
   }
 }

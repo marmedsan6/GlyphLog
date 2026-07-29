@@ -72,7 +72,7 @@ export function SearchBar() {
   return (
     <div ref={containerRef} className="relative w-full max-w-sm sm:max-w-md">
       <div className="relative flex items-center">
-        <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
           value={query}
@@ -88,7 +88,7 @@ export function SearchBar() {
           }}
           placeholder="Buscar en mi colección..."
           className={cn(
-            'w-full h-9 pl-9 pr-8 text-sm rounded-full border border-border focus:border-primary/50 focus:bg-background focus:outline-none transition-all duration-200',
+            'focus:border-primary/50 h-9 w-full rounded-full border border-border pl-9 pr-8 text-sm transition-all duration-200 focus:bg-background focus:outline-none',
             bgOpacity.muted[0.5]
           )}
           aria-label="Buscar en la colección"
@@ -96,7 +96,7 @@ export function SearchBar() {
         {query && (
           <button
             onClick={handleClear}
-            className="absolute right-3 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Limpiar búsqueda"
           >
             <X className="h-3.5 w-3.5" />
@@ -108,12 +108,12 @@ export function SearchBar() {
       {isOpen && hasMinLength && (
         <div
           className={cn(
-            'absolute top-full left-0 right-0 z-50 mt-1.5 p-1.5 rounded-xl border border-border backdrop-blur-md text-popover-foreground shadow-lg animate-in fade-in-50 slide-in-from-top-1 duration-200',
+            'absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-border p-1.5 text-popover-foreground shadow-lg backdrop-blur-md duration-200 animate-in fade-in-50 slide-in-from-top-1',
             bgOpacity.popover[0.9]
           )}
         >
           {isLoading ? (
-            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground gap-2">
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span>Buscando...</span>
             </div>
@@ -129,7 +129,7 @@ export function SearchBar() {
                       navigate(`/entries/${entry.id}`)
                     }}
                     className={cn(
-                      'w-full flex items-center gap-3 p-2 rounded-lg text-left active:bg-muted transition-colors duration-150',
+                      'flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors duration-150 active:bg-muted',
                       hoverBgOpacity.muted[0.7]
                     )}
                   >
@@ -137,28 +137,28 @@ export function SearchBar() {
                       <img
                         src={coverUrl}
                         alt={entry.title}
-                        className="h-10 w-7.5 rounded object-cover border border-border/50 shadow-sm"
+                        className="w-7.5 border-border/50 h-10 rounded border object-cover shadow-sm"
                       />
                     ) : (
-                      <div className="h-10 w-7.5 rounded bg-gradient-to-br from-primary/20 to-accent/20 border border-border/50 flex items-center justify-center text-[10px] font-semibold text-muted-foreground uppercase shadow-sm">
+                      <div className="w-7.5 from-primary/20 to-accent/20 border-border/50 flex h-10 items-center justify-center rounded border bg-gradient-to-br text-[10px] font-semibold uppercase text-muted-foreground shadow-sm">
                         {entry.type[0]}
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate leading-snug">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold leading-snug text-foreground">
                         {entry.title}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="mt-0.5 flex items-center gap-2">
                         <Badge
                           variant="secondary"
                           className={cn(
-                            'h-4.5 px-1.5 py-0 text-[10px] font-medium leading-none rounded-full text-accent-foreground',
+                            'h-4.5 rounded-full px-1.5 py-0 text-[10px] font-medium leading-none text-accent-foreground',
                             bgOpacity.accent[0.4]
                           )}
                         >
                           {getTypeLabel(entry.type)}
                         </Badge>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="truncate text-[11px] text-muted-foreground">
                           {getStatusLabel(entry.type, entry.status)}
                         </span>
                       </div>
@@ -166,10 +166,10 @@ export function SearchBar() {
                   </button>
                 )
               })}
-              <div className="border-t border-border/50 mt-1.5 pt-1.5 px-1 pb-1">
+              <div className="border-border/50 mt-1.5 border-t px-1 pb-1 pt-1.5">
                 <button
                   onClick={() => handleSearchSubmit(query)}
-                  className="w-full h-8 text-xs text-center font-medium text-primary hover:text-primary-foreground hover:bg-primary rounded-md transition-colors duration-150"
+                  className="h-8 w-full rounded-md text-center text-xs font-medium text-primary transition-colors duration-150 hover:bg-primary hover:text-primary-foreground"
                 >
                   Ver todos los resultados para "{query.trim()}"
                 </button>

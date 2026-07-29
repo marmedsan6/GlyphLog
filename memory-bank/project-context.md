@@ -119,6 +119,68 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
   - Integrada la **View Transitions API** nativa en el cambio de tema, permitiendo una animación circular con desenfoque (blur) desde el botón al cambiar.
   - Implementado fallback gracioso para navegadores que no soportan la API nativa de transición.
   - Integrada la dependencia `reicon-react` de forma aislada, utilizando sus iconos `Sun` y `Moon` en `ThemeToggle` para evaluar la biblioteca.
+- Perfil de usuario (historia #31):
+  - Añadidas columnas `username`, `avatar_filename` y `bio` al modelo `User` con migración Alembic e índice único case-insensitive (`LOWER(username)`).
+  - Nuevos endpoints `/api/v1/users/me`: GET, PATCH, POST avatar y DELETE avatar.
+  - Avatar subido validado por magic bytes, tamaño máx 2MB y convertido a WebP con Pillow; guardado como `{user_id}.webp` en `/uploads/avatars/`.
+  - Avatar generado por DiceBear (`pixel-art` style, seed=UUID) como fallback.
+  - Frontend: página `/profile`, componente `ProfileAvatar`, hooks `useProfile`, `useUpdateProfile`, `useUploadAvatar`, `useDeleteAvatar`.
+  - Header actualizado con dropdown de perfil: "Mi perfil" y "Cerrar sesión".
+  - Tests: 197 backend + 62 frontend = **259 passing**
+  - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
+
+- Seguimiento de progreso (historias #32 y #33):
+  - Backend: modelo `ProgressEvent` con tabla inmutable `progress_events`, enums `ProgressUnit` y `ProgressEventType`.
+  - Campos `progress_unit`, `progress_total` y `current_progress` en `Entry` con validaciones de BD.
+  - Migración Alembic `2026_07_17_0841_c2d0c6a36954_add_progress_tracking`.
+  - Endpoint `POST /api/v1/entries/{entry_id}/progress/reset` para reiniciar progreso con transacción y `SELECT FOR UPDATE`.
+  - Endpoint `POST /api/v1/entries/{entry_id}/progress` para actualizar progreso manual creando un `ProgressEvent` de tipo `update` en la misma transacción (`SELECT FOR UPDATE`).
+  - Bloqueo de cambios incompatibles de tipo/unidad cuando existe historial (409 Conflict).
+  - Campo calculado `has_history` en `EntryResponse` para facilitar el frontend.
+  - Frontend: componente `ProgressConfigSelector` integrado en formularios de creación y edición.
+  - Hook `useResetProgress`, servicio `resetProgress` y modal `ResetProgressModal` para reiniciar progreso.
+  - Hook `useUpdateProgress`, servicio `updateProgress` y modal interactivo `UpdateProgressModal` para actualizar progreso (con ajuste +/- rápido, nota y prompt inteligente para marcar completada la entrada).
+  - Sección de progreso en `EntryDetailView` integrada con botón de actualización manual.
+  - Tests: 233 backend + 66 frontend = **299 passing**
+  - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
+
+- Unidades de progreso fijas por tipo (issue #37):
+  - Backend: unidad única derivada del tipo (`anime` → `episodes`, `manga` → `chapters`, `game` → `hours`).
+  - Schemas `EntryCreate` y `EntryUpdate` eliminan `progress_unit`; `EntryResponse` lo mantiene para compatibilidad.
+  - `current_progress`, `progress_total` y valores de `ProgressEvent` migran a `Numeric(10,2)`.
+  - Anime y manga: solo enteros; juegos: decimales con step 0.25 y quick-add `+0.5 h`.
+  - Migración Alembic `2026_07_19_1205_3da18b312194_fix_progress_units_to_single_unit_per_type`: convierte `minutes` → `hours` y crea eventos `reset` para entradas legacy con historial.
+  - Frontend: `ProgressConfigSelector` ahora muestra un label fijo en lugar de un selector; formularios no envían `progress_unit`.
+  - `UpdateProgressModal` adapta step y labels según el tipo de entrada.
+  - Tests: 250 backend + 66 frontend = **316 passing**
+  - Lint: ruff ✅, eslint ✅, tsc ✅, build ✅
+  - ADR: `memory-bank/decisions.md` → ADR-009.
+
+- GlyphLog Companion — Extensión de Chrome y tokens de dispositivo (historia #36):
+  - Backend: modelo `DeviceToken` con hashes SHA-256, expiración rolling a los 90 días y revocación manual.
+  - Códigos de emparejamiento efímeros (6 caracteres, TTL 5 minutos, de un solo uso).
+  - Autenticación flexible en `security.py` (`get_current_user_flexible`): acepta JWT o Device Token (prefijo `dt_`).
+  - Audibilidad: el origen de los eventos de progreso distingue `source="browser_extension"` vs `source="web"`.
+  - Extensión Chrome MV3 (`apps/extension`): popup vanilla JS con búsqueda con debounce, actualización de progreso con botones +/- rápidos y almacenamiento en `chrome.storage.local`. Permisos mínimos (`storage`, `host_permissions` de API, sin `<all_urls>`).
+  - Frontend SPA (`apps/web`): sección **Dispositivos** en `/profile` con el componente `DeviceManager`, generación de código con temporizador de 5 min y diálogo de revocación.
+  - Tests: 242 backend + 103 frontend = **345 passing**
+  - Build & Lint: tsc ✅, eslint ✅, build ✅
+
+- Precargar `progress_total` desde APIs externas (historia #38):
+  - Backend:
+    - Schema `ExternalSearchResult` añade `progress_total: Decimal | None` y `slug: str | None`.
+    - Cliente AniList: GraphQL pide `episodes` (anime) y `chapters` (manga) y mapea a `progress_total`.
+    - Cliente RAWG: el listado ahora expone `slug`; nuevo método `get_game_detail` para obtener `playtime` del endpoint `/games/{slug}`.
+    - Nuevo endpoint `GET /api/v1/external/games/{slug}` que devuelve `GameDetailResponse` con caché de 5 minutos.
+    - Degradación elegante: si RAWG no está configurado o el juego no existe, devuelve `playtime_hours=None`.
+  - Frontend:
+    - Regenerados tipos OpenAPI (`GameDetailResponse`, campo `progress_total` en `ExternalSearchResult`).
+    - Nuevo servicio `getGameDetail` y hook `useGetGameDetail`.
+    - `ExternalSearchAutocomplete`: autocompleta `progress_total` directamente para anime/manga desde AniList; para juegos lanza lazy fetch a RAWG al seleccionar.
+    - `ProgressConfigSelector`: botón "＋ Total" (popover) solo para anime/manga; badge de origen (`AniList` / `RAWG` / `Manual`) bajo el input.
+    - Estado del origen (`ProgressTotalSource`) manejado en `CreateEntryPage` y propagado a los componentes.
+  - Tests: 264 backend + 122 frontend = **386 passing**
+  - Lint: ruff ✅ (app/), eslint ✅, tsc ✅, build ✅
 
 ---
 
@@ -248,7 +310,7 @@ Estas decisiones están pendientes y deben documentarse en `decisions.md` cuando
 - **Sistema de autenticación concreto:** JWT implementado manualmente vs. librería (python-jose, authlib). Cuándo expiran los tokens. Refresh tokens o no. *(Resuelto: ver ADR-005. Login con JWT manual con PyJWT, tokens expiran en 60 min.)*
 - **Login social:** ~~si se implementará Google OAuth u otros proveedores en el MVP o se deja para post-MVP.~~ *(Resuelto: Google OAuth implementado, ver ADR-006. Otros proveedores pendientes.)*
 - **Estrategia de recuperación de contraseña:** email con enlace, código OTP, o simplemente no en MVP.
-- **Modelado del progreso por tipo de contenido:** si episodios/capítulos/horas se modelan en la tabla principal o en tablas separadas.
+- **Modelado del progreso por tipo de contenido:** ~~si episodios/capítulos/horas se modelan en la tabla principal o en tablas separadas.~~ *(Resuelto: unidades fijas en campos de `Entry` con tabla `progress_events` para historial; ver ADR-008 y ADR-009.)*
 - **Hosting del frontend:** Netlify, Vercel, GitHub Pages u otra opción.
 - **Estrategia de testing E2E:** si se usan datos de test reales en BD o se mockea la API.
 

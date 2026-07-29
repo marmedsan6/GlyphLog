@@ -120,7 +120,7 @@ export function ImageUploader({
           <img
             src={previewUrl}
             alt="Portada"
-            className="w-full h-40 object-cover rounded-md border border-border"
+            className="h-40 w-full rounded-md border border-border object-cover"
           />
           {showClearButton && (
             <Button
@@ -128,7 +128,7 @@ export function ImageUploader({
               variant="destructive"
               size="icon"
               onClick={handleClear}
-              className="absolute top-1 right-1 h-6 w-6 rounded-full"
+              className="absolute right-1 top-1 h-6 w-6 rounded-full"
               aria-label={newPreview ? 'Quitar imagen seleccionada' : 'Eliminar imagen de portada'}
             >
               <X className="h-3 w-3" />

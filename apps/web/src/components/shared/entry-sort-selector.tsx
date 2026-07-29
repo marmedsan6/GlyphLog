@@ -52,10 +52,10 @@ export function EntrySortSelector({ sortBy, sortOrder, onSortChange }: EntrySort
             <DropdownMenuRadioItem
               key={option.value}
               value={option.value}
-              className="text-xs py-2 flex items-center justify-between cursor-pointer"
+              className="flex cursor-pointer items-center justify-between py-2 text-xs"
             >
               <span>{option.label}</span>
-              {currentValue === option.value && <Check className="h-3 w-3 text-primary ml-2" />}
+              {currentValue === option.value && <Check className="ml-2 h-3 w-3 text-primary" />}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

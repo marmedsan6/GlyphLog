@@ -55,9 +55,7 @@ describe('useEntries', () => {
 
   it('returns entries and pagination metadata on success', async () => {
     const entry = makeEntry()
-    mockGetEntries.mockResolvedValue(
-      makePaginatedResponse([entry], { total_pages: 1 })
-    )
+    mockGetEntries.mockResolvedValue(makePaginatedResponse([entry], { total_pages: 1 }))
 
     const { result } = renderHook(() => useEntries(), {
       wrapper: TestQueryProvider,

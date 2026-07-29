@@ -18,6 +18,7 @@ import type { components } from './api'
 
 export type EntryType = components['schemas']['EntryType']
 export type EntryStatus = components['schemas']['EntryStatus']
+export type ProgressUnit = components['schemas']['ProgressUnit']
 
 export type EntryResponse = components['schemas']['EntryResponse']
 export type EntryListItem = components['schemas']['EntryListItem']
@@ -26,8 +27,13 @@ export type SortField = components['schemas']['SortField']
 export type SortOrder = components['schemas']['SortOrder']
 export type ExternalSearchResult = components['schemas']['ExternalSearchResult']
 export type ExternalSearchResponse = components['schemas']['ExternalSearchResponse']
+export type GameDetailResponse = components['schemas']['GameDetailResponse']
 
 export type User = components['schemas']['UserResponse']
+
+export type UserProfileResponse = components['schemas']['UserProfileResponse']
+export type UserProfileUpdate = components['schemas']['UserProfileUpdate']
+export type AvatarUploadResponse = components['schemas']['AvatarUploadResponse']
 
 export type LoginRequest = components['schemas']['LoginRequest']
 export type LoginResponse = components['schemas']['TokenResponse']
@@ -48,6 +54,8 @@ export interface EntryCreate {
   rating?: number | null
   year?: number | null
   notes?: string | null
+  progress_unit?: ProgressUnit | null
+  progress_total?: number | null
   cover_image?: File | string | null
 }
 
@@ -68,5 +76,6 @@ export interface EntryUpdateFormData {
   rating: string | null
   year: string | null
   notes: string | null
+  progress_total: string | null
   cover_image?: File | null
 }

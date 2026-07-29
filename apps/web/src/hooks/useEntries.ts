@@ -111,4 +111,3 @@ export function useEntries(): UseEntriesResult {
     refetch: query.refetch,
   }
 }
-

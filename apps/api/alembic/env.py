@@ -16,7 +16,7 @@ from alembic import context
 
 # Importar settings y modelos para que Alembic detecte todos los cambios
 from app.core.config import settings
-from app.models import entry, user  # noqa: F401 — registra los modelos en Base.metadata
+from app.models import entry, progress_event, user  # noqa: F401 — registra los modelos en Base.metadata
 from app.models.base import Base
 
 config = context.config

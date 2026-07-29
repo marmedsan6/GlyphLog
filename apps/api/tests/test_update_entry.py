@@ -7,23 +7,21 @@ No requiere PostgreSQL corriendo.
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-import pytest
 from httpx import AsyncClient
 
 from app.models.entry import EntryStatus, EntryType
 from app.schemas.entry import EntryUpdate
 from app.services.entry_service import EntryService
 from tests.factories import (
+    clear_overrides,
+    client,  # noqa: F401  # fixture compartido
+    entry_service,  # noqa: F401  # fixture compartido
     make_entry,
     make_user,
     mock_entry_repo,  # noqa: F401  # fixture compartido
-    entry_service,  # noqa: F401  # fixture compartido
-    client,  # noqa: F401  # fixture compartido
     override_current_user,
     override_entry_service,
-    clear_overrides,
 )
-
 
 # ---------------------------------------------------------------------------
 # Tests de integración HTTP
@@ -50,7 +48,9 @@ class TestUpdateEntryEndpoint:
             notes="Updated notes",
             cover_image="/uploads/covers/updated.jpg",
         )
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -94,7 +94,9 @@ class TestUpdateEntryEndpoint:
             user_id=user.id,
             title="One Piece (Renamed)",
         )
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -120,7 +122,7 @@ class TestUpdateEntryEndpoint:
     ) -> None:
         """Actualizar entrada inexistente → 404."""
         user = make_user()
-        mock_entry_repo.update.return_value = None
+        mock_entry_repo.get_by_id.return_value = None
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -142,7 +144,7 @@ class TestUpdateEntryEndpoint:
         user = make_user()
         other_user = make_user()
         entry = make_entry(user_id=other_user.id)
-        mock_entry_repo.update.return_value = None
+        mock_entry_repo.get_by_id.return_value = None
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -153,7 +155,8 @@ class TestUpdateEntryEndpoint:
             )
 
             assert response.status_code == 404
-            mock_entry_repo.update.assert_awaited_once()
+            mock_entry_repo.update.assert_not_awaited()
+            mock_entry_repo.get_by_id.assert_awaited_once_with(entry.id, user.id)
         finally:
             clear_overrides()
 
@@ -165,6 +168,8 @@ class TestUpdateEntryEndpoint:
 
         user = make_user()
         entry = make_entry(user_id=user.id)
+        mock_entry_repo.get_by_id.return_value = entry
+        entry_service.progress_event_repo.has_events.return_value = False
         mock_entry_repo.update.side_effect = IntegrityError(
             statement="UPDATE entries",
             params={},
@@ -346,7 +351,9 @@ class TestUpdateEntryEndpoint:
         user = make_user()
         entry = make_entry(user_id=user.id, rating=8.5)
         updated_entry = make_entry(entry_id=entry.id, user_id=user.id, rating=None)
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -370,7 +377,9 @@ class TestUpdateEntryEndpoint:
         user = make_user()
         entry = make_entry(user_id=user.id, year=1999)
         updated_entry = make_entry(entry_id=entry.id, user_id=user.id, year=None)
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -394,7 +403,9 @@ class TestUpdateEntryEndpoint:
         user = make_user()
         entry = make_entry(user_id=user.id, notes="Notas previas")
         updated_entry = make_entry(entry_id=entry.id, user_id=user.id, notes=None)
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 
@@ -418,7 +429,9 @@ class TestUpdateEntryEndpoint:
         user = make_user()
         entry = make_entry(user_id=user.id, cover_image="/uploads/covers/old.jpg")
         updated_entry = make_entry(entry_id=entry.id, user_id=user.id, cover_image=None)
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
+        entry_service.progress_event_repo.has_events.return_value = False
         override_current_user(user)
         override_entry_service(entry_service)
 

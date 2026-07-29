@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.core.dependencies import get_entry_service
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user, get_current_user_flexible
 from app.core.uploads import save_cover_image
 from app.models.entry import EntryType
 from app.models.user import User
@@ -16,6 +16,11 @@ from app.schemas.entry import (
     PaginatedEntryResponse,
     SortField,
     SortOrder,
+)
+from app.schemas.progress import (
+    PaginatedProgressHistoryResponse,
+    ProgressResetRequest,
+    ProgressUpdateRequest,
 )
 from app.services.entry_service import EntryService, InvalidPaginationError
 
@@ -30,12 +35,12 @@ async def list_entries(
     sort_order: SortOrder = SortOrder.desc,
     page: int = 1,
     limit: int = 15,
-    current_user: User = Depends(get_current_user),
+    auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: EntryService = Depends(get_entry_service),
 ) -> PaginatedEntryResponse:
     try:
         return await service.get_all(
-            user_id=current_user.id,
+            user_id=auth.id,
             entry_type=type,
             search=search,
             sort_by=sort_by,
@@ -54,7 +59,7 @@ async def list_entries(
 async def create_entry(
     form_data: EntryCreateForm = Depends(),
     cover_image: UploadFile | None = File(None),
-    current_user: User = Depends(get_current_user),
+    auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse | JSONResponse:
     # Validar datos del formulario PRIMERO (antes de guardar archivos)
@@ -74,16 +79,16 @@ async def create_entry(
         cover_image_path = await save_cover_image(cover_image)
         data.cover_image = cover_image_path
 
-    return await service.create(user_id=current_user.id, data=data)
+    return await service.create(user_id=auth.id, data=data)
 
 
 @router.get("/{entry_id}", response_model=EntryResponse)
 async def get_entry(
     entry_id: UUID,
-    current_user: User = Depends(get_current_user),
+    auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: EntryService = Depends(get_entry_service),
 ) -> EntryResponse:
-    return await service.get_by_id(entry_id=entry_id, user_id=current_user.id)
+    return await service.get_by_id(entry_id=entry_id, user_id=auth.id)
 
 
 @router.put("/{entry_id}", response_model=EntryResponse)
@@ -110,7 +115,53 @@ async def upload_cover_image(
     )
 
 
+@router.post("/{entry_id}/progress/reset", response_model=EntryResponse)
+async def reset_progress(
+    entry_id: UUID,
+    data: ProgressResetRequest,
+    current_user: User = Depends(get_current_user),
+    service: EntryService = Depends(get_entry_service),
+) -> EntryResponse:
+    return await service.reset_progress(
+        entry_id=entry_id,
+        user_id=current_user.id,
+        data=data,
+    )
+
+
+@router.post("/{entry_id}/progress", response_model=EntryResponse)
+async def update_progress(
+    entry_id: UUID,
+    data: ProgressUpdateRequest,
+    auth: AuthenticatedUser = Depends(get_current_user_flexible),
+    service: EntryService = Depends(get_entry_service),
+) -> EntryResponse:
+    return await service.update_progress(
+        entry_id=entry_id,
+        user_id=auth.id,
+        data=data,
+        source=auth.source,
+    )
+
+
+@router.get("/{entry_id}/progress/history", response_model=PaginatedProgressHistoryResponse)
+async def get_progress_history(
+    entry_id: UUID,
+    limit: int = 20,
+    cursor: str | None = None,
+    current_user: User = Depends(get_current_user),
+    service: EntryService = Depends(get_entry_service),
+) -> PaginatedProgressHistoryResponse:
+    return await service.get_progress_history(
+        entry_id=entry_id,
+        user_id=current_user.id,
+        limit=limit,
+        cursor=cursor,
+    )
+
+
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+
 async def delete_entry(
     entry_id: UUID,
     current_user: User = Depends(get_current_user),

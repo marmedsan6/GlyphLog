@@ -40,3 +40,10 @@ export function getApiErrorMessage(err: unknown): string {
 
   return 'Error inesperado. Inténtalo de nuevo.'
 }
+
+/**
+ * Determina si un error de API es un conflicto 409.
+ */
+export function isConflictError(err: unknown): boolean {
+  return isAxiosError(err) && err.response?.status === 409
+}

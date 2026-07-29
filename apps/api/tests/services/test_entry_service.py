@@ -14,12 +14,11 @@ from app.models.entry import EntryStatus, EntryType
 from app.schemas.entry import EntryUpdate
 from app.services.entry_service import EntryService
 from tests.factories import (
+    entry_service,  # noqa: F401  # fixture compartido
     make_entry,
     make_user,
     mock_entry_repo,  # noqa: F401  # fixture compartido
-    entry_service,  # noqa: F401  # fixture compartido
 )
-
 
 # ---------------------------------------------------------------------------
 # Tests de EntryService.get_by_id
@@ -95,6 +94,7 @@ class TestEntryServiceUpdate:
             notes="Updated notes",
             cover_image="/uploads/covers/new.jpg",
         )
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.return_value = updated_entry
 
         data = EntryUpdate(
@@ -120,7 +120,7 @@ class TestEntryServiceUpdate:
         self, entry_service: EntryService, mock_entry_repo: AsyncMock
     ) -> None:
         """Actualizar entrada inexistente → 404."""
-        mock_entry_repo.update.return_value = None
+        mock_entry_repo.get_by_id.return_value = None
         data = EntryUpdate(title="New title")
 
         with pytest.raises(HTTPException) as exc_info:
@@ -133,7 +133,7 @@ class TestEntryServiceUpdate:
         self, entry_service: EntryService, mock_entry_repo: AsyncMock
     ) -> None:
         """Actualizar entrada de otro usuario → 404."""
-        mock_entry_repo.update.return_value = None
+        mock_entry_repo.get_by_id.return_value = None
         data = EntryUpdate(title="New title")
 
         with pytest.raises(HTTPException) as exc_info:
@@ -148,6 +148,8 @@ class TestEntryServiceUpdate:
         from sqlalchemy.exc import IntegrityError
 
         user = make_user()
+        entry = make_entry(user_id=user.id)
+        mock_entry_repo.get_by_id.return_value = entry
         mock_entry_repo.update.side_effect = IntegrityError(
             statement="UPDATE entries",
             params={},
@@ -156,7 +158,7 @@ class TestEntryServiceUpdate:
         data = EntryUpdate(title="Duplicate", type=EntryType.anime)
 
         with pytest.raises(HTTPException) as exc_info:
-            await entry_service.update(uuid4(), user.id, data)
+            await entry_service.update(entry.id, user.id, data)
 
         assert exc_info.value.status_code == 409
         assert "ya tienes una entrada" in exc_info.value.detail.lower()

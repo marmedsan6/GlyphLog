@@ -4,16 +4,14 @@ import type {
   EntryResponse,
   EntryUpdateFormData,
   PaginatedEntryResponse,
+  ProgressUnit,
+  EntryType,
 } from '@/types'
 import type { components, paths } from '@/types/api'
 
-export type GetEntriesParams = NonNullable<
-  paths['/api/v1/entries/']['get']['parameters']['query']
->
+export type GetEntriesParams = NonNullable<paths['/api/v1/entries/']['get']['parameters']['query']>
 
-export async function getEntries(
-  params?: GetEntriesParams
-): Promise<PaginatedEntryResponse> {
+export async function getEntries(params?: GetEntriesParams): Promise<PaginatedEntryResponse> {
   const response = await apiClient.get<PaginatedEntryResponse>('/entries/', {
     params,
   })
@@ -25,27 +23,17 @@ export async function getEntry(id: string): Promise<EntryResponse> {
   return response.data
 }
 
-export async function uploadCoverImage(
-  id: string,
-  file: File
-): Promise<EntryResponse> {
+export async function uploadCoverImage(id: string, file: File): Promise<EntryResponse> {
   const formData = new FormData()
   formData.append('cover_image', file)
 
-  const response = await apiClient.post<EntryResponse>(
-    `/entries/${id}/cover`,
-    formData,
-    {
-      headers: { 'Content-Type': undefined },
-    }
-  )
+  const response = await apiClient.post<EntryResponse>(`/entries/${id}/cover`, formData, {
+    headers: { 'Content-Type': undefined },
+  })
   return response.data
 }
 
-export async function updateEntry(
-  id: string,
-  data: EntryUpdateFormData
-): Promise<EntryResponse> {
+export async function updateEntry(id: string, data: EntryUpdateFormData): Promise<EntryResponse> {
   let coverImagePath: string | null | undefined
 
   if (data.cover_image instanceof File) {
@@ -64,6 +52,7 @@ export async function updateEntry(
     rating: data.rating ? parseFloat(data.rating) : null,
     year: data.year ? parseInt(data.year, 10) : null,
     notes: data.notes?.trim() || null,
+    progress_total: data.progress_total ? parseFloat(data.progress_total) : null,
   }
 
   if (coverImagePath !== undefined) {
@@ -77,6 +66,74 @@ export async function updateEntry(
 export async function deleteEntry(id: string): Promise<void> {
   await apiClient.delete(`/entries/${id}`)
 }
+
+export interface ResetProgressData {
+  reason?: string | null
+  new_type?: EntryType | null
+  new_progress_total?: number | null
+}
+
+export async function resetProgress(id: string, data: ResetProgressData): Promise<EntryResponse> {
+  const body: components['schemas']['ProgressResetRequest'] = {
+    reason: data.reason?.trim() || null,
+    new_type: data.new_type ?? null,
+    new_progress_total: data.new_progress_total ?? null,
+  }
+
+  const response = await apiClient.post<EntryResponse>(`/entries/${id}/progress/reset`, body)
+  return response.data
+}
+
+export interface UpdateProgressData {
+  new_value: number
+  note?: string | null
+  mark_completed?: boolean
+}
+
+export async function updateProgress(id: string, data: UpdateProgressData): Promise<EntryResponse> {
+  const body: components['schemas']['ProgressUpdateRequest'] = {
+    new_value: data.new_value,
+    note: data.note?.trim() || null,
+    mark_completed: data.mark_completed ?? false,
+  }
+
+  const response = await apiClient.post<EntryResponse>(`/entries/${id}/progress`, body)
+  return response.data
+}
+
+export interface ProgressHistoryEvent {
+  id: string
+  entry_id: string
+  previous_value: number | null
+  current_value: number
+  delta: number | null
+  unit: ProgressUnit
+  recorded_at: string
+  note: string | null
+  source: string
+  event_type: 'update' | 'reset'
+  user_id: string | null
+}
+
+export interface PaginatedProgressHistory {
+  events: ProgressHistoryEvent[]
+  next_cursor: string | null
+  has_more: boolean
+}
+
+export async function getProgressHistory(
+  id: string,
+  cursor?: string | null
+): Promise<PaginatedProgressHistory> {
+  const response = await apiClient.get<PaginatedProgressHistory>(
+    `/entries/${id}/progress/history`,
+    {
+      params: cursor ? { cursor } : undefined,
+    }
+  )
+  return response.data
+}
+
 
 export async function createEntry(data: EntryCreate): Promise<EntryResponse> {
   const formData = new FormData()
@@ -93,7 +150,13 @@ export async function createEntry(data: EntryCreate): Promise<EntryResponse> {
   if (data.notes != null && data.notes !== '') {
     formData.append('notes', data.notes)
   }
-  
+  if (data.progress_unit != null) {
+    formData.append('progress_unit', data.progress_unit)
+  }
+  if (data.progress_total != null) {
+    formData.append('progress_total', String(data.progress_total))
+  }
+
   if (data.cover_image != null) {
     if (data.cover_image instanceof File) {
       formData.append('cover_image', data.cover_image)

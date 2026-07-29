@@ -15,11 +15,19 @@ interface ImageCropperProps {
   imageSrc: string
   open: boolean
   fileName?: string
+  aspect?: number
   onConfirm: (croppedFile: File) => void
   onCancel: () => void
 }
 
-export function ImageCropper({ imageSrc, open, fileName, onConfirm, onCancel }: ImageCropperProps) {
+export function ImageCropper({
+  imageSrc,
+  open,
+  fileName,
+  aspect = 3 / 4,
+  onConfirm,
+  onCancel,
+}: ImageCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
@@ -53,12 +61,12 @@ export function ImageCropper({ imageSrc, open, fileName, onConfirm, onCancel }: 
         </AlertDialogHeader>
 
         {/* Contenedor del cropper */}
-        <div className="relative w-full h-80 rounded-md overflow-hidden bg-muted border border-border">
+        <div className="relative h-80 w-full overflow-hidden rounded-md border border-border bg-muted">
           <Cropper
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={3 / 4}
+            aspect={aspect}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
@@ -69,7 +77,7 @@ export function ImageCropper({ imageSrc, open, fileName, onConfirm, onCancel }: 
         </div>
 
         {/* Control de zoom */}
-        <div className="space-y-1.5 mt-2">
+        <div className="mt-2 space-y-1.5">
           <label htmlFor="zoom-range" className="text-xs font-medium text-muted-foreground">
             Zoom: {zoom.toFixed(1)}x
           </label>
@@ -81,7 +89,7 @@ export function ImageCropper({ imageSrc, open, fileName, onConfirm, onCancel }: 
             step={0.1}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-secondary accent-primary"
           />
         </div>
 

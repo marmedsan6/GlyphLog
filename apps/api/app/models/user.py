@@ -3,13 +3,15 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Index, String
+from sqlalchemy import Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.device_token import DeviceToken
     from app.models.entry import Entry
+    from app.models.progress_event import ProgressEvent
 
 
 # El índice único parcial solo aplica a usuarios OAuth (provider != "local").
@@ -45,10 +47,33 @@ class User(Base, TimestampMixin):
     # NULL para usuarios locales. La unicidad (provider, provider_id) se garantiza
     # con el índice parcial definido a nivel de módulo.
     provider_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Identidad pública del usuario. Almacenado en minúsculas para evitar
+    # colisiones case-insensitive. Puede ser NULL mientras no se configure.
+    # La unicidad case-insensitive se garantiza con el índice funcional
+    # ix_users_username_lower definido en __table_args__.
+    username: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Nombre de archivo del avatar subido, almacenado en /uploads/avatars/.
+    # NULL cuando el usuario usa el avatar generado por DiceBear.
+    avatar_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Biografía pública del usuario. Opcional, máximo 500 caracteres.
+    bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     entries: Mapped[list[Entry]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    progress_events: Mapped[list[ProgressEvent]] = relationship(
+        back_populates="user",
+    )
+    device_tokens: Mapped[list[DeviceToken]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
-    __table_args__ = (_ix_users_provider_provider_id,)
+    __table_args__ = (
+        _ix_users_provider_provider_id,
+        # Índice único case-insensitive sobre username. PostgreSQL permite
+        # múltiples NULLs en un índice unique, así que usuarios sin username
+        # configurado no colisionan entre sí.
+        Index("ix_users_username_lower", func.lower(username), unique=True),
+    )

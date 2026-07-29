@@ -10,10 +10,12 @@ import { getApiErrorMessage } from '@/utils/api-errors'
 import {
   EntryFormFields,
   entryFormSchema,
+  FIXED_PROGRESS_UNIT,
   ImageUploader,
   validateImageFile,
   ExternalSearchAutocomplete,
   type EntryFormValues,
+  type ProgressTotalSource,
 } from '@/components/shared/entry-form'
 
 export function CreateEntryPage() {
@@ -22,6 +24,7 @@ export function CreateEntryPage() {
   const [coverImage, setCoverImage] = useState<File | null>(null)
   const [remoteCoverUrl, setRemoteCoverUrl] = useState<string | null>(null)
   const [isAutocompleted, setIsAutocompleted] = useState(false)
+  const [progressTotalSource, setProgressTotalSource] = useState<ProgressTotalSource | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -34,6 +37,7 @@ export function CreateEntryPage() {
       rating: '',
       year: '',
       notes: '',
+      progress_total: '',
     },
   })
 
@@ -63,6 +67,8 @@ export function CreateEntryPage() {
         rating: values.rating ? parseFloat(values.rating) : null,
         year: values.year ? parseInt(values.year, 10) : null,
         notes: values.notes?.trim() || null,
+        progress_unit: FIXED_PROGRESS_UNIT[values.type],
+        progress_total: values.progress_total ? parseFloat(values.progress_total) : null,
         cover_image: coverImage || remoteCoverUrl,
       })
       navigate('/collection')
@@ -73,7 +79,7 @@ export function CreateEntryPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background py-8">
-      <Card className="w-full max-w-md mx-4">
+      <Card className="mx-4 w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Nueva entrada</CardTitle>
         </CardHeader>
@@ -81,7 +87,7 @@ export function CreateEntryPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {(apiError || mutationError) && (
-                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="bg-destructive/10 rounded-md p-3 text-sm text-destructive">
                   {apiError || mutationError?.message}
                 </div>
               )}
@@ -97,10 +103,15 @@ export function CreateEntryPage() {
                 }}
                 isAutocompleted={isAutocompleted}
                 setIsAutocompleted={setIsAutocompleted}
+                onProgressTotalSource={setProgressTotalSource}
               />
 
-              <EntryFormFields isAutocompleted={isAutocompleted} />
-              
+              <EntryFormFields
+                isAutocompleted={isAutocompleted}
+                progressTotalSource={progressTotalSource}
+                onProgressTotalSource={setProgressTotalSource}
+              />
+
               <ImageUploader
                 currentImageUrl={remoteCoverUrl}
                 selectedImage={coverImage}

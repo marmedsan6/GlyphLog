@@ -1,13 +1,7 @@
 import { useFormContext } from 'react-hook-form'
 import { Input } from '@/components/ui/input'
 import { bgOpacity } from '@/lib/tailwind-opacity'
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   ENTRY_NOTES_MAX_LENGTH,
   MAX_RATING,
@@ -25,8 +19,8 @@ export function OptionalFields({ disabledYear = false }: OptionalFieldsProps) {
   const { control } = useFormContext<EntryFormValues>()
 
   return (
-    <div className="border-t border-border pt-4 mt-2">
-      <p className="text-sm text-muted-foreground mb-3">Campos opcionales</p>
+    <div className="mt-2 border-t border-border pt-4">
+      <p className="mb-3 text-sm text-muted-foreground">Campos opcionales</p>
       <div className="space-y-4">
         <FormField
           control={control}
@@ -65,7 +59,9 @@ export function OptionalFields({ disabledYear = false }: OptionalFieldsProps) {
                   max={MAX_YEAR}
                   placeholder="Ej: 2024"
                   readOnly={disabledYear}
-                  className={disabledYear ? `${bgOpacity.muted[0.5]} cursor-not-allowed opacity-80` : ''}
+                  className={
+                    disabledYear ? `${bgOpacity.muted[0.5]} cursor-not-allowed opacity-80` : ''
+                  }
                   {...field}
                   value={field.value ?? ''}
                 />
@@ -92,7 +88,7 @@ export function OptionalFields({ disabledYear = false }: OptionalFieldsProps) {
                   rows={4}
                   maxLength={ENTRY_NOTES_MAX_LENGTH}
                   placeholder="Tus notas sobre esta entrada..."
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
+                  className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm"
                   {...field}
                   value={field.value ?? ''}
                 />

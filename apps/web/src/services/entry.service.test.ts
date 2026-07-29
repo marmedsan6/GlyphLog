@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { uploadCoverImage, updateEntry } from './entry.service'
+import { uploadCoverImage, updateEntry, updateProgress } from './entry.service'
 import { apiClient } from '@/lib/api-client'
 import type { EntryResponse, EntryUpdateFormData } from '@/types'
 
@@ -19,15 +19,17 @@ function makeEntry(overrides: Partial<EntryResponse> = {}): EntryResponse {
     year: 1999,
     notes: 'Notas',
     cover_image: null,
+    progress_unit: null,
+    progress_total: null,
+    current_progress: null,
+    has_history: false,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
     ...overrides,
   }
 }
 
-function makeFormData(
-  overrides: Partial<EntryUpdateFormData> = {}
-): EntryUpdateFormData {
+function makeFormData(overrides: Partial<EntryUpdateFormData> = {}): EntryUpdateFormData {
   return {
     title: 'One Piece',
     type: 'anime',
@@ -35,6 +37,7 @@ function makeFormData(
     rating: '9.5',
     year: '1999',
     notes: 'Notas',
+    progress_total: '12',
     ...overrides,
   }
 }
@@ -51,11 +54,9 @@ describe('uploadCoverImage', () => {
 
     const result = await uploadCoverImage('entry-1', file)
 
-    expect(mockPost).toHaveBeenCalledWith(
-      '/entries/entry-1/cover',
-      expect.any(FormData),
-      { headers: { 'Content-Type': undefined } }
-    )
+    expect(mockPost).toHaveBeenCalledWith('/entries/entry-1/cover', expect.any(FormData), {
+      headers: { 'Content-Type': undefined },
+    })
     expect(result).toEqual(response)
   })
 })
@@ -76,11 +77,9 @@ describe('updateEntry', () => {
 
     const result = await updateEntry('entry-1', makeFormData({ cover_image: file }))
 
-    expect(mockPost).toHaveBeenCalledWith(
-      '/entries/entry-1/cover',
-      expect.any(FormData),
-      { headers: { 'Content-Type': undefined } }
-    )
+    expect(mockPost).toHaveBeenCalledWith('/entries/entry-1/cover', expect.any(FormData), {
+      headers: { 'Content-Type': undefined },
+    })
 
     expect(mockPut).toHaveBeenCalledWith('/entries/entry-1', {
       title: 'One Piece',
@@ -89,6 +88,7 @@ describe('updateEntry', () => {
       rating: 9.5,
       year: 1999,
       notes: 'Notas',
+      progress_total: 12,
       cover_image: '/uploads/covers/new.png',
     })
 
@@ -120,3 +120,28 @@ describe('updateEntry', () => {
     expect(body).not.toHaveProperty('cover_image')
   })
 })
+
+describe('updateProgress', () => {
+  beforeEach(() => {
+    mockPost.mockReset()
+  })
+
+  it('sends a POST request to /entries/{id}/progress with data', async () => {
+    const response = makeEntry({ current_progress: 5 })
+    mockPost.mockResolvedValue({ data: response })
+
+    const result = await updateProgress('entry-1', {
+      new_value: 5,
+      note: 'Avanzando un poco',
+      mark_completed: false,
+    })
+
+    expect(mockPost).toHaveBeenCalledWith('/entries/entry-1/progress', {
+      new_value: 5,
+      note: 'Avanzando un poco',
+      mark_completed: false,
+    })
+    expect(result).toEqual(response)
+  })
+})
+

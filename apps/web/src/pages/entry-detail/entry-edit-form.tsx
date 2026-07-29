@@ -16,7 +16,11 @@ import type { EntryResponse } from '@/types'
 
 export interface EntryEditFormProps {
   entry: EntryResponse
-  onSubmit: (values: EntryFormValues, coverImage: File | null, keepCoverImage: boolean) => Promise<void>
+  onSubmit: (
+    values: EntryFormValues,
+    coverImage: File | null,
+    keepCoverImage: boolean
+  ) => Promise<void>
   onCancel: () => void
   isSubmitting: boolean
 }
@@ -37,6 +41,7 @@ export function EntryEditForm({ entry, onSubmit, onCancel, isSubmitting }: Entry
       rating: entry.rating?.toString() ?? '',
       year: entry.year?.toString() ?? '',
       notes: entry.notes ?? '',
+      progress_total: entry.progress_total?.toString() ?? '',
     },
   })
 
@@ -49,6 +54,7 @@ export function EntryEditForm({ entry, onSubmit, onCancel, isSubmitting }: Entry
       rating: entry.rating?.toString() ?? '',
       year: entry.year?.toString() ?? '',
       notes: entry.notes ?? '',
+      progress_total: entry.progress_total?.toString() ?? '',
     })
     setKeepCoverImage(true)
     setSelectedImage(null)
@@ -69,9 +75,7 @@ export function EntryEditForm({ entry, onSubmit, onCancel, isSubmitting }: Entry
 
   function handleCancel(): void {
     if (form.formState.isDirty || selectedImage !== null || !keepCoverImage) {
-      const confirmed = window.confirm(
-        'Tienes cambios sin guardar. ¿Seguro que quieres cancelar?'
-      )
+      const confirmed = window.confirm('Tienes cambios sin guardar. ¿Seguro que quieres cancelar?')
       if (!confirmed) {
         return
       }

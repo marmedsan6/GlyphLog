@@ -1,15 +1,20 @@
 import uuid
+from io import BytesIO
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
+from PIL import Image
 
 # Directorio de uploads — se crea bajo demanda (no en import time)
 # para evitar PermissionError cuando el named volume de Docker
 # tiene permisos de root y la app corre como appuser.
 UPLOAD_DIR = Path("uploads/covers")
+AVATAR_DIR = Path("uploads/avatars")
 
-# Tamaño máximo: 5MB
+# Tamaño máximo: 5MB para portadas, 2MB para avatares.
 MAX_FILE_SIZE = 5 * 1024 * 1024
+MAX_AVATAR_SIZE = 2 * 1024 * 1024
 
 
 def _ensure_upload_dir() -> None:
@@ -20,6 +25,17 @@ def _ensure_upload_dir() -> None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error de permisos al crear directorio de uploads. Contacta al administrador.",
+        )
+
+
+def _ensure_avatar_dir() -> None:
+    """Crea el directorio de avatares si no existe. Lanza 500 si falla."""
+    try:
+        AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error de permisos al crear directorio de avatares. Contacta al administrador.",
         )
 
 
@@ -34,14 +50,8 @@ def _detect_extension(content: bytes) -> str | None:
     return None
 
 
-async def save_cover_image(file: UploadFile) -> str:
-    """Valida y guarda una imagen de portada. Retorna la ruta relativa."""
-    _ensure_upload_dir()
-
-    # Leer el contenido completo para validar magic bytes y tamaño
-    content = await file.read()
-
-    # Validar magic bytes — no confiar en content_type del cliente
+def _validate_image(content: bytes, max_size: int) -> None:
+    """Valida magic bytes y tamaño de una imagen. Lanza 422 si falla."""
     extension = _detect_extension(content)
     if extension is None:
         raise HTTPException(
@@ -49,18 +59,55 @@ async def save_cover_image(file: UploadFile) -> str:
             detail="Formato de imagen no válido. Usa JPG, PNG o WebP.",
         )
 
-    # Validar tamaño
-    if len(content) > MAX_FILE_SIZE:
+    if len(content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="La imagen no puede superar los 5MB.",
+            detail=f"La imagen no puede superar los {max_size // (1024 * 1024)}MB.",
         )
 
-    # Generar nombre único con UUID para evitar colisiones
+
+async def save_cover_image(file: UploadFile) -> str:
+    """Valida y guarda una imagen de portada. Retorna la ruta relativa."""
+    _ensure_upload_dir()
+
+    content = await file.read()
+    _validate_image(content, MAX_FILE_SIZE)
+
+    extension = _detect_extension(content)
     filename = f"{uuid.uuid4()}{extension}"
     filepath = UPLOAD_DIR / filename
-
     filepath.write_bytes(content)
 
-    # Retornar ruta relativa para almacenar en BD y servir estáticamente
     return f"/uploads/covers/{filename}"
+
+
+async def save_avatar(file: UploadFile, user_id: UUID) -> str:
+    """Valida, convierte a WebP y guarda un avatar. Retorna la ruta relativa."""
+    _ensure_avatar_dir()
+
+    content = await file.read()
+    _validate_image(content, MAX_AVATAR_SIZE)
+
+    # Convertir siempre a WebP para optimizar tamaño.
+    try:
+        source_image = Image.open(BytesIO(content))
+        rgb_image = source_image.convert("RGB")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="No se pudo procesar la imagen. Asegúrate de que sea un archivo válido.",
+        ) from exc
+
+    filename = f"{user_id}.webp"
+    filepath = AVATAR_DIR / filename
+
+    rgb_image.save(filepath, format="WEBP", quality=85, method=6)
+
+    return f"/uploads/avatars/{filename}"
+
+
+def delete_avatar_file(filename: str) -> None:
+    """Elimina un archivo de avatar del disco. Ignora si no existe."""
+    filepath = AVATAR_DIR / filename
+    if filepath.exists():
+        filepath.unlink()
