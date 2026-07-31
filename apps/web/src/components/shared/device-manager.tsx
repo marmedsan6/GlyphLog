@@ -15,6 +15,8 @@ import {
 import { useDevices, useGeneratePairingCode, useRevokeDevice } from '@/hooks/use-devices'
 import { useToast } from '@/hooks/use-toast'
 
+const EXTENSION_DOWNLOAD_URL = '/extension/glyphlog-companion.zip'
+
 export function DeviceManager() {
   const { data: devices, isLoading, error, refetch } = useDevices()
   const generateMutation = useGeneratePairingCode()
@@ -107,7 +109,26 @@ export function DeviceManager() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Pairing code alert banner */}
+        {/* Extension download banner */}
+        <div className="rounded-lg border bg-muted/40 p-4 flex items-start gap-4">
+          <span className="text-2xl select-none">⬡</span>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium">GlyphLog Companion — Extensión de Chrome</p>
+            <p className="text-xs text-muted-foreground">
+              Registra animes y actualiza tu progreso directamente desde Crunchyroll, AnimeFLV y MangaDex.
+            </p>
+          </div>
+          <a
+            href={EXTENSION_DOWNLOAD_URL}
+            download="glyphlog-companion.zip"
+            className="shrink-0"
+          >
+            <Button variant="outline" size="sm">
+              Descargar extensión
+            </Button>
+          </a>
+        </div>
+        {/* Pairing code alert banner — aparece al generar código */}
         {pairingCode && (
           <div className="rounded-lg border border-primary/50 bg-primary/10 p-4 text-center space-y-2">
             <p className="text-sm font-medium text-primary">

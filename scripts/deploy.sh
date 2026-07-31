@@ -32,6 +32,27 @@ fi
 echo "🔄 Actualizando código..."
 git pull origin main
 
+echo "📦 Actualizando extensión Chrome..."
+# Requiere Node.js y pnpm instalados en el servidor. Si no están disponibles,
+# se omite este paso (el zip anterior queda tal cual en public/extension/).
+if command -v pnpm &> /dev/null; then
+    cd apps/extension
+    pnpm install --frozen-lockfile --ignore-scripts
+    pnpm build
+    cd ../..
+    mkdir -p apps/web/public/extension
+    # Empaqueta solo el contenido de chrome-mv3 (sin el directorio padre)
+    # Creamos en /tmp para evitar sobreescribir el zip activo con zip -r (que añade en vez de reemplazar)
+    cd apps/extension/.output/chrome-mv3
+    zip -r /tmp/glyphlog-companion.zip . -x '*.map'
+    cp /tmp/glyphlog-companion.zip ../../../../apps/web/public/extension/glyphlog-companion.zip
+    rm /tmp/glyphlog-companion.zip
+    cd ../../../..
+    echo "✅ Extension zip actualizado"
+else
+    echo "⚠️  pnpm no encontrado — se mantiene el zip previo de la extensión"
+fi
+
 echo "🐳 Reconstruyendo y levantando contenedores de producción..."
 docker compose -f docker-compose.prod.yml up -d --build
 
