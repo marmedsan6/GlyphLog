@@ -129,3 +129,4 @@ temp/
 *.cert
 *.crt
 start-brave-extension.sh
+.hermes/
