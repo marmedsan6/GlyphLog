@@ -128,3 +128,4 @@ temp/
 *.key
 *.cert
 *.crt
+start-brave-extension.sh
