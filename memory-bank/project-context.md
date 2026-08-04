@@ -37,6 +37,8 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 
 **Fase 0 — Setup completado, CRUD completo de entradas implementado, y Google OAuth integrado en login y registro** (julio 2026)
 
+> **Agosto 2026 — Limpieza de código:** auditoría completa y limpieza de código muerto/basura git (6 commits, ver `memory-bank/sessions/session-2026-08-04-code-cleanup.md` y ADR-011).
+
 - `apps/web` scaffoldeado: Vite + React 18 + TypeScript strict + Tailwind CSS + shadcn/ui
 - Sistema de auth con JWT en sessionStorage
 - React Router v6 con rutas pública y protegidas

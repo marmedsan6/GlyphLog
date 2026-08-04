@@ -20,6 +20,7 @@
 | [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables | Aceptada | julio 2026 |
 | [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada | Aceptada | julio 2026 |
 | [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>` | Aceptada | julio 2026 |
+| [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
 
 ---
 
@@ -557,3 +558,38 @@ Copiar y rellenar para cada nueva decisión:
 - **Alternativa B:** Por qué se descartó.
 ```
 
+---
+
+## ADR-011
+
+### Autenticación por-endpoint: device tokens limitados a lectura/creación/progreso
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+La extensión Chrome (GlyphLog Companion) se autentica con device tokens (`dt_...`), mientras la SPA usa JWT. En `routers/entries.py` convivían dos dependencias: `get_current_user_flexible` (acepta ambos) y `get_current_user` (solo JWT). Una auditoría de limpieza detectó la mezcla y verificó si era un bug o una decisión.
+
+#### Decisión
+
+La división es **intencional** y se mantiene:
+
+- Endpoints con `get_current_user_flexible` (accesibles desde la extensión): `GET /entries/` (listar), `POST /entries/` (crear), `GET /entries/{id}` (detalle), `POST /entries/{id}/progress` (actualizar progreso).
+- Endpoints con `get_current_user` (solo SPA web): `PUT /entries/{id}` (editar), `POST /entries/{id}/cover` (portada), `POST /entries/{id}/progress/reset` (reset), `GET /entries/{id}/progress/history` (historial), `DELETE /entries/{id}` (borrar).
+
+#### Razones
+
+- Principio de mínimo privilegio: la extensión solo necesita buscar, añadir y registrar progreso desde páginas externas; no debe poder editar/borrar entradas ni resetear seguimiento.
+- Reducir la superficie de ataque de los device tokens (viven en `chrome.storage.local`, más expuestos que un JWT en sessionStorage).
+- Historial y reset son operaciones delicadas que requieren contexto UI completo.
+
+#### Consecuencias
+
+- Si la extensión necesita editar o resetear en el futuro, habrá que decidir entre ampliar permisos del device token o exigir JWT.
+- Los device tokens son revocables y con expiración rolling de 90 días, mitigando el riesgo de la superficie ampliada.
+
+#### Alternativas consideradas
+
+- **Unificar todo a `flexible`:** descartado por mínimo privilegio.
+- **Unificar todo a JWT:** rompería la extensión, que no debe manejar credenciales de la SPA.
