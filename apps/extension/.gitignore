@@ -1,0 +1,11 @@
+# Dependencias
+node_modules/
+
+# Build de WXT (se regenera con `pnpm build`)
+.output/
+
+# Caché de WXT
+.wxt/
+
+# Zips de distribución
+*.zip
