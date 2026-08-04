@@ -7,7 +7,8 @@ Extensión de Chrome para registrar y actualizar el progreso de tus animes, mang
 1. Abre Google Chrome y navega a `chrome://extensions/`.
 2. Activa el **Modo de desarrollador** (interruptor en la esquina superior derecha).
 3. Haz clic en **Cargar descomprimida** (Load unpacked).
-4. Selecciona la carpeta `apps/extension` de este repositorio.
+4. Selecciona la carpeta `apps/extension/.output/chrome-mv3` del repositorio
+   (generada por `pnpm --filter glyphlog-companion-extension build`; si no existe, ejecuta ese comando primero).
 5. Haz clic en el icono del rompecabezas en la barra de Chrome y fija **GlyphLog Companion**.
 
 ## 🔑 Cómo emparejar la extensión
