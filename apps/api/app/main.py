@@ -1,6 +1,4 @@
 import traceback
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, status
@@ -19,19 +17,10 @@ from app.routers.entries import router as entries_router
 from app.routers.external_search import router as external_search_router
 from app.routers.profile import router as profile_router
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup: inicializar recursos si fuera necesario
-    yield
-    # Shutdown: liberar recursos al cerrar
-
-
 app = FastAPI(
     title="GlyphLog API",
     description="API REST para gestionar colecciones de anime, manga y videojuegos.",
     version="0.1.0",
-    lifespan=lifespan,
     # Swagger y ReDoc solo activos con DEBUG=true.
     # En producción (DEBUG=false) se deshabilitan completamente.
     docs_url="/docs" if settings.debug else None,
@@ -86,15 +75,6 @@ async def validation_exception_handler(
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": "; ".join(messages)},
-    )
-
-
-@app.exception_handler(NotImplementedError)
-async def not_implemented_handler(request: Request, exc: NotImplementedError) -> JSONResponse:
-    """Maneja endpoints no implementados con 501."""
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content={"detail": "This endpoint is not yet implemented"},
     )
 
 

@@ -96,15 +96,6 @@ class EntryService:
             )
         return await self._enrich_with_history(entry)
 
-    def _is_unit_compatible(self, entry_type: EntryType, unit: ProgressUnit | None) -> bool:
-        """Comprueba si una unidad es compatible con el tipo de entrada."""
-        if unit is None:
-            return True
-        return unit == FIXED_UNIT_BY_TYPE.get(entry_type)
-
-    def _format_fixed_unit(self, entry_type: EntryType) -> str:
-        return FIXED_UNIT_BY_TYPE.get(entry_type, ProgressUnit.episodes).value
-
     async def _enrich_with_history(self, entry: Entry) -> EntryResponse:
         """Valida el EntryResponse desde un Entry y añade el flag has_history."""
         response = EntryResponse.model_validate(entry)
