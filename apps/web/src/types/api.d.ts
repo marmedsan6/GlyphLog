@@ -353,6 +353,196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/import/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse Import
+         * @description Parsea una lista de contenido con Claude/Bedrock.
+         *
+         *     **Fuentes soportadas:**
+         *     - `mal`: MyAnimeList (XML o HTML)
+         *     - `anilist`: AniList (JSON export)
+         *     - `kitsu`: Kitsu (JSON export)
+         *     - `steam`: Steam (lista de juegos)
+         *     - `text`: Texto libre
+         *
+         *     **Nota:** Este endpoint consume tokens de Bedrock (~5-15k por lista de 100 entradas).
+         */
+        post: operations["parse_import_api_v1_import_parse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/import/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Import
+         * @description Ejecuta la importación de entradas parseadas.
+         *
+         *     Crea las entradas en batch dentro de una transacción.
+         *     Las entradas duplicadas (por título) se omiten automáticamente.
+         */
+        post: operations["execute_import_api_v1_import_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recommendations/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Recommendations
+         * @description Genera recomendaciones personalizadas con Claude/Bedrock.
+         *
+         *     Analiza la colección completa del usuario (ratings, tipos, estados) y
+         *     sugiere obras nuevas basadas en sus patrones de consumo.
+         *
+         *     **Nota:** Este endpoint consume tokens de Bedrock (~30-50k por generación).
+         *
+         *     **Requisito mínimo:** 5 entradas en la colección para resultados óptimos.
+         */
+        post: operations["generate_recommendations_api_v1_recommendations_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Stats Overview
+         * @description Obtiene estadísticas completas del usuario.
+         *
+         *     Incluye:
+         *     - Total de entradas por tipo y estado
+         *     - Ratings promedio globales y por tipo
+         *     - Tasas de completado
+         *     - Distribución de ratings
+         *     - Progreso acumulado
+         *     - Timeline de entradas añadidas
+         *     - Racha de actualizaciones
+         *
+         *     **Performance**: Optimizado para <100ms con hasta 1000 entradas.
+         */
+        get: operations["get_stats_overview_api_v1_stats_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat
+         * @description Envía un mensaje a GlyphAI y recibe la respuesta en streaming (SSE).
+         *
+         *     Formato de eventos:
+         *     ```
+         *     data: {"delta": "texto"}
+         *
+         *
+         *     ...
+         *     data: [DONE]
+         *
+         *
+         *     ```
+         *
+         *     El mensaje del usuario y la respuesta (completa o parcial si hay error)
+         *     se persisten en la conversación indicada, o en una nueva si no se indica.
+         */
+        post: operations["chat_api_v1_ai_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Conversations
+         * @description Lista las conversaciones del usuario, ordenadas por `updated_at DESC`.
+         *
+         *     Excluye conversaciones huérfanas (sin mensajes).
+         */
+        get: operations["list_conversations_api_v1_ai_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Conversation
+         * @description Detalle de una conversación propia con todos sus mensajes.
+         */
+        get: operations["get_conversation_api_v1_ai_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Conversation
+         * @description Elimina una conversación propia (cascada a sus mensajes).
+         */
+        delete: operations["delete_conversation_api_v1_ai_conversations__conversation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -425,6 +615,104 @@ export interface components {
         Body_upload_cover_image_api_v1_entries__entry_id__cover_post: {
             /** Cover Image */
             cover_image: string;
+        };
+        /**
+         * ChatMessage
+         * @description Mensaje individual del historial de chat enviado por el cliente.
+         */
+        ChatMessage: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant" | "system";
+            /** Content */
+            content: string;
+        };
+        /**
+         * ChatMessageResponse
+         * @description Mensaje persistido devuelto por la API.
+         */
+        ChatMessageResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant" | "system";
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ChatRequest
+         * @description Request de chat: historial de mensajes + conversación persistente opcional.
+         *
+         *     Si `conversation_id` se omite, se crea una conversación nueva y tanto el
+         *     mensaje del usuario como la respuesta se persisten en ella. El widget
+         *     flotante (efímero) no envía `conversation_id`.
+         */
+        ChatRequest: {
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Conversation Id */
+            conversation_id?: string | null;
+        };
+        /**
+         * ConversationListItem
+         * @description Item del listado de conversaciones (sidebar de /chat).
+         */
+        ConversationListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ConversationResponse
+         * @description Conversación completa con todos sus mensajes.
+         */
+        ConversationResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Messages */
+            messages: components["schemas"]["ChatMessageResponse"][];
         };
         /**
          * DeviceListResponse
@@ -605,6 +893,33 @@ export interface components {
             /** Playtime Hours */
             playtime_hours?: string | null;
         };
+        /**
+         * GenerateRecommendationsRequest
+         * @description Request para generar recomendaciones.
+         */
+        GenerateRecommendationsRequest: {
+            /** @description Filtrar por tipo */
+            type?: components["schemas"]["EntryType"] | null;
+            /**
+             * Limit
+             * @description Número de recomendaciones
+             * @default 10
+             */
+            limit: number;
+        };
+        /**
+         * GenerateRecommendationsResponse
+         * @description Response de generación de recomendaciones.
+         */
+        GenerateRecommendationsResponse: {
+            /**
+             * Recommendations
+             * @description Recomendaciones
+             */
+            recommendations: components["schemas"]["Recommendation"][];
+            /** @description Metadata */
+            metadata: components["schemas"]["RecommendationMetadata"];
+        };
         /** GoogleLoginRequest */
         GoogleLoginRequest: {
             /** Id Token */
@@ -615,12 +930,111 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * ImportError
+         * @description Error al importar una entrada.
+         */
+        ImportError: {
+            /**
+             * Title
+             * @description Título de la entrada con error
+             */
+            title: string;
+            /**
+             * Error
+             * @description Mensaje de error
+             */
+            error: string;
+        };
+        /**
+         * ImportExecuteRequest
+         * @description Request para ejecutar la importación.
+         */
+        ImportExecuteRequest: {
+            /**
+             * Entries
+             * @description Entradas a importar (máx 500)
+             */
+            entries: components["schemas"]["ParsedEntry-Input"][];
+        };
+        /**
+         * ImportExecuteResponse
+         * @description Response de la ejecución de importación.
+         */
+        ImportExecuteResponse: {
+            /**
+             * Created
+             * @description Número de entradas creadas
+             */
+            created: number;
+            /**
+             * Skipped
+             * @description Número de entradas omitidas
+             */
+            skipped: number;
+            /**
+             * Errors
+             * @description Errores al importar
+             */
+            errors?: components["schemas"]["ImportError"][];
+        };
+        /**
+         * ImportParseRequest
+         * @description Request para parsear una lista de importación.
+         */
+        ImportParseRequest: {
+            /** @description Fuente de la lista */
+            source: components["schemas"]["ImportSource"];
+            /**
+             * Content
+             * @description Contenido de la lista
+             */
+            content: string;
+        };
+        /**
+         * ImportParseResponse
+         * @description Response del parseo de importación.
+         */
+        ImportParseResponse: {
+            /**
+             * Entries
+             * @description Entradas parseadas
+             */
+            entries: components["schemas"]["ParsedEntry-Output"][];
+            /**
+             * Warnings
+             * @description Advertencias del parseo
+             */
+            warnings?: string[];
+        };
+        /**
+         * ImportSource
+         * @description Fuentes soportadas para importación.
+         * @enum {string}
+         */
+        ImportSource: "mal" | "anilist" | "kitsu" | "steam" | "text";
         /** LoginRequest */
         LoginRequest: {
             /** Email */
             email: string;
             /** Password */
             password: string;
+        };
+        /**
+         * PaginatedConversationsResponse
+         * @description Respuesta paginada de conversaciones (mismo formato que entries).
+         */
+        PaginatedConversationsResponse: {
+            /** Conversations */
+            conversations: components["schemas"]["ConversationListItem"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Limit */
+            limit: number;
+            /** Total Pages */
+            total_pages: number;
         };
         /** PaginatedEntryResponse */
         PaginatedEntryResponse: {
@@ -662,6 +1076,96 @@ export interface components {
              * @description Segundos hasta que expire el código
              */
             expires_in: number;
+        };
+        /**
+         * ParsedEntry
+         * @description Entrada parseada por Claude desde una lista externa.
+         */
+        "ParsedEntry-Input": {
+            /**
+             * Title
+             * @description Título de la obra
+             */
+            title: string;
+            /** @description Tipo de entrada */
+            type: components["schemas"]["EntryType"];
+            /** @description Estado de seguimiento */
+            status: components["schemas"]["EntryStatus"];
+            /**
+             * Rating
+             * @description Rating de 1 a 10
+             */
+            rating?: number | null;
+            /**
+             * Current Progress
+             * @description Progreso actual
+             */
+            current_progress?: number | string | null;
+            /**
+             * Progress Total
+             * @description Progreso total
+             */
+            progress_total?: number | string | null;
+            /**
+             * Year
+             * @description Año de lanzamiento
+             */
+            year?: number | null;
+            /**
+             * Notes
+             * @description Notas del usuario
+             */
+            notes?: string | null;
+            /**
+             * Confidence
+             * @description Confianza del parseo (0.0-1.0)
+             */
+            confidence: number;
+        };
+        /**
+         * ParsedEntry
+         * @description Entrada parseada por Claude desde una lista externa.
+         */
+        "ParsedEntry-Output": {
+            /**
+             * Title
+             * @description Título de la obra
+             */
+            title: string;
+            /** @description Tipo de entrada */
+            type: components["schemas"]["EntryType"];
+            /** @description Estado de seguimiento */
+            status: components["schemas"]["EntryStatus"];
+            /**
+             * Rating
+             * @description Rating de 1 a 10
+             */
+            rating?: number | null;
+            /**
+             * Current Progress
+             * @description Progreso actual
+             */
+            current_progress?: string | null;
+            /**
+             * Progress Total
+             * @description Progreso total
+             */
+            progress_total?: string | null;
+            /**
+             * Year
+             * @description Año de lanzamiento
+             */
+            year?: number | null;
+            /**
+             * Notes
+             * @description Notas del usuario
+             */
+            notes?: string | null;
+            /**
+             * Confidence
+             * @description Confianza del parseo (0.0-1.0)
+             */
+            confidence: number;
         };
         /**
          * ProgressEventResponse
@@ -737,6 +1241,90 @@ export interface components {
              * @default false
              */
             mark_completed: boolean;
+        };
+        /**
+         * Recommendation
+         * @description Recomendación generada por Claude.
+         */
+        Recommendation: {
+            /**
+             * Title
+             * @description Título de la obra
+             */
+            title: string;
+            /** @description Tipo de entrada */
+            type: components["schemas"]["EntryType"];
+            /**
+             * Match Percentage
+             * @description Porcentaje de match (0-100)
+             */
+            match_percentage: number;
+            /**
+             * Reason
+             * @description Razón de la recomendación
+             */
+            reason: string;
+            /**
+             * Genres
+             * @description Géneros
+             */
+            genres?: string[];
+            /**
+             * Year
+             * @description Año
+             */
+            year?: number | null;
+            /**
+             * External Url
+             * @description URL externa (AniList/RAWG)
+             */
+            external_url?: string | null;
+            /**
+             * Cover Image Url
+             * @description URL de la imagen de portada
+             */
+            cover_image_url?: string | null;
+            /**
+             * Similar To
+             * @description Títulos similares de la colección
+             */
+            similar_to?: string[];
+        };
+        /**
+         * RecommendationMetadata
+         * @description Metadata de la generación de recomendaciones.
+         */
+        RecommendationMetadata: {
+            /**
+             * Analyzed Entries
+             * @description Entradas analizadas
+             */
+            analyzed_entries: number;
+            /**
+             * Favorite Genres
+             * @description Géneros favoritos
+             */
+            favorite_genres?: string[];
+            /**
+             * Avg Rating
+             * @description Rating promedio
+             */
+            avg_rating: number;
+            /**
+             * Completion Rate
+             * @description Tasa de completado (%)
+             */
+            completion_rate: number;
+            /**
+             * Tokens Used
+             * @description Tokens consumidos
+             */
+            tokens_used?: number | null;
+            /**
+             * Model
+             * @description Modelo usado
+             */
+            model: string;
         };
         /** RegisterResponse */
         RegisterResponse: {
@@ -814,6 +1402,163 @@ export interface components {
             id: string;
             /** Email */
             email: string;
+        };
+        /**
+         * UserStats
+         * @description Estadísticas completas del usuario.
+         * @example {
+         *       "avg_rating": 8.2,
+         *       "avg_rating_by_type": {
+         *         "anime": 8.5,
+         *         "game": 8.3,
+         *         "manga": 7.8
+         *       },
+         *       "by_status": {
+         *         "completed": 30,
+         *         "dropped": 2,
+         *         "on_hold": 3,
+         *         "plan_to_watch": 5,
+         *         "watching": 5
+         *       },
+         *       "by_type": {
+         *         "anime": 20,
+         *         "game": 10,
+         *         "manga": 15
+         *       },
+         *       "completion_rate": 66.7,
+         *       "completion_rate_by_type": {
+         *         "anime": 70,
+         *         "game": 70,
+         *         "manga": 60
+         *       },
+         *       "current_streak_days": 7,
+         *       "entries_by_month": [
+         *         [
+         *           "2025-08",
+         *           3
+         *         ],
+         *         [
+         *           "2025-09",
+         *           5
+         *         ],
+         *         [
+         *           "2025-10",
+         *           2
+         *         ]
+         *       ],
+         *       "rating_distribution": {
+         *         "1": 0,
+         *         "2": 0,
+         *         "3": 1,
+         *         "4": 2,
+         *         "5": 3,
+         *         "6": 5,
+         *         "7": 8,
+         *         "8": 12,
+         *         "9": 10,
+         *         "10": 4
+         *       },
+         *       "top_genres": [
+         *         [
+         *           "Action",
+         *           15
+         *         ],
+         *         [
+         *           "Fantasy",
+         *           12
+         *         ],
+         *         [
+         *           "Adventure",
+         *           10
+         *         ]
+         *       ],
+         *       "total_entries": 45,
+         *       "total_progress": {
+         *         "chapters": 350,
+         *         "episodes": 240,
+         *         "hours": 120.5
+         *       }
+         *     }
+         */
+        UserStats: {
+            /**
+             * Total Entries
+             * @description Total de entradas
+             */
+            total_entries: number;
+            /**
+             * By Type
+             * @description Entradas por tipo (anime/manga/game)
+             */
+            by_type: {
+                [key: string]: number;
+            };
+            /**
+             * By Status
+             * @description Entradas por estado (watching/completed/etc)
+             */
+            by_status: {
+                [key: string]: number;
+            };
+            /**
+             * Avg Rating
+             * @description Rating promedio global
+             */
+            avg_rating: number;
+            /**
+             * Avg Rating By Type
+             * @description Rating promedio por tipo
+             */
+            avg_rating_by_type: {
+                [key: string]: number;
+            };
+            /**
+             * Completion Rate
+             * @description Porcentaje de entradas completadas
+             */
+            completion_rate: number;
+            /**
+             * Completion Rate By Type
+             * @description Porcentaje de completado por tipo
+             */
+            completion_rate_by_type: {
+                [key: string]: number;
+            };
+            /**
+             * Top Genres
+             * @description Top 10 géneros más frecuentes (nombre, count)
+             */
+            top_genres: [
+                string,
+                number
+            ][];
+            /**
+             * Rating Distribution
+             * @description Distribución de ratings (1-10 -> count)
+             */
+            rating_distribution: {
+                [key: string]: number;
+            };
+            /**
+             * Total Progress
+             * @description Progreso acumulado por unidad (episodes/chapters/hours)
+             */
+            total_progress: {
+                [key: string]: number;
+            };
+            /**
+             * Entries By Month
+             * @description Entradas añadidas por mes (YYYY-MM, count) - últimos 12 meses
+             */
+            entries_by_month: [
+                string,
+                number
+            ][];
+            /**
+             * Current Streak Days
+             * @description Días consecutivos con actualizaciones de progreso
+             */
+            current_streak_days: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1509,6 +2254,250 @@ export interface operations {
             header?: never;
             path: {
                 device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parse_import_api_v1_import_parse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportParseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportParseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_import_api_v1_import_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportExecuteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_recommendations_api_v1_recommendations_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRecommendationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateRecommendationsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_overview_api_v1_stats_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserStats"];
+                };
+            };
+        };
+    };
+    chat_api_v1_ai_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_ai_conversations_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedConversationsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_ai_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_conversation_api_v1_ai_conversations__conversation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
             };
             cookie?: never;
         };
