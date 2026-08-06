@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.entry import Entry, EntryType
 from app.schemas.entry import EntryCreate, EntryUpdate, SortField, SortOrder
@@ -55,6 +56,7 @@ class EntryRepository:
 
         stmt = (
             self._base_query(user_id, entry_type, search)
+            .options(selectinload(Entry.progress_events))  # Eager loading para evitar N+1
             .order_by(order_expr)
             .limit(limit)
             .offset(offset)
@@ -76,7 +78,11 @@ class EntryRepository:
     async def get_by_id(self, entry_id: UUID, user_id: UUID) -> Entry | None:
         # SEGURIDAD: filtrar por entry_id Y user_id.
         # Un usuario nunca debe poder acceder a entradas de otro usuario.
-        stmt = select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+        stmt = (
+            select(Entry)
+            .options(selectinload(Entry.progress_events))  # Eager loading para evitar N+1
+            .where(Entry.id == entry_id, Entry.user_id == user_id)
+        )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
