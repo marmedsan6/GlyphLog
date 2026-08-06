@@ -1,6 +1,13 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# pytest-asyncio 1.x crea un event loop por test por defecto. Con loop por
+# test, el pool global del engine de la app (creado en el loop del primer
+# test) se rompe en Windows: "Event loop is closed". Un único loop para toda
+# la sesión restaura el comportamiento de pytest-asyncio 0.x con el que se
+# escribió la suite.
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.coverage.run]
 source = ["app"]
@@ -21,4 +28,12 @@ select = ["E", "F", "I"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+ignore_missing_imports = true
+
+# Los SDK de OpenAI y Anthropic crashean el análisis de mypy 1.16 (INTERNAL
+# ERROR en openai/_client.py). Se excluyen del análisis; sus tipos se tratan
+# como Any, que es suficiente para nuestro uso (llamadas con kwargs).
+[[tool.mypy.overrides]]
+module = ["openai.*", "anthropic.*"]
+follow_imports = "skip"
 ignore_missing_imports = true

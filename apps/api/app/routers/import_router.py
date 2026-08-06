@@ -5,10 +5,9 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.dependencies import get_bedrock_client, get_entry_repository
-from app.core.security import get_current_user
+from app.core.security import AuthenticatedUser, get_current_user
 from app.integrations.bedrock.client import BedrockClient
 from app.repositories.entry_repository import EntryRepository
-from app.schemas.auth import AuthenticatedUser
 from app.schemas.import_schema import (
     ImportExecuteRequest,
     ImportExecuteResponse,

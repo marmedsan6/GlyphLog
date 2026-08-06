@@ -14,8 +14,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.dependencies import get_entry_service, get_profile_service
-from app.core.security import AuthenticatedUser, get_current_user, get_current_user_flexible, hash_password
+from app.core.security import (
+    AuthenticatedUser,
+    get_current_user,
+    get_current_user_flexible,
+    hash_password,
+)
 from app.main import app
+from app.models.conversation import ChatMessage, Conversation
 from app.models.entry import Entry, EntryStatus, EntryType
 from app.models.user import User
 from app.repositories.entry_repository import EntryRepository
@@ -83,6 +89,41 @@ def make_user(
     )
 
 
+def make_conversation(
+    conversation_id: UUID | None = None,
+    user_id: UUID | None = None,
+    title: str = "Test conversación",
+    created_at: datetime | None = None,
+    updated_at: datetime | None = None,
+) -> Conversation:
+    """Crea una instancia de Conversation en memoria (sin sesión de BD)."""
+    now = datetime.now(timezone.utc)
+    return Conversation(
+        id=conversation_id or uuid4(),
+        user_id=user_id or uuid4(),
+        title=title,
+        created_at=created_at or now,
+        updated_at=updated_at or now,
+    )
+
+
+def make_chat_message(
+    conversation_id: UUID,
+    role: str = "user",
+    content: str = "Hola",
+    message_id: UUID | None = None,
+    created_at: datetime | None = None,
+) -> ChatMessage:
+    """Crea una instancia de ChatMessage en memoria (sin sesión de BD)."""
+    return ChatMessage(
+        id=message_id or uuid4(),
+        conversation_id=conversation_id,
+        role=role,
+        content=content,
+        created_at=created_at or datetime.now(timezone.utc),
+    )
+
+
 @pytest.fixture
 def mock_entry_repo() -> AsyncMock:
     return AsyncMock(spec=EntryRepository)
@@ -123,7 +164,9 @@ def override_current_user(user: User, source: str = "web") -> None:
     Útil en tests JWT donde se accede a endpoints protegidos por get_current_user.
     """
     app.dependency_overrides[get_current_user] = lambda: user
-    app.dependency_overrides[get_current_user_flexible] = lambda: AuthenticatedUser(user=user, source=source)
+    app.dependency_overrides[get_current_user_flexible] = lambda: AuthenticatedUser(
+        user=user, source=source
+    )
 
 
 def override_current_user_flexible(user: User, source: str = "web") -> None:
@@ -132,7 +175,9 @@ def override_current_user_flexible(user: User, source: str = "web") -> None:
     Útil en tests de device token para verificar que endpoints JWT-only rechazan
     tokens de extensión con 401.
     """
-    app.dependency_overrides[get_current_user_flexible] = lambda: AuthenticatedUser(user=user, source=source)
+    app.dependency_overrides[get_current_user_flexible] = lambda: AuthenticatedUser(
+        user=user, source=source
+    )
 
 
 def override_entry_service(service: EntryService) -> None:

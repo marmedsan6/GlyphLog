@@ -4,12 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.integrations.bedrock.client import BedrockClient
+from app.repositories.ai_repository import AIRepository
+from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.device_token_repository import DeviceTokenRepository
 from app.repositories.entry_repository import EntryRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.progress_event_repository import ProgressEventRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.services.conversation_service import ConversationService
 from app.services.device_token_service import DeviceTokenService
 from app.services.entry_service import EntryService
 from app.services.external_clients.anilist_client import AniListClient
@@ -32,6 +35,20 @@ def get_progress_event_repository(db: AsyncSession = Depends(get_db)) -> Progres
 
 def get_device_token_repository(db: AsyncSession = Depends(get_db)) -> DeviceTokenRepository:
     return DeviceTokenRepository(db)
+
+
+def get_ai_repository(db: AsyncSession = Depends(get_db)) -> AIRepository:
+    return AIRepository(db)
+
+
+def get_conversation_repository(db: AsyncSession = Depends(get_db)) -> ConversationRepository:
+    return ConversationRepository(db)
+
+
+def get_conversation_service(
+    conversation_repo: ConversationRepository = Depends(get_conversation_repository),
+) -> ConversationService:
+    return ConversationService(conversation_repo)
 
 
 def get_auth_service(

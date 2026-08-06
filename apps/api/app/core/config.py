@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     bedrock_region: str = "us-east-1"
 
+    # ── GlyphAI (Chat) ─────────────────────────────────────────────────────────
+    # Proveedor activo del chat de GlyphAI: "openai" (default) o "anthropic".
+    # Si la API key del proveedor elegido está vacía, POST /api/v1/ai/chat
+    # responde 503 (modo degradado) — el resto de la app sigue funcionando.
+    ai_provider: str = "openai"
+    # Modelos por defecto: GPT-4o-mini es el principal (~$0.15/M input); Claude
+    # Haiku es el fallback. Ambos son baratos para uso personal.
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-3-5-haiku-latest"
+
     # ── YouTube API ────────────────────────────────────────────────────────────
     # API Key para analizar canales de YouTube (discovery feature).
     # Si está vacía, el endpoint de YouTube discovery responde con 503.
