@@ -38,6 +38,12 @@ const RecommendationsPage = lazy(() =>
     default: module.RecommendationsPage,
   }))
 )
+const ChatPage = lazy(() =>
+  import('@/pages/chat/chat.page').then((module) => ({ default: module.ChatPage }))
+)
+const YoutubeDiscoveryPage = lazy(() =>
+  import('@/pages/discover/youtube').then((module) => ({ default: module.YoutubeDiscoveryPage }))
+)
 
 const router = createBrowserRouter([
   // ── Rutas públicas ─────────────────────────────────────────────────────────
@@ -91,6 +97,22 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageSkeleton />}>
                 <RecommendationsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/chat',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <ChatPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/discover/youtube',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <YoutubeDiscoveryPage />
               </Suspense>
             ),
           },
