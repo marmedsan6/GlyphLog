@@ -14,6 +14,7 @@ import { CreateEntryPage } from '@/pages/create-entry/create-entry.page'
 import { EntryDetailPage } from '@/pages/entry-detail/entry-detail.page'
 import { ImportPage } from '@/pages/import/import.page'
 import { ProfilePage } from '@/pages/profile/profile.page'
+import { RecommendationsPage } from '@/pages/recommendations/recommendations.page'
 import { NotFoundPage } from '@/pages/not-found/not-found.page'
 
 const router = createBrowserRouter([
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
           { path: '/entries/new', element: <CreateEntryPage /> },
           { path: '/entries/:id', element: <EntryDetailPage /> },
           { path: '/import', element: <ImportPage /> },
+          { path: '/recommendations', element: <RecommendationsPage /> },
           { path: '/profile', element: <ProfilePage /> },
         ],
       },
