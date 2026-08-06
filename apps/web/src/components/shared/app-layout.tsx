@@ -49,6 +49,12 @@ export function AppLayout() {
             >
               Colección
             </Link>
+            <Link
+              to="/import"
+              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              Importar
+            </Link>
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

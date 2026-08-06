@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     # Si está vacía, se omitirá la búsqueda en RAWG degradándose graciosamente.
     rawg_api_key: str = ""
 
+    # ── AWS Bedrock (Claude) ───────────────────────────────────────────────────
+    # Modelo de Claude en Bedrock para funciones de IA (importador, recomendaciones, analytics).
+    # Por defecto: Sonnet 4.5 en us-east-1.
+    # Credenciales se leen del AWS profile (default) o variables de entorno (AWS_ACCESS_KEY_ID, etc.)
+    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    bedrock_region: str = "us-east-1"
+
+    # ── YouTube API ────────────────────────────────────────────────────────────
+    # API Key para analizar canales de YouTube (discovery feature).
+    # Si está vacía, el endpoint de YouTube discovery responde con 503.
+    youtube_api_key: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

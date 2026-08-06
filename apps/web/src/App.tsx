@@ -12,6 +12,7 @@ import { RegisterPage } from '@/pages/register/register.page'
 import { CollectionPage } from '@/pages/collection/collection.page'
 import { CreateEntryPage } from '@/pages/create-entry/create-entry.page'
 import { EntryDetailPage } from '@/pages/entry-detail/entry-detail.page'
+import { ImportPage } from '@/pages/import/import.page'
 import { ProfilePage } from '@/pages/profile/profile.page'
 import { NotFoundPage } from '@/pages/not-found/not-found.page'
 
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
           { path: '/collection', element: <CollectionPage /> },
           { path: '/entries/new', element: <CreateEntryPage /> },
           { path: '/entries/:id', element: <EntryDetailPage /> },
+          { path: '/import', element: <ImportPage /> },
           { path: '/profile', element: <ProfilePage /> },
         ],
       },
