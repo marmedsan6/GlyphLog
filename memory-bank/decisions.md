@@ -22,6 +22,7 @@
 | [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>` | Aceptada | julio 2026 |
 | [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
 | [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock | Aceptada | agosto 2026 |
+| [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado | Aceptada | agosto 2026 |
 
 ---
 
@@ -594,6 +595,19 @@ La división es **intencional** y se mantiene:
 
 - **Unificar todo a `flexible`:** descartado por mínimo privilegio.
 - **Unificar todo a JWT:** rompería la extensión, que no debe manejar credenciales de la SPA.
+
+---
+
+## ADR-013
+
+### GlyphAI provider-agnostic con SSE y RAG acotado
+
+**Fecha:** agosto 2026  
+**Estado:** Aceptada
+
+GlyphAI separa la interfaz de proveedor de IA de la lógica del servicio, soporta OpenAI y Anthropic mediante configuración y expone respuestas incrementales con SSE. El contexto RAG usa únicamente la colección del usuario, prioriza entradas completadas y se limita a 3000 tokens. Las conversaciones se persisten en backend y el frontend consume el stream con `fetch` y `ReadableStream`.
+
+Esta decisión mantiene el backend sustituible entre proveedores, evita enviar datos de otros usuarios y permite respuestas progresivas tanto en el widget global como en `/chat`.
 
 ---
 

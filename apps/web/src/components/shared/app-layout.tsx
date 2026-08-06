@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { LogOut, User } from 'lucide-react'
+import { ChatWidget } from '@/components/shared/chat/chat-widget'
 import { ProfileAvatar } from '@/components/shared/profile-avatar'
 import { SearchBar } from '@/components/shared/search-bar'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
@@ -61,6 +62,12 @@ export function AppLayout() {
             >
               Recomendaciones
             </Link>
+            <Link
+              to="/chat"
+              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              Chat IA
+            </Link>
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -94,6 +101,8 @@ export function AppLayout() {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
+      {/* Widget de chat flotante: visible en todas las páginas protegidas. */}
+      <ChatWidget />
     </div>
   )
 }
