@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.rate_limiter import limiter
+from app.routers.ai import router as ai_router
 from app.routers.auth import router as auth_router
 from app.routers.devices import router as devices_router
 from app.routers.entries import router as entries_router
@@ -105,6 +106,7 @@ app.include_router(devices_router, prefix="/api/v1/devices", tags=["devices"])
 app.include_router(import_router, prefix="/api/v1", tags=["import"])
 app.include_router(recommendations_router, prefix="/api/v1", tags=["recommendations"])
 app.include_router(stats_router, prefix="/api/v1", tags=["stats"])
+app.include_router(ai_router, prefix="/api/v1", tags=["ai"])
 
 # Servir archivos subidos estáticamente.
 # El mount va DESPUÉS de los routers para no interceptar rutas de la API.
