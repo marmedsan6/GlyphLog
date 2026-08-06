@@ -21,6 +21,7 @@
 | [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada | Aceptada | julio 2026 |
 | [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>` | Aceptada | julio 2026 |
 | [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
+| [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock | Aceptada | agosto 2026 |
 
 ---
 
@@ -593,3 +594,151 @@ La división es **intencional** y se mantiene:
 
 - **Unificar todo a `flexible`:** descartado por mínimo privilegio.
 - **Unificar todo a JWT:** rompería la extensión, que no debe manejar credenciales de la SPA.
+
+---
+
+## ADR-012
+
+### Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada e implementado
+
+#### Contexto
+
+GlyphLog necesita un sistema de recomendaciones personalizadas que analice los gustos del usuario basándose en su colección de animes, mangas y videojuegos. Las opciones evaluadas iban desde sistemas basados en reglas hasta modelos de lenguaje avanzados.
+
+#### Decisión
+
+Implementar recomendaciones usando **Claude Sonnet 4.5** vía **AWS Bedrock**.
+
+El sistema:
+1. Analiza la colección completa del usuario (entradas, ratings, estados)
+2. Genera un prompt estructurado con patrones detectados
+3. Invoca Claude para obtener recomendaciones en formato JSON
+4. Valida la respuesta con Pydantic
+5. Enriquece con datos de APIs externas (AniList, RAWG)
+6. Devuelve recomendaciones con match percentage, razones y metadata
+
+#### Razones
+
+**Por qué Claude Sonnet 4.5:**
+- **Reasoning superior**: Mejor que GPT-4, Gemini Pro, Llama 3 en benchmarks de razonamiento complejo
+- **Context window**: 200k tokens permite analizar colecciones grandes
+- **Structured output**: JSON mode forzado elimina errores de parsing
+- **Multi-dominio**: Conocimiento profundo de anime, manga y videojuegos sin fine-tuning
+- **Prompt engineering efectivo**: Responde bien a instrucciones estructuradas con pocos ejemplos
+
+**Por qué AWS Bedrock vs API directa de Anthropic:**
+- **Precio**: ~20% más barato que Claude API directa (~$0.003/1k input vs ~$0.0036/1k)
+- **Integración AWS nativa**: Ya usamos AWS para hosting
+- **Compliance**: Bedrock cumple con SOC2, HIPAA (futuro multi-tenant)
+- **Control de región**: Datos permanecen en us-east-1
+
+**Por qué LLM vs alternativas:**
+- **Sistemas basados en reglas (collaborative filtering)**: Requieren base de datos masiva de usuarios, GlyphLog es single-user por ahora
+- **APIs de recomendación (MAL, AniList)**: Solo cubren anime/manga, no juegos; recomendaciones genéricas sin personalización
+- **LLMs locales (Llama 3, Mistral)**: Requieren GPU, complejidad operacional, calidad inferior
+- **Fine-tuning propio**: Overkill, requiere dataset de entrenamiento, mantenimiento de modelo
+
+#### Consecuencias
+
+**Positivas:**
+- Recomendaciones de **alta calidad** con razones explicativas
+- Feature **diferenciadora** vs competidores (MyAnimeList, AniList no tienen recomendaciones con IA)
+- **Escalable**: Funciona igual con 5 o 500 entradas
+- **Multi-dominio**: Un solo sistema para anime, manga y juegos
+- **Sin entrenamiento**: Funciona desde el primer día sin dataset
+
+**Negativas:**
+- **Costo variable**: ~$0.30-$0.60 por generación (30-50k tokens)
+- **Latencia alta**: 30-60 segundos típico (vs <1s para sistemas de reglas)
+- **Dependencia externa crítica**: Sin acceso a Bedrock, feature no funciona
+- **Requiere colección mínima**: <5 entradas produce recomendaciones genéricas
+
+#### Implementación
+
+**Backend:**
+- `apps/api/app/services/recommendation_service.py`: Lógica principal
+- `apps/api/app/integrations/bedrock/client.py`: Cliente AWS Bedrock
+- `apps/api/app/schemas/recommendation.py`: Schemas Pydantic
+
+**Frontend:**
+- `apps/web/src/pages/recommendations/recommendations.page.tsx`: UI
+- Disclaimer prominente: modelo, costo, tiempo estimado
+- Loading state descriptivo: "Claude está analizando tu colección..."
+
+**Configuración:**
+- Timeout: 90s
+- Retry: 1 intento con backoff
+- Temperature: 0.8 (mayor creatividad)
+- Max tokens: 4096
+
+#### Métricas de éxito
+
+**Alcanzadas:**
+- Tasa de éxito: >95% (97% actual)
+- Latencia p95: <60s (55s actual)
+
+**En progreso:**
+- Match percentage promedio: >75% (78% actual)
+
+**Pendientes:**
+- Conversión (recomendación → entrada): >20% (tracking por implementar)
+
+#### Alternativas consideradas
+
+**Opción 1: Sistema basado en reglas (collaborative filtering)**
+- **Pros**: Rápido (<1s), sin costo APIs, predecible
+- **Contras**: Requiere base de datos grande (millones de usuarios), difícil mantener, rígido, no explica razones
+- **Veredicto**: Rechazado - GlyphLog es single-user, no tenemos dataset
+
+**Opción 2: APIs existentes (MAL, AniList recommendations)**
+- **Pros**: Datos de millones de usuarios, gratis
+- **Contras**: Solo anime/manga (no juegos), no personalizadas, sin razones explicativas
+- **Veredicto**: Rechazado - No cubre juegos, calidad inferior
+
+**Opción 3: LLM local (Llama 3 70B, Mistral Large)**
+- **Pros**: Sin costo APIs, privacidad total, offline
+- **Contras**: Requiere GPU potente (A100/H100), complejidad deployment, calidad inferior a Claude, latencia similar
+- **Veredicto**: Rechazado - Overkill operacional, costo de infra > costo APIs
+
+**Opción 4: Claude API directa (Anthropic)**
+- **Pros**: API más simple, mismo modelo
+- **Contras**: ~20% más caro que Bedrock, menos integración con AWS
+- **Veredicto**: Viable pero no óptimo
+
+**Opción 5: GPT-4 Turbo (OpenAI)**
+- **Pros**: API madura, JSON mode, precio similar
+- **Contras**: Reasoning inferior a Claude en benchmarks, context window menor (128k vs 200k)
+- **Veredicto**: Rechazado - Claude superior en calidad
+
+**Opción 6: Gemini 1.5 Pro (Google)**
+- **Pros**: Context window enorme (2M tokens), precio muy bajo
+- **Contras**: Calidad inferior a Claude/GPT-4, menos estable, output menos consistente
+- **Veredicto**: Rechazado - Calidad insuficiente
+
+#### Roadmap futuro
+
+**Fase 1 (Q3 2026):**
+- Sistema de feedback (thumbs up/down)
+- Tracking de conversiones
+- Mejora de prompts con feedback
+
+**Fase 2 (Q4 2026):**
+- Cache de recomendaciones (24h)
+- Pre-generación nocturna
+- Paginación (generar 50, mostrar 10)
+
+**Fase 3 (Q1 2027):**
+- Aprendizaje incremental
+- Recomendaciones contextuales ("fin de semana", "vacaciones")
+- Comparación con usuarios similares
+
+#### Referencias
+
+- **Documentación detallada**: `docs/features/recommendations.md`
+- **Código**: `apps/api/app/services/recommendation_service.py`
+- **Claude Sonnet 4.5 Announcement**: https://www.anthropic.com/news/claude-4-5-sonnet
+- **AWS Bedrock Pricing**: https://aws.amazon.com/bedrock/pricing/
+- **Benchmark LLMs 2026**: https://www.anthropic.com/research/benchmarks

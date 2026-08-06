@@ -475,3 +475,508 @@ function handleCredentialResponse(response: { credential?: string }) {
 - Degradación graciosa: si `VITE_GOOGLE_CLIENT_ID` está vacío, el botón no se renderiza.
 
 **Por qué `@react-oauth/google` queda instalada pero no se usa:** ocupa ~5 KB gzip, se usará en el futuro para refresh tokens o hooks utilitarios. Decisión documentada en ADR-006.
+
+---
+
+## 10. Patrón: Integración con LLMs (Claude/GPT/Gemini)
+
+### Contexto
+
+GlyphLog integra Claude Sonnet 4.5 (AWS Bedrock) para dos features de IA:
+1. **Recomendaciones personalizadas**: Analiza la colección y sugiere nuevas entradas
+2. **Importación inteligente**: Parsea listas externas (MAL, AniList, texto libre)
+
+Este patrón establece la arquitectura estándar para integrar LLMs en el proyecto.
+
+### Principios generales
+
+1. **Un servicio por feature de IA**: No mezclar lógica de negocio con lógica de IA
+2. **Prompt engineering estructurado**: Formato consistente con role, task, instructions, output format
+3. **Structured output forzado**: JSON schema validation obligatorio
+4. **Timeout y retry agresivos**: LLMs son lentos e inestables
+5. **Error handling granular**: Diferentes errores para diferentes causas
+6. **UI transparente**: Disclaimer prominente con modelo, costo, tiempo estimado
+
+### Arquitectura de un servicio de IA
+
+#### 1. Servicio dedicado
+
+**Patrón:**
+```python
+# apps/api/app/services/recommendation_service.py
+
+class RecommendationService:
+    """Servicio para generar recomendaciones personalizadas con Claude."""
+
+    def __init__(
+        self,
+        bedrock_client: BedrockClient,          # Cliente LLM
+        entry_repository: EntryRepository,      # Acceso a datos
+        external_search_service: ExternalSearchService,  # Enriquecimiento
+    ):
+        self.bedrock_client = bedrock_client
+        self.entry_repository = entry_repository
+        self.external_search_service = external_search_service
+
+    async def generate_recommendations(
+        self, user_id: UUID, entry_type: EntryType | None = None, limit: int = 10
+    ) -> GenerateRecommendationsResponse:
+        """
+        Genera recomendaciones personalizadas usando Claude.
+        
+        Flujo:
+        1. Obtener colección del usuario
+        2. Calcular metadata
+        3. Construir prompt estructurado
+        4. Invocar Claude
+        5. Validar respuesta con Pydantic
+        6. Enriquecer con APIs externas
+        7. Devolver response estructurado
+        """
+        # ... implementación
+```
+
+**Responsabilidades del servicio:**
+- Preparar datos de entrada (colección del usuario, filtros)
+- Construir prompt con formato estructurado
+- Invocar LLM a través del cliente
+- Parsear y validar respuesta
+- Enriquecer con datos adicionales (opcional)
+- Devolver response tipado
+
+**NO responsabilidades del servicio:**
+- Autenticación (manejada por el router)
+- Logging HTTP (manejado por middleware)
+- Rate limiting (manejado por middleware)
+- Retry de red (manejado por el cliente)
+
+#### 2. Prompt engineering estructurado
+
+**Patrón:**
+```python
+def _build_recommendation_prompt(
+    self, entries: list, limit: int, entry_type: EntryType | None
+) -> str:
+    """Construye el prompt para Claude."""
+    
+    # Formatear datos de entrada
+    entries_formatted = "\n".join(
+        [f"- {e.title} ({e.type.value}, {e.status.value}, {e.rating}/10)"
+         for e in sorted_entries[:30]]
+    )
+    
+    # Calcular métricas
+    completion_rate = (completed_count / len(entries)) * 100
+    avg_rating = sum(ratings) / len(ratings)
+    
+    # Construir prompt estructurado
+    return f"""<role>You are a recommendation engine for anime/manga/videogames.</role>
+
+<task>
+Analyze this user's collection and recommend {limit} new titles that match their taste.
+</task>
+
+<input>
+USER COLLECTION (sorted by rating DESC):
+{entries_formatted}
+
+PATTERNS:
+- Completion rate: {completion_rate:.1f}%
+- Average rating: {avg_rating:.1f}/10
+- Total entries: {len(entries)}
+</input>
+
+<instructions>
+1. Prioritize titles similar to their highest-rated entries
+2. Avoid recommending duplicates from their collection
+3. Include genre variety
+4. Provide specific reasoning referencing their rated titles
+</instructions>
+
+<output_format>
+Return ONLY a JSON array with this structure (no markdown, no explanation):
+[
+  {{
+    "title": "string",
+    "type": "anime" | "manga" | "game",
+    "match_percentage": 0-100,
+    "reason": "string (explain WHY this matches, reference their titles)",
+    "genres": ["string"],
+    "similar_to": ["title1", "title2"]
+  }}
+]
+</output_format>"""
+```
+
+**Reglas del prompt:**
+- Usar tags XML para estructura clara (`<role>`, `<task>`, `<input>`, `<instructions>`, `<output_format>`)
+- NO hardcodear ejemplos (excepto para few-shot learning)
+- Especificar claramente el formato de output (JSON, markdown, texto)
+- Incluir límites numéricos cuando apliquen (max 30 entradas, 1-10 rating)
+- Limitar tamaño de input (máximo ~50k chars para no exceder context window)
+
+#### 3. Structured output forzado (JSON mode)
+
+**Con AWS Bedrock (Claude):**
+```python
+# apps/api/app/integrations/bedrock/client.py
+
+def invoke_json(
+    self,
+    prompt: str,
+    temperature: float = 0.7,
+    system: str | None = None,
+) -> dict[str, Any] | list[Any]:
+    """Invoca el modelo y parsea la respuesta como JSON."""
+    
+    # 1. Invocar Claude
+    response_text = self.invoke(prompt, temperature, system)
+    
+    # 2. Intentar extraer JSON si viene envuelto en markdown
+    if "```json" in response_text:
+        json_start = response_text.find("```json") + 7
+        json_end = response_text.find("```", json_start)
+        response_text = response_text[json_start:json_end].strip()
+    elif "```" in response_text:
+        json_start = response_text.find("```") + 3
+        json_end = response_text.find("```", json_start)
+        response_text = response_text[json_start:json_end].strip()
+    
+    # 3. Parsear JSON
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error al parsear JSON: {e}\nRespuesta: {response_text[:500]}")
+        raise ValueError(f"La respuesta no es JSON válido: {e}")
+```
+
+**Con OpenAI (GPT-4):**
+```python
+# Usar response_format con JSON mode (GPT-4 Turbo+)
+response = openai.ChatCompletion.create(
+    model="gpt-4-turbo",
+    messages=[...],
+    response_format={"type": "json_object"}
+)
+```
+
+**Validación con Pydantic:**
+```python
+# apps/api/app/schemas/recommendation.py
+
+class Recommendation(BaseModel):
+    """Recomendación generada por Claude."""
+    
+    title: str = Field(..., description="Título de la obra")
+    type: EntryType = Field(..., description="Tipo de entrada")
+    match_percentage: int = Field(..., ge=0, le=100)
+    reason: str = Field(..., min_length=10, description="Razón explicativa")
+    genres: list[str] = Field(default_factory=list)
+    similar_to: list[str] = Field(default_factory=list)
+    
+    # Campos opcionales (enriquecidos después)
+    year: int | None = Field(None, ge=1900, le=2100)
+    external_url: str | None = None
+    cover_image_url: str | None = None
+```
+
+**En el servicio:**
+```python
+recommendations_data = bedrock_client.invoke_json(prompt=prompt, temperature=0.8)
+
+if not isinstance(recommendations_data, list):
+    raise ValueError("Claude no devolvió un array JSON")
+
+# Validar cada recomendación
+recommendations: list[Recommendation] = []
+for item in recommendations_data[:limit]:
+    try:
+        rec = Recommendation(**item)  # Pydantic valida
+        recommendations.append(rec)
+    except Exception as e:
+        logger.warning(f"Error al validar recomendación: {e}")
+        # Descartar recomendación inválida, continuar con las demás
+```
+
+#### 4. Timeout y retry
+
+**Cliente con retry automático:**
+```python
+# apps/api/app/integrations/bedrock/client.py
+
+import boto3
+from botocore.config import Config
+
+def __init__(self, model_id: str, region: str, max_tokens: int = 4096):
+    # Configurar timeout y retry en boto3
+    config = Config(
+        read_timeout=90,        # 90 segundos para llamadas largas
+        connect_timeout=10,     # 10 segundos para conectar
+        retries={
+            'max_attempts': 2,  # 1 retry
+            'mode': 'standard'
+        }
+    )
+    
+    self.client = boto3.client(
+        service_name="bedrock-runtime",
+        region_name=region,
+        config=config
+    )
+```
+
+**Servicio con manejo de timeout:**
+```python
+async def generate_recommendations(...) -> GenerateRecommendationsResponse:
+    try:
+        # Invocar con timeout implícito (90s en cliente)
+        recommendations_data = self.bedrock_client.invoke_json(
+            prompt=prompt,
+            temperature=0.8,
+        )
+        
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "ThrottlingException":
+            raise HTTPException(status_code=429, detail="Bedrock rate limit alcanzado, reintenta en 1 minuto")
+        elif error_code == "ModelTimeoutError":
+            raise HTTPException(status_code=504, detail="El modelo tardó demasiado en responder")
+        else:
+            raise HTTPException(status_code=500, detail=f"Error de Bedrock: {error_code}")
+    
+    except ValueError as e:
+        # JSON inválido
+        raise HTTPException(status_code=500, detail=f"Respuesta inválida del modelo: {str(e)}")
+    
+    except Exception as e:
+        logger.error(f"Error inesperado: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al generar recomendaciones")
+```
+
+#### 5. Error handling granular
+
+**Jerarquía de errores:**
+```python
+# apps/api/app/exceptions.py
+
+class AIServiceError(Exception):
+    """Error base para servicios de IA."""
+    pass
+
+class InsufficientDataError(AIServiceError):
+    """Datos insuficientes para generar respuesta (ej: <5 entradas)."""
+    pass
+
+class ModelTimeoutError(AIServiceError):
+    """El modelo LLM tardó demasiado en responder."""
+    pass
+
+class InvalidResponseError(AIServiceError):
+    """La respuesta del modelo no cumple con el schema esperado."""
+    pass
+
+class RateLimitError(AIServiceError):
+    """Rate limit del proveedor de LLM alcanzado."""
+    pass
+```
+
+**En el servicio:**
+```python
+if len(entries) < 5:
+    raise InsufficientDataError("Se requieren al menos 5 entradas para generar recomendaciones")
+```
+
+**En el router:**
+```python
+# apps/api/app/routers/recommendations.py
+
+@router.post("/generate", response_model=GenerateRecommendationsResponse)
+async def generate_recommendations(
+    request: GenerateRecommendationsRequest,
+    current_user: User = Depends(get_current_user),
+    service: RecommendationService = Depends(get_recommendation_service),
+):
+    try:
+        return await service.generate_recommendations(
+            user_id=current_user.id,
+            entry_type=request.type,
+            limit=request.limit
+        )
+    
+    except InsufficientDataError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except ModelTimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    
+    except InvalidResponseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    except RateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+```
+
+#### 6. UI para features de IA
+
+**Disclaimer prominente:**
+```tsx
+// apps/web/src/pages/recommendations/recommendations.page.tsx
+
+<Alert className="mb-6">
+  <AlertCircle className="h-4 w-4" />
+  <AlertDescription>
+    Este sistema usa <strong>Claude Sonnet 4.5</strong> en AWS Bedrock y 
+    consume aproximadamente <strong>30-50k tokens</strong> por generación.
+    El análisis puede tardar entre <strong>30-60 segundos</strong>.
+  </AlertDescription>
+</Alert>
+```
+
+**Loading state descriptivo:**
+```tsx
+<Button onClick={handleGenerate} disabled={isPending}>
+  <Sparkles className="mr-2 h-4 w-4" />
+  {isPending 
+    ? 'Claude está analizando tu colección...' 
+    : 'Generar recomendaciones'}
+</Button>
+```
+
+**Toast de error con contexto:**
+```tsx
+onError: (error) => {
+  const message = getApiErrorMessage(error)
+  
+  if (message.includes('menos de 5 entradas')) {
+    toast({
+      title: 'Colección insuficiente',
+      description: 'Añade al menos 5 entradas a tu colección para obtener recomendaciones personalizadas.',
+      variant: 'destructive',
+    })
+  } else if (message.includes('timeout')) {
+    toast({
+      title: 'El análisis tardó demasiado',
+      description: 'Claude no respondió a tiempo. Inténtalo nuevamente.',
+      variant: 'destructive',
+    })
+  } else {
+    toast({
+      title: 'Error al generar recomendaciones',
+      description: message,
+      variant: 'destructive',
+    })
+  }
+}
+```
+
+**Empty state invitando a acción:**
+```tsx
+{!result && !isPending && (
+  <Card>
+    <CardContent className="flex min-h-[400px] items-center justify-center p-8">
+      <div className="text-center">
+        <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+        <h3 className="mb-2 text-lg font-semibold">
+          Genera tu primera recomendación personalizada
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Configura los filtros arriba y haz clic en "Generar recomendaciones" para comenzar.
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+)}
+```
+
+### Ejemplo completo: RecommendationService
+
+Ver implementación de referencia:
+- **Backend**: `apps/api/app/services/recommendation_service.py`
+- **Cliente Bedrock**: `apps/api/app/integrations/bedrock/client.py`
+- **Schemas**: `apps/api/app/schemas/recommendation.py`
+- **Router**: `apps/api/app/routers/recommendations.py`
+- **Frontend**: `apps/web/src/pages/recommendations/recommendations.page.tsx`
+
+### Anti-patrones
+
+**NO hacer:**
+
+1. **Llamar LLM desde el router:**
+   ```python
+   # ❌ MAL - Router con lógica de IA
+   @router.post("/generate")
+   async def generate_recommendations(...):
+       prompt = f"Recommend me anime: {entries}"
+       response = bedrock_client.invoke(prompt)
+       return response
+   ```
+   
+   **Por qué:** Mezcla responsabilidades, difícil testear, no reutilizable
+
+2. **Prompt hardcodeado sin variables:**
+   ```python
+   # ❌ MAL - Prompt estático
+   prompt = "Recommend me 10 anime similar to Attack on Titan"
+   ```
+   
+   **Por qué:** No personalizado, no escalable, no reutilizable
+
+3. **Asumir response válido sin validación:**
+   ```python
+   # ❌ MAL - No validar respuesta
+   recommendations_data = bedrock_client.invoke_json(prompt)
+   return recommendations_data  # Puede estar malformado
+   ```
+   
+   **Por qué:** Propagará errores al frontend, exposición de datos inválidos
+
+4. **UI sin disclaimer:**
+   ```tsx
+   {/* ❌ MAL - Botón sin contexto */}
+   <Button onClick={generate}>Generate AI recommendations</Button>
+   ```
+   
+   **Por qué:** Usuario no sabe qué esperar (tiempo, costo, modelo)
+
+5. **Timeout excesivo (>90s):**
+   ```python
+   # ❌ MAL - Timeout muy largo
+   config = Config(read_timeout=300)  # 5 minutos
+   ```
+   
+   **Por qué:** Mala UX, probablemente indica problema en el modelo
+
+6. **Reintentar infinitamente:**
+   ```python
+   # ❌ MAL - Retry sin límite
+   while True:
+       try:
+           return bedrock_client.invoke(prompt)
+       except:
+           continue
+   ```
+   
+   **Por qué:** Puede agotar límites de rate, costo descontrolado
+
+### Cuándo usar LLMs
+
+**Usar LLMs para:**
+- Análisis de texto complejo (sentimiento, intención, clasificación multi-etiqueta)
+- Generación de contenido personalizado (recomendaciones, resúmenes)
+- Parsing de formatos no estructurados (listas de texto libre, capturas de pantalla)
+- Razonamiento que requiere conocimiento del mundo (géneros de anime, similitud de juegos)
+
+**NO usar LLMs para:**
+- Cálculos matemáticos simples (suma, promedio, porcentajes)
+- Queries a base de datos (usar SQL directamente)
+- Validaciones de formato (usar regex o Pydantic)
+- Features tiempo-real (<1s de latencia)
+- Operaciones deterministas (sorting, filtering)
+
+### Referencias
+
+- **ADR-012**: Sistema de Recomendaciones con Claude Sonnet 4.5 (`memory-bank/decisions.md`)
+- **Documentación completa**: `docs/features/recommendations.md`
+- **Claude API Reference**: https://docs.anthropic.com/en/api/
+- **AWS Bedrock Documentation**: https://docs.aws.amazon.com/bedrock/
+- **Prompt Engineering Guide**: https://www.promptingguide.ai/
