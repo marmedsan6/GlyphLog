@@ -1,8 +1,10 @@
 import asyncio
 import logging
-import time
+from threading import Lock
+from typing import Any
 
 import httpx
+from cachetools import TTLCache
 
 from app.schemas.external_search import (
     ExternalSearchResponse,
@@ -15,57 +17,40 @@ from app.services.external_clients.rawg_client import RawgClient, _playtime_to_h
 logger = logging.getLogger(__name__)
 
 
-class MemoryCache:
-    def __init__(self, ttl_seconds: int = 300) -> None:
-        self.ttl = ttl_seconds
-        self.cache = {}
+class ThreadSafeCache:
+    """Caché thread-safe con TTL para resultados de búsqueda externa.
 
-    def get(self, key: str) -> list[ExternalSearchResult] | None:
-        if key in self.cache:
-            value, timestamp = self.cache[key]
-            if time.time() - timestamp < self.ttl:
-                logger.info(f"Caché hit para query: '{key}'")
-                return value
-            else:
-                del self.cache[key]
-        return None
-
-    def set(self, key: str, value: list[ExternalSearchResult]) -> None:
-        self.cache[key] = (value, time.time())
-
-
-class GameDetailCache:
-    """Caché específica para el detalle de juegos RAWG.
-
-    Clave: slug del juego. Valor: GameDetailResponse. Mismo TTL que MemoryCache
-    (5 minutos) para no repetir peticiones al detalle cuando el usuario
-    selecciona el mismo resultado en poco tiempo.
+    Usa cachetools.TTLCache para gestión automática de expiración y
+    limpieza de entradas antiguas. Thread-safe para entornos con múltiples
+    workers uvicorn.
     """
 
-    def __init__(self, ttl_seconds: int = 300) -> None:
-        self.ttl = ttl_seconds
-        self.cache: dict[str, tuple[GameDetailResponse, float]] = {}
+    def __init__(self, maxsize: int = 1000, ttl: int = 3600) -> None:
+        # maxsize=1000: hasta 1000 queries distintas en caché
+        # ttl=3600: 1 hora de TTL (más generoso que los 5 min anteriores)
+        self._cache: TTLCache[str, Any] = TTLCache(maxsize=maxsize, ttl=ttl)
+        self._lock = Lock()
 
-    def get(self, key: str) -> GameDetailResponse | None:
-        if key in self.cache:
-            value, timestamp = self.cache[key]
-            if time.time() - timestamp < self.ttl:
-                logger.info(f"Caché hit para detalle de juego: '{key}'")
-                return value
-            else:
-                del self.cache[key]
-        return None
+    def get(self, key: str) -> Any | None:
+        with self._lock:
+            value = self._cache.get(key)
+            if value is not None:
+                logger.info(f"Cache hit: '{key}'")
+            return value
 
-    def set(self, key: str, value: GameDetailResponse) -> None:
-        self.cache[key] = (value, time.time())
+    def set(self, key: str, value: Any) -> None:
+        with self._lock:
+            self._cache[key] = value
 
 
 class ExternalSearchService:
     def __init__(self, anilist_client: AniListClient, rawg_client: RawgClient) -> None:
         self.anilist_client = anilist_client
         self.rawg_client = rawg_client
-        self.cache = MemoryCache(ttl_seconds=300)  # TTL de 5 minutos configurado por defecto
-        self.game_detail_cache = GameDetailCache(ttl_seconds=300)
+        # Caché de búsquedas: TTL de 1 hora (3600s) para reducir hits a APIs externas
+        self.cache = ThreadSafeCache(maxsize=1000, ttl=3600)
+        # Caché de detalles de juegos: TTL de 1 hora también
+        self.game_detail_cache = ThreadSafeCache(maxsize=500, ttl=3600)
 
     async def search(self, query: str) -> ExternalSearchResponse:
         # Sanitizar y normalizar query
