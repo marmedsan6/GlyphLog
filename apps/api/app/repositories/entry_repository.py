@@ -136,3 +136,25 @@ class EntryRepository:
         await self.db.delete(entry)
         await self.db.commit()
         return True
+
+    async def find_by_title_and_user(self, title: str, user_id: UUID | str) -> Entry | None:
+        """Busca una entrada por título exacto (case-insensitive) y usuario."""
+        # Convertir user_id a UUID si viene como string
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
+        stmt = select(Entry).where(
+            func.lower(Entry.title) == title.lower(), Entry.user_id == user_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_user(self, user_id: UUID | str) -> list[Entry]:
+        """Lista todas las entradas de un usuario (sin paginación)."""
+        # Convertir user_id a UUID si viene como string
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
+        stmt = select(Entry).where(Entry.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())

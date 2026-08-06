@@ -15,6 +15,7 @@ from app.routers.auth import router as auth_router
 from app.routers.devices import router as devices_router
 from app.routers.entries import router as entries_router
 from app.routers.external_search import router as external_search_router
+from app.routers.import_router import router as import_router
 from app.routers.profile import router as profile_router
 
 app = FastAPI(
@@ -99,6 +100,7 @@ app.include_router(entries_router, prefix="/api/v1/entries", tags=["entries"])
 app.include_router(profile_router, prefix="/api/v1/users", tags=["profile"])
 app.include_router(external_search_router, prefix="/api/v1", tags=["external-search"])
 app.include_router(devices_router, prefix="/api/v1/devices", tags=["devices"])
+app.include_router(import_router, prefix="/api/v1", tags=["import"])
 
 # Servir archivos subidos estáticamente.
 # El mount va DESPUÉS de los routers para no interceptar rutas de la API.

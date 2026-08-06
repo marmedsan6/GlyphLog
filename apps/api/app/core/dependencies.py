@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.integrations.bedrock.client import BedrockClient
 from app.repositories.device_token_repository import DeviceTokenRepository
 from app.repositories.entry_repository import EntryRepository
 from app.repositories.profile_repository import ProfileRepository
@@ -70,4 +71,15 @@ _external_search_service = ExternalSearchService(_anilist_client, _rawg_client)
 
 def get_external_search_service() -> ExternalSearchService:
     return _external_search_service
+
+
+# Cliente de Bedrock singleton para reutilizar conexión
+_bedrock_client = BedrockClient(
+    model_id=settings.bedrock_model_id,
+    region=settings.bedrock_region,
+)
+
+
+def get_bedrock_client() -> BedrockClient:
+    return _bedrock_client
 
