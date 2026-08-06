@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label'
 import { useParseImport } from '@/hooks/useParseImport'
 import { useExecuteImport } from '@/hooks/useExecuteImport'
 import { useToast } from '@/hooks/use-toast'
-import { getApiErrorMessage } from '@/utils/error'
+import { getApiErrorMessage } from '@/utils/api-errors'
 import { ImportPreview } from './import-preview'
 import type { ImportSource, ParsedEntry } from '@/services/import.service'
-import { ArrowLeft, FileText, Upload } from 'lucide-react'
+import { ArrowLeft, FileText } from 'lucide-react'
 
 export function ImportPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
