@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@/components/shared/theme-provider'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -6,16 +7,37 @@ import { Toaster } from '@/components/ui/toaster'
 import { queryClient } from '@/lib/query-client'
 import { ProtectedRoute } from '@/components/shared/protected-route'
 import { AppLayout } from '@/components/shared/app-layout'
+import { PageSkeleton } from '@/components/shared/page-skeleton'
 import { HomePage } from '@/pages/home/home.page'
 import { LoginPage } from '@/pages/login/login.page'
 import { RegisterPage } from '@/pages/register/register.page'
-import { CollectionPage } from '@/pages/collection/collection.page'
-import { CreateEntryPage } from '@/pages/create-entry/create-entry.page'
-import { EntryDetailPage } from '@/pages/entry-detail/entry-detail.page'
-import { ImportPage } from '@/pages/import/import.page'
-import { ProfilePage } from '@/pages/profile/profile.page'
-import { RecommendationsPage } from '@/pages/recommendations/recommendations.page'
 import { NotFoundPage } from '@/pages/not-found/not-found.page'
+
+// Lazy loading de rutas protegidas para reducir bundle inicial
+const CollectionPage = lazy(() =>
+  import('@/pages/collection/collection.page').then((module) => ({ default: module.CollectionPage }))
+)
+const CreateEntryPage = lazy(() =>
+  import('@/pages/create-entry/create-entry.page').then((module) => ({
+    default: module.CreateEntryPage,
+  }))
+)
+const EntryDetailPage = lazy(() =>
+  import('@/pages/entry-detail/entry-detail.page').then((module) => ({
+    default: module.EntryDetailPage,
+  }))
+)
+const ImportPage = lazy(() =>
+  import('@/pages/import/import.page').then((module) => ({ default: module.ImportPage }))
+)
+const ProfilePage = lazy(() =>
+  import('@/pages/profile/profile.page').then((module) => ({ default: module.ProfilePage }))
+)
+const RecommendationsPage = lazy(() =>
+  import('@/pages/recommendations/recommendations.page').then((module) => ({
+    default: module.RecommendationsPage,
+  }))
+)
 
 const router = createBrowserRouter([
   // ── Rutas públicas ─────────────────────────────────────────────────────────
@@ -32,12 +54,54 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: '/collection', element: <CollectionPage /> },
-          { path: '/entries/new', element: <CreateEntryPage /> },
-          { path: '/entries/:id', element: <EntryDetailPage /> },
-          { path: '/import', element: <ImportPage /> },
-          { path: '/recommendations', element: <RecommendationsPage /> },
-          { path: '/profile', element: <ProfilePage /> },
+          {
+            path: '/collection',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <CollectionPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/entries/new',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <CreateEntryPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/entries/:id',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <EntryDetailPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/import',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <ImportPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/recommendations',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <RecommendationsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/profile',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <ProfilePage />
+              </Suspense>
+            ),
+          },
         ],
       },
     ],
