@@ -55,6 +55,12 @@ export function AppLayout() {
             >
               Importar
             </Link>
+            <Link
+              to="/recommendations"
+              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              Recomendaciones
+            </Link>
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
