@@ -432,7 +432,7 @@ class TestStatsServiceTimeline:
                 current_value=Decimal(i + 1),
                 unit=ProgressUnit.episodes,
                 recorded_at=today - timedelta(days=i),
-                event_type=ProgressEventType.increment,
+                event_type=ProgressEventType.update,
                 source="web",
             )
             db_session.add(event)
