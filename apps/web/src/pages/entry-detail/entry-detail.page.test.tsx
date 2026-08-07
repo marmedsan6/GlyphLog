@@ -147,9 +147,7 @@ describe('EntryDetailPage', () => {
     const titleInput = screen.getByLabelText('Título')
     fireEvent.change(titleInput, { target: { value: 'One Piece updated' } })
 
-    act(() => {
-      screen.getByRole('button', { name: 'Guardar cambios' }).click()
-    })
+    fireEvent.submit(screen.getByRole('button', { name: 'Guardar cambios' }).closest('form')!)
 
     await waitFor(() => {
       expect(mockUpdateEntry).toHaveBeenCalled()
@@ -184,9 +182,7 @@ describe('EntryDetailPage', () => {
       expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeInTheDocument()
     })
 
-    act(() => {
-      screen.getByRole('button', { name: 'Guardar cambios' }).click()
-    })
+    fireEvent.submit(screen.getByRole('button', { name: 'Guardar cambios' }).closest('form')!)
 
     await waitFor(() => {
       expect(screen.getByText('Error al guardar')).toBeInTheDocument()

@@ -8,7 +8,7 @@ export function useProfile() {
   return useQuery<UserProfileResponse, Error>({
     queryKey: [PROFILE_QUERY_KEY],
     queryFn: getProfile,
-    staleTime: 60_000,
+    staleTime: 10 * 60 * 1000, // 10 minutos - el perfil cambia raramente
   })
 }
 

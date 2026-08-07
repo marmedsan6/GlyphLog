@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.entry import Entry, EntryType
 from app.schemas.entry import EntryCreate, EntryUpdate, SortField, SortOrder
@@ -55,6 +56,7 @@ class EntryRepository:
 
         stmt = (
             self._base_query(user_id, entry_type, search)
+            .options(selectinload(Entry.progress_events))  # Eager loading para evitar N+1
             .order_by(order_expr)
             .limit(limit)
             .offset(offset)
@@ -76,7 +78,11 @@ class EntryRepository:
     async def get_by_id(self, entry_id: UUID, user_id: UUID) -> Entry | None:
         # SEGURIDAD: filtrar por entry_id Y user_id.
         # Un usuario nunca debe poder acceder a entradas de otro usuario.
-        stmt = select(Entry).where(Entry.id == entry_id, Entry.user_id == user_id)
+        stmt = (
+            select(Entry)
+            .options(selectinload(Entry.progress_events))  # Eager loading para evitar N+1
+            .where(Entry.id == entry_id, Entry.user_id == user_id)
+        )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -136,3 +142,25 @@ class EntryRepository:
         await self.db.delete(entry)
         await self.db.commit()
         return True
+
+    async def find_by_title_and_user(self, title: str, user_id: UUID | str) -> Entry | None:
+        """Busca una entrada por título exacto (case-insensitive) y usuario."""
+        # Convertir user_id a UUID si viene como string
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
+        stmt = select(Entry).where(
+            func.lower(Entry.title) == title.lower(), Entry.user_id == user_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_user(self, user_id: UUID | str) -> list[Entry]:
+        """Lista todas las entradas de un usuario (sin paginación)."""
+        # Convertir user_id a UUID si viene como string
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
+        stmt = select(Entry).where(Entry.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
