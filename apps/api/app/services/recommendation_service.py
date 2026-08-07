@@ -1,9 +1,10 @@
 """Servicio de recomendaciones inteligentes con Claude/Bedrock."""
 
 import logging
+from urllib.parse import quote
 from uuid import UUID
 
-from app.integrations.bedrock.client import BedrockClient
+from app.integrations.llm import JsonLlm
 from app.models.entry import EntryStatus, EntryType
 from app.repositories.entry_repository import EntryRepository
 from app.schemas.recommendation import (
@@ -17,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 class RecommendationService:
-    """Servicio para generar recomendaciones personalizadas con Claude."""
+    """Servicio para generar recomendaciones personalizadas con un LLM."""
 
     def __init__(
         self,
-        bedrock_client: BedrockClient,
+        llm_client: JsonLlm,
         entry_repository: EntryRepository,
         external_search_service: ExternalSearchService,
     ):
-        self.bedrock_client = bedrock_client
+        self.llm_client = llm_client
         self.entry_repository = entry_repository
         self.external_search_service = external_search_service
 
@@ -64,8 +65,8 @@ class RecommendationService:
         prompt = self._build_recommendation_prompt(entries, limit, entry_type)
 
         try:
-            # Invocar Claude
-            recommendations_data = self.bedrock_client.invoke_json(
+            # Invocar el LLM configurado (Bedrock en prod, OpenAI en dev)
+            recommendations_data = self.llm_client.invoke_json(
                 prompt=prompt,
                 temperature=0.8,  # Mayor creatividad para recomendaciones
                 system="You are a recommendation engine for anime/manga/videogames.",
@@ -188,7 +189,10 @@ Return ONLY a JSON array of recommendations, no additional text."""
 
                 if matches:
                     match = matches[0]
-                    rec.external_url = f"https://anilist.co/search/{match.title}"  # Placeholder
+                    # URL-encode del título para que el link de búsqueda sea válido
+                    rec.external_url = (
+                        f"https://anilist.co/search/{quote(match.title)}"
+                    )
                     rec.cover_image_url = match.cover_image
                     rec.year = match.year
                     logger.debug(f"Enriquecida recomendación: {rec.title}")

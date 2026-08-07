@@ -1,12 +1,14 @@
 """Router para el sistema de importación inteligente."""
 
 import logging
+from typing import NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.dependencies import get_bedrock_client, get_entry_repository
+from app.core.dependencies import get_entry_repository, get_llm_client
+from app.core.llm_errors import map_llm_error
 from app.core.security import AuthenticatedUser, get_current_user
-from app.integrations.bedrock.client import BedrockClient
+from app.integrations.llm import JsonLlm
 from app.repositories.entry_repository import EntryRepository
 from app.schemas.import_schema import (
     ImportExecuteRequest,
@@ -22,11 +24,29 @@ router = APIRouter(prefix="/import", tags=["import"])
 
 
 def get_import_service(
-    bedrock_client: BedrockClient = Depends(get_bedrock_client),
+    llm_client: JsonLlm = Depends(get_llm_client),
     entry_repo: EntryRepository = Depends(get_entry_repository),
 ) -> ImportService:
     """Dependency para obtener el servicio de importación."""
-    return ImportService(bedrock_client, entry_repo)
+    return ImportService(llm_client, entry_repo)
+
+
+def _map_parse_error(error: Exception) -> NoReturn:
+    """Traduce errores del parseo a HTTP con mensajes accionables."""
+    mapped = map_llm_error(error)
+    if mapped is not None:
+        raise mapped
+    if isinstance(error, ValueError):
+        logger.error(f"Error de validacion en parseo: {error}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Error al parsear la lista: {str(error)}",
+        )
+    logger.error(f"Error interno en parseo: {error}")
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Error interno al procesar la importación",
+    )
 
 
 @router.post("/parse", response_model=ImportParseResponse)
@@ -48,19 +68,9 @@ async def parse_import(
     **Nota:** Este endpoint consume tokens de Bedrock (~5-15k por lista de 100 entradas).
     """
     try:
-        return await service.parse_import(request.source, request.content, str(auth.user_id))
-    except ValueError as e:
-        logger.error(f"Error de validación en parseo: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Error al parsear la lista: {str(e)}",
-        )
+        return await service.parse_import(request.source, request.content, str(auth.id))
     except Exception as e:
-        logger.error(f"Error inesperado en parseo: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno al procesar la importación",
-        )
+        _map_parse_error(e)
 
 
 @router.post("/execute", response_model=ImportExecuteResponse)
@@ -76,7 +86,7 @@ async def execute_import(
     Las entradas duplicadas (por título) se omiten automáticamente.
     """
     try:
-        return await service.execute_import(request.entries, str(auth.user_id))
+        return await service.execute_import(request.entries, str(auth.id))
     except Exception as e:
         logger.error(f"Error inesperado en ejecución de importación: {e}")
         raise HTTPException(
