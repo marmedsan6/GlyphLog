@@ -23,7 +23,11 @@ const mockUseGenerateRecommendations = vi.mocked(useGenerateRecommendations)
 const mockToast = vi.fn()
 const mockNavigate = vi.fn()
 
-vi.mocked(useToast).mockReturnValue({ toast: mockToast } as ReturnType<typeof useToast>)
+vi.mocked(useToast).mockReturnValue({
+  toast: mockToast,
+  dismiss: vi.fn(),
+  toasts: [],
+})
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -82,7 +86,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -98,7 +102,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -118,7 +122,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -138,7 +142,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -158,7 +162,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: vi.fn(),
       isPending: true,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -175,7 +179,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -197,7 +201,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -218,7 +222,7 @@ describe('RecommendationsPage', () => {
       status: 400,
       statusText: 'Bad Request',
       headers: {},
-      config: {} as any,
+      config: { headers: {} as import('axios').AxiosRequestHeaders },
     }
 
     const mockMutate = vi.fn((_, callbacks) => {
@@ -227,7 +231,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -251,7 +255,7 @@ describe('RecommendationsPage', () => {
       status: 500,
       statusText: 'Internal Server Error',
       headers: {},
-      config: {} as any,
+      config: { headers: {} as import('axios').AxiosRequestHeaders },
     }
 
     const mockMutate = vi.fn((_, callbacks) => {
@@ -260,7 +264,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -280,7 +284,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 
@@ -293,7 +297,7 @@ describe('RecommendationsPage', () => {
     mockUseGenerateRecommendations.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useGenerateRecommendations>)
+    } as unknown as ReturnType<typeof useGenerateRecommendations>)
 
     renderWithProviders(<RecommendationsPage />)
 

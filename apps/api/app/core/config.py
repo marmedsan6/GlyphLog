@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Modelos por defecto: GPT-4o-mini es el principal (~$0.15/M input); Claude
     # Haiku es el fallback. Ambos son baratos para uso personal.
     openai_api_key: str = ""
+    openai_base_url: str = ""
     openai_model: str = "gpt-4o-mini"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-3-5-haiku-latest"

@@ -39,6 +39,7 @@ export function YoutubeChannelManager() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault()
       handleAddChannel()
     }
   }
@@ -62,7 +63,7 @@ export function YoutubeChannelManager() {
               placeholder="https://www.youtube.com/@TheAnimeMan"
               value={newChannelUrl}
               onChange={(e) => setNewChannelUrl(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               disabled={!canAddMore}
             />
             <Button onClick={handleAddChannel} disabled={!canAddMore}>

@@ -1,38 +1,40 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { UserStats } from "@/services/stats.service";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { ListChecks } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { UserStats } from '@/services/stats.service'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { ListChecks } from 'lucide-react'
 
-interface StatsByStatusChartProps {
-  stats: UserStats;
+const COLORS: Record<string, string> = {
+  completed: '#10b981',
+  watching: '#3b82f6',
+  reading: '#3b82f6',
+  playing: '#3b82f6',
+  plan_to_watch: '#f59e0b',
+  plan_to_read: '#f59e0b',
+  plan_to_play: '#f59e0b',
+  on_hold: '#8b5cf6',
+  dropped: '#ef4444',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: "#10b981",
-  "in-progress": "#3b82f6",
-  planned: "#f59e0b",
-  "on-hold": "#8b5cf6",
-  dropped: "#ef4444",
-};
+const LABELS: Record<string, string> = {
+  completed: 'Completado',
+  watching: 'Viendo',
+  reading: 'Leyendo',
+  playing: 'Jugando',
+  plan_to_watch: 'Planeado',
+  plan_to_read: 'Planeado',
+  plan_to_play: 'Planeado',
+  on_hold: 'En pausa',
+  dropped: 'Abandonado',
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  completed: "Completado",
-  "in-progress": "En Progreso",
-  planned: "Planeado",
-  "on-hold": "En Pausa",
-  dropped: "Abandonado",
-};
-
-export function StatsByStatusChart({ stats }: StatsByStatusChartProps) {
-  const data = Object.entries(stats.byStatus || {})
-    .map(([status, count]) => ({
-      name: STATUS_LABELS[status] || status,
-      value: count,
-      fill: STATUS_COLORS[status] || "#6b7280",
+export function StatsByStatusChart({ stats }: { stats: UserStats }) {
+  const data = Object.entries(stats.by_status)
+    .map(([status, value]) => ({
+      name: LABELS[status] ?? status,
+      value,
+      fill: COLORS[status] ?? '#6b7280',
     }))
-    .filter((item) => item.value > 0);
-
-  const hasData = data.length > 0;
+    .filter((item) => item.value > 0)
 
   return (
     <Card>
@@ -43,7 +45,7 @@ export function StatsByStatusChart({ stats }: StatsByStatusChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {!hasData ? (
+        {data.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
             No hay datos disponibles
           </div>
@@ -56,7 +58,7 @@ export function StatsByStatusChart({ stats }: StatsByStatusChartProps) {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
+                  `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
                 }
                 outerRadius={80}
                 dataKey="value"
@@ -65,18 +67,12 @@ export function StatsByStatusChart({ stats }: StatsByStatusChartProps) {
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                }}
-              />
+              <Tooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

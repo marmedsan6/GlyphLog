@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ExternalLink, Plus, Check, ThumbsUp, ThumbsDown, Minus } from 'lucide-react'
 import type { YoutubeSuggestion } from '@/types/youtube-discovery'
 import { addSuggestionToCollection } from '@/services/youtube-discovery.service'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/hooks/use-toast'
 
 interface YoutubeSuggestionCardProps {
   suggestion: YoutubeSuggestion
