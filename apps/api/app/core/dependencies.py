@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.integrations.bedrock.client import BedrockClient
+from app.integrations.llm import JsonLlm, OpenAIJsonlClient
 from app.repositories.ai_repository import AIRepository
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.device_token_repository import DeviceTokenRepository
@@ -97,6 +98,23 @@ _bedrock_client = BedrockClient(
 )
 
 
-def get_bedrock_client() -> BedrockClient:
+def get_llm_client() -> JsonLlm:
+    """Devuelve el cliente LLM para generación JSON (recomendaciones e importación).
+
+    El proveedor se elige por entorno:
+    - "openai" (dev): reutiliza la API key del chat, sin credenciales AWS.
+    - "bedrock" (default, prod): Claude vía AWS con credenciales del entorno.
+    """
+    if settings.ai_completion_provider == "openai":
+        return OpenAIJsonlClient(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            base_url=settings.openai_base_url or None,
+        )
+    if settings.ai_completion_provider != "bedrock":
+        raise ValueError(
+            f"AI_COMPLETION_PROVIDER inválido: {settings.ai_completion_provider!r}. "
+            "Usa 'openai' o 'bedrock'."
+        )
     return _bedrock_client
 

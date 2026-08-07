@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     bedrock_region: str = "us-east-1"
 
+    # ── Generación estructurada (JSON) ─────────────────────────────────────────
+    # Proveedor para recomendaciones e importación (los endpoints que piden JSON
+    # estructurado a un LLM). "bedrock" (default) usa Claude vía AWS — pensado
+    # para producción; "openai" reutiliza la API key del chat — pensado para
+    # desarrollo local sin credenciales AWS.
+    ai_completion_provider: str = "bedrock"
+
     # ── GlyphAI (Chat) ─────────────────────────────────────────────────────────
     # Proveedor activo del chat de GlyphAI: "openai" (default) o "anthropic".
     # Si la API key del proveedor elegido está vacía, POST /api/v1/ai/chat

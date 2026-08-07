@@ -46,7 +46,12 @@ class ImportParseRequest(BaseModel):
 
     source: ImportSource = Field(..., description="Fuente de la lista")
     content: str = Field(
-        ..., min_length=10, max_length=100000, description="Contenido de la lista"
+        ...,
+        min_length=10,
+        max_length=1_000_000,
+        description=(
+            "Contenido de la lista (hasta 1MB, suficiente para exports de MAL de ~250k caracteres)"
+        ),
     )
 
 
