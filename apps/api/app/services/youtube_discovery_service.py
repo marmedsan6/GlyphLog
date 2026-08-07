@@ -6,7 +6,6 @@ menciones de anime/manga/juegos, cruza con la colección del usuario y enriquece
 con catálogos externos (AniList/RAWG).
 """
 
-import json
 import logging
 from datetime import datetime
 from typing import Any
@@ -14,7 +13,6 @@ from uuid import UUID
 
 from app.integrations.bedrock.client import BedrockClient
 from app.integrations.youtube.client import YouTubeClient
-from app.models.entry import EntryType
 from app.repositories.entry_repository import EntryRepository
 from app.schemas.youtube_discovery import AnalysisMetadata, YoutubeSuggestion
 

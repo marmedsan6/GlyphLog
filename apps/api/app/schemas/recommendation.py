@@ -1,6 +1,5 @@
 """Schemas para el sistema de recomendaciones."""
 
-from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +17,9 @@ class Recommendation(BaseModel):
     year: int | None = Field(None, ge=1900, le=2100, description="Año")
     external_url: str | None = Field(None, description="URL externa (AniList/RAWG)")
     cover_image_url: str | None = Field(None, description="URL de la imagen de portada")
-    similar_to: list[str] = Field(default_factory=list, description="Títulos similares de la colección")
+    similar_to: list[str] = Field(
+        default_factory=list, description="Títulos similares de la colección"
+    )
 
 
 class RecommendationMetadata(BaseModel):

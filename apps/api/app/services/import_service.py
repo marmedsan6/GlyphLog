@@ -51,7 +51,10 @@ class ImportService:
             parsed_data = self.bedrock_client.invoke_json(
                 prompt=prompt,
                 temperature=0.3,  # Baja temperatura para mayor precisión
-                system="You are a parser for anime/manga/game lists. Extract structured data accurately.",
+                system=(
+                    "You are a parser for anime/manga/game lists. "
+                    "Extract structured data accurately."
+                ),
             )
 
             if not isinstance(parsed_data, list):
