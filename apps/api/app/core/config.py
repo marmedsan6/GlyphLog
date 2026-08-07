@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     # ── AWS Bedrock (Claude) ───────────────────────────────────────────────────
     # Modelo de Claude en Bedrock para funciones de IA (importador, recomendaciones, analytics).
     # Por defecto: Sonnet 4.5 en us-east-1.
-    # Credenciales se leen del AWS profile (default) o variables de entorno (AWS_ACCESS_KEY_ID, etc.)
+    # Credenciales se leen del AWS profile (default) o variables de entorno
+    # (AWS_ACCESS_KEY_ID, etc.)
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     bedrock_region: str = "us-east-1"
 

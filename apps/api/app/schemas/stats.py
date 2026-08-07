@@ -13,7 +13,9 @@ class UserStats(BaseModel):
     )
     avg_rating: float = Field(..., description="Rating promedio global", ge=0, le=10)
     avg_rating_by_type: dict[str, float] = Field(..., description="Rating promedio por tipo")
-    completion_rate: float = Field(..., description="Porcentaje de entradas completadas", ge=0, le=100)
+    completion_rate: float = Field(
+        ..., description="Porcentaje de entradas completadas", ge=0, le=100
+    )
     completion_rate_by_type: dict[str, float] = Field(
         ..., description="Porcentaje de completado por tipo"
     )
@@ -29,7 +31,9 @@ class UserStats(BaseModel):
     entries_by_month: list[tuple[str, int]] = Field(
         ..., description="Entradas añadidas por mes (YYYY-MM, count) - últimos 12 meses"
     )
-    current_streak_days: int = Field(..., description="Días consecutivos con actualizaciones de progreso")
+    current_streak_days: int = Field(
+        ..., description="Días consecutivos con actualizaciones de progreso"
+    )
 
     class Config:
         json_schema_extra = {

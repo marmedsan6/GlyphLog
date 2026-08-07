@@ -10,7 +10,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.entry import Entry, EntryStatus, EntryType
-from app.models.enums import ProgressUnit
 from app.models.progress_event import ProgressEvent
 
 logger = logging.getLogger(__name__)
