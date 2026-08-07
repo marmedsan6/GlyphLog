@@ -1,7 +1,6 @@
 """Servicio de recomendaciones inteligentes con Claude/Bedrock."""
 
 import logging
-from collections import Counter
 from uuid import UUID
 
 from app.integrations.bedrock.client import BedrockClient

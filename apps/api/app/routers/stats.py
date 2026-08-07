@@ -1,12 +1,12 @@
 """Router de estadísticas del usuario."""
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import AuthenticatedUser, get_current_user_flexible
 from app.schemas.stats import UserStats
 from app.services.stats_service import StatsService
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 

@@ -25,6 +25,14 @@ line-length = 100
 # E: pycodestyle errors, F: pyflakes, I: isort
 select = ["E", "F", "I"]
 
+[tool.ruff.lint.per-file-ignores]
+# Estos archivos contienen prompts de LLM como strings multilínea; partirlos
+# en líneas de 100 chars alteraría el texto que se envía al modelo.
+"app/core/ai_prompts.py" = ["E501"]
+"app/services/import_service.py" = ["E501"]
+"app/services/recommendation_service.py" = ["E501"]
+"app/services/youtube_discovery_service.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
