@@ -59,7 +59,7 @@ export function EntryEditForm({ entry, onSubmit, onCancel, isSubmitting }: Entry
     setKeepCoverImage(true)
     setSelectedImage(null)
     setImageError(null)
-  }, [entry, form])
+  }, [entry])
 
   function handleImageChange(file: File | null) {
     const validationError = validateImageFile(file)

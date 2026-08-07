@@ -30,6 +30,7 @@ export function EntryCard({ entry }: EntryCardProps) {
               alt={`Portada de ${entry.title}`}
               className="h-full w-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
