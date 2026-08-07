@@ -192,7 +192,10 @@ class AIService:
         system: str | None,
     ) -> AsyncIterator[Any]:
         """Inicia el streaming con OpenAI; los errores de conexión → AIProviderError."""
-        client = AsyncOpenAI(api_key=self.openai_api_key)
+        client_kwargs: dict[str, str] = {"api_key": self.openai_api_key}
+        if settings.openai_base_url:
+            client_kwargs["base_url"] = settings.openai_base_url
+        client = AsyncOpenAI(**client_kwargs)
         api_messages: list[dict[str, str]] = [
             {"role": message.role, "content": message.content} for message in messages
         ]

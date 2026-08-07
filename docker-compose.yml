@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: glyphlog
       POSTGRES_DB: glyphlog
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,6 +35,8 @@ services:
       - ./apps/api:/app
       - /app/.venv # Evita sobreescribir venv local si existe en el host
       - ./apps/api/uploads:/app/uploads # Persistencia de imágenes de portada en el host
+    env_file:
+      - ./apps/api/.env
     environment:
       - DATABASE_URL=postgresql+asyncpg://glyphlog:glyphlog@postgres:5432/glyphlog
       - SECRET_KEY=your-super-secret-key-that-is-at-least-32-chars-long-for-dev
@@ -42,14 +44,12 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - DEBUG=true
       - ALLOWED_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
+
       # Client ID de Google OAuth para validar id_tokens en el backend.
       # Si está vacío, POST /api/v1/auth/google responde 503 (modo degradado).
       # El MISMO valor debe inyectarse en el servicio web como VITE_GOOGLE_CLIENT_ID.
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      # GlyphAI (chat IA). Vacías por defecto → POST /api/v1/ai/chat responde 503.
-      - AI_PROVIDER=${AI_PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
     depends_on:
       postgres:
         condition: service_healthy

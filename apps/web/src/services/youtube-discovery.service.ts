@@ -47,9 +47,8 @@ export async function addSuggestionToCollection(
     rating: null,
     year: null,
     notes: null,
-    cover_image_url: null,
+    cover_image: null,
     progress_total: null,
-    current_progress: null,
   }
 
   const response = await apiClient.post('/entries/', body)

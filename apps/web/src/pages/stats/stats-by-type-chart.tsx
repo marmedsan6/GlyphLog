@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { UserStats } from "@/services/stats.service";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Film } from "lucide-react";
 
 interface StatsByTypeChartProps {
@@ -11,17 +11,17 @@ export function StatsByTypeChart({ stats }: StatsByTypeChartProps) {
   const data = [
     {
       name: "Anime",
-      count: stats.byType?.anime || 0,
+      count: stats.by_type.anime || 0,
       fill: "#8b5cf6",
     },
     {
       name: "Manga",
-      count: stats.byType?.manga || 0,
+      count: stats.by_type.manga || 0,
       fill: "#ec4899",
     },
     {
       name: "Juegos",
-      count: stats.byType?.game || 0,
+      count: stats.by_type.game || 0,
       fill: "#10b981",
     },
   ];

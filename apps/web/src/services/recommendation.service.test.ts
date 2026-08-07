@@ -5,7 +5,7 @@ import type { GenerateRecommendationsResponse } from './recommendation.service'
 
 vi.mock('@/lib/api-client')
 
-const mockApiClient = vi.mocked(apiClient)
+const mockApiClient = vi.mocked(apiClient, { deep: true })
 
 function makeResponse(): GenerateRecommendationsResponse {
   return {

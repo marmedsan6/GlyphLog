@@ -12,7 +12,11 @@ vi.mock('@/hooks/use-toast')
 const mockCreateEntry = vi.mocked(useCreateEntry)
 const mockToast = vi.fn()
 
-vi.mocked(useToast).mockReturnValue({ toast: mockToast } as ReturnType<typeof useToast>)
+vi.mocked(useToast).mockReturnValue({
+  toast: mockToast,
+  dismiss: vi.fn(),
+  toasts: [],
+})
 
 function makeRecommendation(overrides: Partial<Recommendation> = {}): Recommendation {
   return {
@@ -34,7 +38,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation()
     render(<RecommendationCard recommendation={recommendation} />)
@@ -54,7 +58,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation({ cover_image_url: null })
     render(<RecommendationCard recommendation={recommendation} />)
@@ -67,7 +71,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation({ match_percentage: 85 })
     render(<RecommendationCard recommendation={recommendation} />)
@@ -80,7 +84,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation({ match_percentage: 70 })
     render(<RecommendationCard recommendation={recommendation} />)
@@ -93,7 +97,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation({ match_percentage: 50 })
     render(<RecommendationCard recommendation={recommendation} />)
@@ -107,7 +111,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation()
     render(<RecommendationCard recommendation={recommendation} />)
@@ -137,7 +141,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation()
     render(<RecommendationCard recommendation={recommendation} />)
@@ -158,7 +162,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation()
     render(<RecommendationCard recommendation={recommendation} />)
@@ -177,7 +181,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const { rerender } = render(<RecommendationCard recommendation={makeRecommendation()} />)
 
@@ -193,7 +197,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const recommendation = makeRecommendation({ genres: ['Action', 'Fantasy', 'Drama'] })
     render(<RecommendationCard recommendation={recommendation} />)
@@ -207,7 +211,7 @@ describe('RecommendationCard', () => {
     mockCreateEntry.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as ReturnType<typeof useCreateEntry>)
+    } as unknown as ReturnType<typeof useCreateEntry>)
 
     const { rerender } = render(<RecommendationCard recommendation={makeRecommendation()} />)
 

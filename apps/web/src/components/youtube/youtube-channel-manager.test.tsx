@@ -26,7 +26,7 @@ describe('YoutubeChannelManager', () => {
     const addButton = screen.getByRole('button', { name: /Añadir/i })
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@TheAnimeMan',
+      target: { value: 'https://www.youtube.com/@TheAnimeMan' },
     })
     fireEvent.click(addButton)
 
@@ -49,7 +49,7 @@ describe('YoutubeChannelManager', () => {
     const input = screen.getByLabelText(/URL del canal/i) as HTMLInputElement
     const addButton = screen.getByRole('button', { name: /Añadir/i })
 
-    fireEvent.change(input, { value: 'https://invalid-url.com' })
+    fireEvent.change(input, { target: { value: 'https://invalid-url.com' } })
     fireEvent.click(addButton)
 
     expect(screen.getByText(/Ingresa una URL válida de YouTube/i)).toBeInTheDocument()
@@ -63,7 +63,7 @@ describe('YoutubeChannelManager', () => {
     const addButton = screen.getByRole('button', { name: /Añadir/i })
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@TheAnimeMan',
+      target: { value: 'https://www.youtube.com/@TheAnimeMan' },
     })
     fireEvent.click(addButton)
 
@@ -86,7 +86,7 @@ describe('YoutubeChannelManager', () => {
     // Añadir 5 canales
     for (let i = 1; i <= 5; i++) {
       fireEvent.change(input, {
-        value: `https://www.youtube.com/@Channel${i}`,
+        target: { value: `https://www.youtube.com/@Channel${i}` },
       })
       fireEvent.click(addButton)
     }
@@ -103,9 +103,9 @@ describe('YoutubeChannelManager', () => {
     const input = screen.getByLabelText(/URL del canal/i) as HTMLInputElement
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@TheAnimeMan',
+      target: { value: 'https://www.youtube.com/@TheAnimeMan' },
     })
-    fireEvent.keyPress(input, { key: 'Enter', code: 'Enter' })
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' })
 
     expect(screen.getByText(/TheAnimeMan/i)).toBeInTheDocument()
   })
@@ -117,7 +117,7 @@ describe('YoutubeChannelManager', () => {
     const addButton = screen.getByRole('button', { name: /Añadir/i })
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@TheAnimeMan',
+      target: { value: 'https://www.youtube.com/@TheAnimeMan' },
     })
     fireEvent.click(addButton)
 
@@ -133,11 +133,11 @@ describe('YoutubeChannelManager', () => {
     const channelUrl = 'https://www.youtube.com/@TheAnimeMan'
 
     // Añadir primera vez
-    fireEvent.change(input, { value: channelUrl })
+    fireEvent.change(input, { target: { value: channelUrl } })
     fireEvent.click(addButton)
 
     // Intentar añadir duplicado
-    fireEvent.change(input, { value: channelUrl })
+    fireEvent.change(input, { target: { value: channelUrl } })
     fireEvent.click(addButton)
 
     expect(screen.getByText(/Este canal ya está en la lista/i)).toBeInTheDocument()
@@ -150,14 +150,14 @@ describe('YoutubeChannelManager', () => {
     const addButton = screen.getByRole('button', { name: /Añadir/i })
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@Channel1',
+      target: { value: 'https://www.youtube.com/@Channel1' },
     })
     fireEvent.click(addButton)
 
     expect(screen.getByText(/Canales guardados \(1\/5\)/i)).toBeInTheDocument()
 
     fireEvent.change(input, {
-      value: 'https://www.youtube.com/@Channel2',
+      target: { value: 'https://www.youtube.com/@Channel2' },
     })
     fireEvent.click(addButton)
 

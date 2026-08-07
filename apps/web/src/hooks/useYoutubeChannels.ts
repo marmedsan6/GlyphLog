@@ -4,51 +4,58 @@
  * Usa localStorage para persistir la lista de canales.
  */
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'glyphlog_youtube_channels'
 const MAX_CHANNELS = 5
 
+function loadChannels(): string[] {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (!stored) return []
+
+  try {
+    const parsed: unknown = JSON.parse(stored)
+    return Array.isArray(parsed) && parsed.every((channel): channel is string => typeof channel === 'string')
+      ? parsed
+      : []
+  } catch {
+    return []
+  }
+}
+
 export function useYoutubeChannels() {
-  const [channels, setChannels] = useState<string[]>([])
+  const [channels, setChannels] = useState<string[]>(loadChannels)
+  const channelsRef = useRef(channels)
 
-  // Cargar canales del localStorage al montar
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed)) {
-          setChannels(parsed)
-        }
-      } catch (error) {
-        console.error('Error al cargar canales:', error)
-      }
-    }
-  }, [])
+    channelsRef.current = channels
+  }, [channels])
 
-  // Guardar canales en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(channels))
   }, [channels])
 
   const addChannel = (url: string) => {
-    if (channels.length >= MAX_CHANNELS) {
+    const current = channelsRef.current
+    if (current.length >= MAX_CHANNELS) {
       throw new Error(`Máximo ${MAX_CHANNELS} canales permitidos`)
     }
-
-    if (channels.includes(url)) {
+    if (current.includes(url)) {
       throw new Error('Este canal ya está en la lista')
     }
-
-    setChannels([...channels, url])
+    const next = [...current, url]
+    channelsRef.current = next
+    setChannels(next)
   }
 
   const removeChannel = (url: string) => {
-    setChannels(channels.filter((ch) => ch !== url))
+    const next = channelsRef.current.filter((channel) => channel !== url)
+    channelsRef.current = next
+    setChannels(next)
   }
 
   const clearChannels = () => {
+    channelsRef.current = []
     setChannels([])
   }
 
