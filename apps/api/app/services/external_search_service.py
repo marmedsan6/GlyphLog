@@ -8,7 +8,6 @@ from cachetools import TTLCache
 
 from app.schemas.external_search import (
     ExternalSearchResponse,
-    ExternalSearchResult,
     GameDetailResponse,
 )
 from app.services.external_clients.anilist_client import AniListClient

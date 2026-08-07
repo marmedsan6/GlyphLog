@@ -8,6 +8,9 @@ os.environ.setdefault("ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 os.environ.setdefault("DEBUG", "true")
 os.environ.setdefault("ALLOWED_ORIGINS", '["http://localhost:5173"]')
+# API key falsa para tests de YouTube discovery: los tests que la mockean a
+# vacío (test_analyze_channels_youtube_api_not_configured) la sobrescriben.
+os.environ.setdefault("YOUTUBE_API_KEY", "test_youtube_api_key")
 # Límites bajos para testing — permiten verificar rate limiting sin cientos de peticiones.
 os.environ.setdefault("RATE_LIMIT_LOGIN", "2/minute")
 os.environ.setdefault("RATE_LIMIT_REGISTER", "2/minute")
