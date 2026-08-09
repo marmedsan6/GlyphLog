@@ -15,8 +15,8 @@ from app.services.auth_service import AuthService
 from app.services.conversation_service import ConversationService
 from app.services.device_token_service import DeviceTokenService
 from app.services.entry_service import EntryService
-from app.services.external_clients.anilist_client import AniListClient
-from app.services.external_clients.rawg_client import RawgClient
+from app.integrations.anilist_client import AniListClient
+from app.integrations.rawg_client import RawgClient
 from app.services.external_search_service import ExternalSearchService
 from app.services.profile_service import ProfileService
 

@@ -10,8 +10,8 @@ from app.schemas.external_search import (
     ExternalSearchResponse,
     GameDetailResponse,
 )
-from app.services.external_clients.anilist_client import AniListClient
-from app.services.external_clients.rawg_client import RawgClient, _playtime_to_hours
+from app.integrations.anilist_client import AniListClient
+from app.integrations.rawg_client import RawgClient, _playtime_to_hours
 
 logger = logging.getLogger(__name__)
 

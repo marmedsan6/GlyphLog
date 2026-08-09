@@ -1,0 +1,88 @@
+# GlyphLog - Dev Infrastructure (cloud VM aislada de prod)
+#
+# Variante del docker-compose de desarrollo pensada para ejecutarse en la
+# misma VM que prod (Oracle Cloud) SIN interferir con él:
+#   - Containers nombrados *-dev (no choca con glyphlog-*-prod)
+#   - TODOS los puertos bindeados a 127.0.0.1: el dev no se expone a internet,
+#     se accede por túnel SSH (desde el móvil o el PC local)
+#   - Postgres dev en 127.0.0.1:5433 (el prod NO publica puerto, no hay conflicto)
+#   - SECRET_KEY y DATABASE_URL separados de prod (apps/api/.env)
+#
+# Uso:
+#   cp apps/api/.env.example apps/api/.env   # y rellena SECRET_KEY
+#   docker compose -f docker-compose.dev.yml up -d --build
+#   docker compose -f docker-compose.dev.yml exec -T glyphlog-dev-api alembic upgrade head
+#
+# Acceso por túnel (ej. desde el móvil):
+#   ssh -L 5173:127.0.0.1:5173 -L 8000:127.0.0.1:8000 ubuntu@<vm-ip>
+#   → abrir http://localhost:5173 con Vite proxieando /api a localhost:8000
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: glyphlog-dev-postgres
+    environment:
+      POSTGRES_USER: glyphlog
+      POSTGRES_PASSWORD: glyphlog
+      POSTGRES_DB: glyphlog
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyphlog -d glyphlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: glyphlog-dev-api
+    user: root
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - /app/.venv
+      - ./apps/api/uploads:/app/uploads
+    env_file:
+      - ./apps/api/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://glyphlog:glyphlog@postgres:5432/glyphlog
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - ALLOWED_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: node:20-alpine
+    container_name: glyphlog-dev-web
+    working_dir: /app
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             pnpm --filter web exec vite --host"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:

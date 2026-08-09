@@ -495,6 +495,7 @@ Cada subagente tiene contexto acotado y gasta menos tokens que el agente princip
 | `thermo-nuclear-review` | Code review ultra-estricto (calidad, abstracciones, spaghetti) |
 | `qa-senior` | Planes de prueba, templates de bug reports, testing E2E |
 | `fix-issue` | Crear issues con formato INVEST, clasificar bugs |
+| `user-story` | Crear historias de usuario con formato INVEST |
 | `deploy-to-prod` | Deploy a producción (Oracle Cloud + Cloudflare) |
 
 ### Flujo ideal de una tarea
