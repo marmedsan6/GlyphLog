@@ -1,18 +1,16 @@
-"""Tests de campos opcionales (rating, year, notes, cover_image) en entradas.
+"""Tests del endpoint de crear entrada (POST /api/v1/entries).
 
-Cobertura: validación de schemas, integración HTTP con multipart/form-data
-y subida de imágenes. Todos los tests usan mocks — no requieren PostgreSQL.
+Cobertura: integración HTTP con dependencias mockeadas.
+No requiere PostgreSQL corriendo.
 """
 
 import io
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
-import pytest
 from httpx import AsyncClient
-from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
-from app.models.entry import EntryStatus, EntryType
-from app.schemas.entry import EntryCreate
 from app.services.entry_service import EntryService
 from tests.factories import (
     clear_overrides,
@@ -26,184 +24,243 @@ from tests.factories import (
 )
 
 # ---------------------------------------------------------------------------
-# Tests de schema — validación directa de campos opcionales en EntryCreate
+# Tests de integración HTTP — campos obligatorios
 # ---------------------------------------------------------------------------
 
 
-class TestEntryCreateOptionalFieldsSchema:
-    """Validaciones de Pydantic sobre campos opcionales de EntryCreate."""
+class TestCreateEntryEndpoint:
+    """Tests del endpoint POST /api/v1/entries vía HTTP."""
 
-    # ── Rating ────────────────────────────────────────────────────────────
+    async def test_create_entry_success(
+        self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
+    ) -> None:
+        """Criterio B1: POST retorna 201 Created con datos correctos."""
+        user = make_user()
+        entry = make_entry(user_id=user.id)
+        mock_entry_repo.create.return_value = entry
+        override_current_user(user)
+        override_entry_service(entry_service)
 
-    def test_rating_valid_values(self) -> None:
-        """Rating acepta valores dentro del rango [1.0, 10.0]."""
-        for value in (1.0, 5.5, 10.0):
-            data = EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                rating=value,
-            )
-            assert data.rating == value
-
-    def test_rating_below_minimum_raises(self) -> None:
-        """Rating < 1.0 → ValidationError."""
-        with pytest.raises(ValidationError):
-            EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                rating=0.5,
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "One Piece", "type": "anime", "status": "watching"},
             )
 
-    def test_rating_above_maximum_raises(self) -> None:
-        """Rating > 10.0 → ValidationError."""
-        with pytest.raises(ValidationError):
-            EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                rating=10.1,
+            assert response.status_code == 201
+            body = response.json()
+            assert body["title"] == "One Piece"
+            assert body["type"] == "anime"
+            assert body["status"] == "watching"
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_response_includes_all_fields(
+        self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
+    ) -> None:
+        """Criterio B2: respuesta incluye id, title, type, status, user_id, created_at, updated_at."""
+        user = make_user()
+        entry = make_entry(user_id=user.id)
+        mock_entry_repo.create.return_value = entry
+        override_current_user(user)
+        override_entry_service(entry_service)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "One Piece", "type": "anime", "status": "watching"},
             )
 
-    def test_rating_none_is_valid(self) -> None:
-        """Rating como None es válido (campo opcional)."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            rating=None,
-        )
-        assert data.rating is None
+            assert response.status_code == 201
+            body = response.json()
+            assert "id" in body
+            assert "title" in body
+            assert "type" in body
+            assert "status" in body
+            assert "user_id" in body
+            assert "rating" in body
+            assert "year" in body
+            assert "notes" in body
+            assert "cover_image" in body
+            assert "created_at" in body
+            assert "updated_at" in body
+        finally:
+            clear_overrides()
 
-    # ── Year ──────────────────────────────────────────────────────────────
+    async def test_create_entry_user_id_from_jwt(
+        self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
+    ) -> None:
+        """Criterio B3: user_id se extrae del JWT, no se acepta en el request."""
+        user = make_user()
+        entry = make_entry(user_id=user.id)
+        mock_entry_repo.create.return_value = entry
+        override_current_user(user)
+        override_entry_service(entry_service)
 
-    def test_year_valid_values(self) -> None:
-        """Year acepta valores dentro del rango [1950, 2100]."""
-        for value in (1950, 2024, 2100):
-            data = EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                year=value,
-            )
-            assert data.year == value
-
-    def test_year_below_minimum_raises(self) -> None:
-        """Year < 1950 → ValidationError."""
-        with pytest.raises(ValidationError):
-            EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                year=1949,
-            )
-
-    def test_year_above_maximum_raises(self) -> None:
-        """Year > 2100 → ValidationError."""
-        with pytest.raises(ValidationError):
-            EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                year=2101,
+        try:
+            # Enviar user_id en el body debe ser ignorado (no está en EntryCreate schema)
+            response = await client.post(
+                "/api/v1/entries/",
+                data={
+                    "title": "One Piece",
+                    "type": "anime",
+                    "status": "watching",
+                    "user_id": str(uuid4()),  # Este user_id debe ignorarse
+                },
             )
 
-    def test_year_none_is_valid(self) -> None:
-        """Year como None es válido (campo opcional)."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            year=None,
-        )
-        assert data.year is None
+            assert response.status_code == 201
+            body = response.json()
+            # El user_id en la respuesta debe ser el del usuario autenticado
+            assert body["user_id"] == str(user.id)
+        finally:
+            clear_overrides()
 
-    # ── Notes ─────────────────────────────────────────────────────────────
+    async def test_create_entry_missing_title(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B4: falta título → 422."""
+        user = make_user()
+        override_current_user(user)
 
-    def test_notes_valid_text(self) -> None:
-        """Notes acepta texto dentro del límite de 5000 caracteres."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            notes="Una gran aventura",
-        )
-        assert data.notes == "Una gran aventura"
-
-    def test_notes_exactly_5000_chars_is_valid(self) -> None:
-        """Notes de exactamente 5000 caracteres debe ser válido (boundary)."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            notes="a" * 5000,
-        )
-        assert data.notes == "a" * 5000
-
-    def test_notes_over_5000_chars_raises(self) -> None:
-        """Notes > 5000 caracteres → ValidationError."""
-        with pytest.raises(ValidationError):
-            EntryCreate(
-                title="One Piece",
-                type=EntryType.anime,
-                status=EntryStatus.watching,
-                notes="a" * 5001,
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"type": "anime", "status": "watching"},
             )
 
-    def test_notes_trimmed(self) -> None:
-        """Notes se almacena con trim() aplicado."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            notes="  texto con espacios  ",
-        )
-        assert data.notes == "texto con espacios"
+            assert response.status_code == 422
+        finally:
+            clear_overrides()
 
-    def test_notes_none_is_valid(self) -> None:
-        """Notes como None es válido (campo opcional)."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            notes=None,
-        )
-        assert data.notes is None
+    async def test_create_entry_empty_title_http(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B5: título vacío vía HTTP → 422."""
+        user = make_user()
+        override_current_user(user)
 
-    # ── Todos los opcionales ──────────────────────────────────────────────
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "", "type": "anime", "status": "watching"},
+            )
 
-    def test_all_optionals_none_is_valid(self) -> None:
-        """Todos los campos opcionales como None → entrada válida."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-        )
-        assert data.rating is None
-        assert data.year is None
-        assert data.notes is None
-        assert data.cover_image is None
+            assert response.status_code == 422
+            assert "vacío" in response.json()["detail"]
+        finally:
+            clear_overrides()
 
-    def test_all_optionals_set_is_valid(self) -> None:
-        """Todos los campos opcionales con valores válidos → entrada válida."""
-        data = EntryCreate(
-            title="One Piece",
-            type=EntryType.anime,
-            status=EntryStatus.watching,
-            rating=8.5,
-            year=1999,
-            notes="Clásico del anime",
-            cover_image="/uploads/covers/test.jpg",
+    async def test_create_entry_whitespace_title_http(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B5: título solo espacios vía HTTP → 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "     ", "type": "anime", "status": "watching"},
+            )
+
+            assert response.status_code == 422
+            assert "vacío" in response.json()["detail"]
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_title_over_500_chars_http(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B6: título > 500 chars vía HTTP → 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "a" * 501, "type": "anime", "status": "watching"},
+            )
+
+            assert response.status_code == 422
+            assert "500" in response.json()["detail"]
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_invalid_type(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B7: tipo inválido → 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "One Piece", "type": "movie", "status": "watching"},
+            )
+
+            assert response.status_code == 422
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_invalid_status(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B8: estado inválido → 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "One Piece", "type": "anime", "status": "reading"},
+            )
+
+            assert response.status_code == 422
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_duplicate_http(
+        self, client: AsyncClient, entry_service: EntryService, mock_entry_repo: AsyncMock
+    ) -> None:
+        """Criterio B9: duplicado (mismo título + tipo para usuario) vía HTTP → 409."""
+        user = make_user()
+        mock_entry_repo.create.side_effect = IntegrityError(
+            statement="INSERT INTO entries ...",
+            params={},
+            orig=Exception('duplicate key value violates unique constraint "uq_entries_user_title_type"'),
         )
-        assert data.rating == 8.5
-        assert data.year == 1999
-        assert data.notes == "Clásico del anime"
-        assert data.cover_image == "/uploads/covers/test.jpg"
+        override_current_user(user)
+        override_entry_service(entry_service)
+
+        try:
+            response = await client.post(
+                "/api/v1/entries/",
+                data={"title": "One Piece", "type": "anime", "status": "watching"},
+            )
+
+            assert response.status_code == 409
+            assert "ya tienes" in response.json()["detail"].lower()
+        finally:
+            clear_overrides()
+
+    async def test_create_entry_requires_authentication(
+        self, client: AsyncClient
+    ) -> None:
+        """Criterio B11: endpoint requiere autenticación (sin token → 401)."""
+        # NO mockeamos get_current_user — la dependencia real debe ejecutarse
+        # y fallar al no encontrar header Authorization.
+        response = await client.post(
+            "/api/v1/entries/",
+            data={"title": "One Piece", "type": "anime", "status": "watching"},
+        )
+
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------
-# Tests de integración HTTP — campos opcionales vía multipart/form-data
+# Tests de integración HTTP — campos opcionales
 # ---------------------------------------------------------------------------
 
 
