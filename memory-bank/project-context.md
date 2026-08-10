@@ -1,7 +1,7 @@
 # Contexto del Proyecto — GlyphLog
 
 > Documento de referencia rápida. Mantenerlo siempre actualizado al finalizar cada sesión de trabajo.
-> Última actualización: julio 2026
+> Última actualización: agosto 2026
 
 ---
 
@@ -38,6 +38,8 @@ GlyphLog es una aplicación web personal para registrar, organizar y hacer segui
 **Fase 0 — Setup completado, CRUD completo de entradas implementado, y Google OAuth integrado en login y registro** (julio 2026)
 
 > **Agosto 2026 — Limpieza de código:** auditoría completa y limpieza de código muerto/basura git (6 commits, ver `memory-bank/sessions/session-2026-08-04-code-cleanup.md` y ADR-011).
+>
+> **Agosto 2026 — Fixes UX, import MAL y proveedor LLM:** tema sin blur, GlyphAI, DevTools solo dev, import de export real de MAL (`.xml.gz` por navegador), fix `auth.user_id` → `auth.id` (causa de 500) y abstracción `llm_client` por entorno (OpenAI local / Bedrock prod, ADR-014). Ver `memory-bank/sessions/session-2026-08-07-llm-provider-import-fixes.md`.
 
 - `apps/web` scaffoldeado: Vite + React 18 + TypeScript strict + Tailwind CSS + shadcn/ui
 - Sistema de auth con JWT en sessionStorage

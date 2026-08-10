@@ -66,7 +66,7 @@ export function AppLayout() {
               to="/chat"
               className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
             >
-              Chat IA
+              GlyphAI
             </Link>
             <ThemeToggle />
             <DropdownMenu>

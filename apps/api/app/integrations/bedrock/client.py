@@ -10,6 +10,7 @@ import logging
 from typing import Any
 
 import boto3
+from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -37,9 +38,17 @@ class BedrockClient:
         self.max_tokens = max_tokens
 
         try:
+            # Timeouts explícitos: Bedrock puede colgarse sin credenciales o en
+            # regiones sin acceso al modelo. Sin esto, el endpoint tarda hasta
+            # 60s+ y el frontend parece "muerto". Retries estándar de AWS.
             self.client = boto3.client(
                 service_name="bedrock-runtime",
                 region_name=region,
+                config=BotoConfig(
+                    connect_timeout=10,
+                    read_timeout=120,
+                    retries={"max_attempts": 2, "mode": "standard"},
+                ),
             )
             logger.info(f"BedrockClient inicializado: {model_id} en {region}")
         except Exception as e:
