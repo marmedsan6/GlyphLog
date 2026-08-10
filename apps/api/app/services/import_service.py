@@ -1,10 +1,10 @@
-"""Servicio de importación inteligente con Claude/Bedrock."""
+"""Servicio de importación inteligente con un LLM (Claude vía Bedrock o OpenAI)."""
 
 import logging
 from decimal import Decimal
 from uuid import UUID
 
-from app.integrations.bedrock.client import BedrockClient
+from app.integrations.llm import JsonLlm
 from app.models.entry import FIXED_UNIT_BY_TYPE
 from app.repositories.entry_repository import EntryRepository
 from app.schemas.entry import EntryCreate
@@ -18,12 +18,18 @@ from app.schemas.import_schema import (
 
 logger = logging.getLogger(__name__)
 
+# Máximo de caracteres del contenido que se envían al LLM. Listas mayores
+# se truncan y se avisa al usuario para que no crea que se analizó todo.
+# 120k chars ≈ 30k tokens: suficiente para un export MAL de ~250k chars
+# manteniendo margen para la respuesta.
+MAX_PARSE_CONTENT_CHARS = 120_000
+
 
 class ImportService:
-    """Servicio para parsear e importar listas de contenido con Claude."""
+    """Servicio para parsear e importar listas de contenido con un LLM."""
 
-    def __init__(self, bedrock_client: BedrockClient, entry_repository: EntryRepository):
-        self.bedrock_client = bedrock_client
+    def __init__(self, llm_client: JsonLlm, entry_repository: EntryRepository):
+        self.llm_client = llm_client
         self.entry_repository = entry_repository
 
     async def parse_import(
@@ -42,13 +48,23 @@ class ImportService:
         """
         logger.info(f"Parseando importación de {source.value} para user {user_id}")
 
+        warnings: list[str] = []
+
+        # Si la lista excede el límite que se envía a Claude, avisar de que el
+        # análisis será parcial en lugar de callar el truncado.
+        if len(content) > MAX_PARSE_CONTENT_CHARS:
+            warnings.append(
+                "La lista es muy larga y se ha analizado solo una parte. "
+                "Considera dividirla en dos importaciones."
+            )
+
         # Construir prompt según la fuente
         format_description = self._get_format_description(source)
         prompt = self._build_parse_prompt(source, format_description, content)
 
         try:
-            # Invocar Claude para parsear
-            parsed_data = self.bedrock_client.invoke_json(
+            # Invocar el LLM configurado (Bedrock en prod, OpenAI en dev)
+            parsed_data = self.llm_client.invoke_json(
                 prompt=prompt,
                 temperature=0.3,  # Baja temperatura para mayor precisión
                 system=(
@@ -62,7 +78,6 @@ class ImportService:
 
             # Validar y convertir a ParsedEntry
             entries = []
-            warnings = []
 
             for item in parsed_data:
                 try:
@@ -179,7 +194,7 @@ For each entry, extract:
 Return ONLY a JSON array of entries, no additional text.
 
 List content:
-{content[:50000]}"""  # Limitar a 50k chars para no exceder límites
+{content[:MAX_PARSE_CONTENT_CHARS]}"""  # Limitar para no exceder límites de contexto
 
     async def _mark_duplicates(
         self, entries: list[ParsedEntry], user_id: str, warnings: list[str]

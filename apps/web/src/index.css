@@ -86,6 +86,10 @@
 }
 
 /* ── View Transition: theme toggle animation ───────────── */
+/* La máscara circular de expansión usa un SVG SIN filtro de blur:
+   el feGaussianBlur obliga a recomposición GPU en toda la página y
+   causaba lag en el cambio de tema. Duración acortada a 0.4s para
+   que el cambio se sienta fluido sin perder el efecto. */
 :root {
   --expo-out: linear(
     0 0%,
@@ -112,9 +116,9 @@
 }
 
 ::view-transition-new(root) {
-  mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><defs><filter id="blur"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="20" cy="20" r="18" fill="white" filter="url(%23blur)"/></svg>')
+  mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="white"/></svg>')
     center / 0 no-repeat;
-  animation: theme-scale 1s;
+  animation: theme-scale 0.4s;
   animation-fill-mode: both;
 }
 
@@ -126,7 +130,7 @@
 }
 
 .dark::view-transition-new(root) {
-  animation: theme-scale 1s;
+  animation: theme-scale 0.4s;
   animation-fill-mode: both;
 }
 

@@ -50,6 +50,20 @@ const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  // TEMPORAL: preview de avatares para elegir estilo DiceBear. Eliminar al decidir.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/avatar-preview',
+          lazy: async () => {
+            const { AvatarPreviewPage } = await import(
+              '@/pages/avatar-preview/avatar-preview.page'
+            )
+            return { Component: AvatarPreviewPage }
+          },
+        },
+      ]
+    : []),
 
   // ── Rutas protegidas — requieren autenticación ─────────────────────────────
   // ProtectedRoute verifica la sesión. Si no hay token, redirige a /login.
@@ -145,9 +159,10 @@ export function App() {
       <ThemeProvider>
         <RouterProvider router={router} />
         <Toaster />
-        {/* ReactQueryDevtools se excluye automáticamente en producción
-            cuando NODE_ENV=production (Vite lo establece durante el build) */}
-        <ReactQueryDevtools initialIsOpen={false} />
+        {/* DevTools de TanStack Query SOLO en desarrollo. La condición con
+            import.meta.env.DEV es explícita: en el build de producción este
+            panel (el círculo flotante + pop-up "TANSTACK") nunca se monta. */}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </ThemeProvider>
     </QueryClientProvider>
   )

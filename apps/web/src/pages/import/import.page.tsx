@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,9 +14,10 @@ import { useParseImport } from '@/hooks/useParseImport'
 import { useExecuteImport } from '@/hooks/useExecuteImport'
 import { useToast } from '@/hooks/use-toast'
 import { getApiErrorMessage } from '@/utils/api-errors'
+import { readImportFile } from '@/utils/import-file'
 import { ImportPreview } from './import-preview'
 import type { ImportSource, ParsedEntry } from '@/services/import.service'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { ArrowLeft, FileText, Upload } from 'lucide-react'
 
 export function ImportPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -26,6 +28,7 @@ export function ImportPage() {
 
   const { mutate: parse, isPending: isParsing } = useParseImport()
   const { mutate: execute, isPending: isExecuting } = useExecuteImport()
+  const [fileName, setFileName] = useState<string | null>(null)
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -42,7 +45,7 @@ export function ImportPage() {
       toast({
         variant: 'destructive',
         title: 'Contenido insuficiente',
-        description: 'Pega al menos 10 caracteres de tu lista',
+        description: 'Pega al menos 10 caracteres de tu lista o sube un archivo',
       })
       return
     }
@@ -68,6 +71,28 @@ export function ImportPage() {
         },
       }
     )
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0]
+    event.target.value = '' // permite re-subir el mismo archivo
+    if (!file) return
+
+    try {
+      const text = await readImportFile(file)
+      setContent(text)
+      setFileName(file.name)
+      toast({
+        title: 'Archivo cargado',
+        description: `"${file.name}" (${(text.length / 1000).toFixed(0)}k caracteres) listo para parsear`,
+      })
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'No se pudo leer el archivo',
+        description: error instanceof Error ? error.message : 'Error inesperado al leer el archivo',
+      })
+    }
   }
 
   function handleExecuteImport(entries: ParsedEntry[]) {
@@ -147,7 +172,34 @@ export function ImportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="content">Contenido de la lista</Label>
+              <Label htmlFor="import-file">O sube tu export de MyAnimeList (.xml o .xml.gz)</Label>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => document.getElementById('import-file')?.click()}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Elegir archivo
+                </Button>
+                <input
+                  id="import-file"
+                  type="file"
+                  accept=".xml,.json,.txt,.gz"
+                  className="hidden"
+                  onChange={(e) => {
+                    void handleFileChange(e)
+                  }}
+                />
+                {fileName && (
+                  <span className="text-xs text-muted-foreground" data-testid="import-file-name">
+                    {fileName}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Formatos: .xml (MAL/AniList/Kitsu), .json (AniList/Steam), .txt. Los .gz se
+                descomprimen en tu navegador.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="content">O pega el contenido directamente</Label>
               <Textarea
                 id="content"
                 placeholder="Pega aquí tu lista de anime/manga/juegos..."

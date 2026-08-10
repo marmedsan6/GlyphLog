@@ -23,6 +23,7 @@
 | [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
 | [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock | Aceptada | agosto 2026 |
 | [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado | Aceptada | agosto 2026 |
+| [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod) | Aceptada | agosto 2026 |
 
 ---
 
@@ -756,3 +757,36 @@ El sistema:
 - **Claude Sonnet 4.5 Announcement**: https://www.anthropic.com/news/claude-4-5-sonnet
 - **AWS Bedrock Pricing**: https://aws.amazon.com/bedrock/pricing/
 - **Benchmark LLMs 2026**: https://www.anthropic.com/research/benchmarks
+
+---
+
+## ADR-014
+
+### `llm_client` inyectable por entorno: OpenAI en local, Bedrock en producción
+
+**Fecha:** agosto 2026  
+**Estado:** Aceptada
+
+#### Contexto
+
+Recomendaciones e importación de MAL dependían directamente de `BedrockClient`, que en local (sin credenciales AWS válidas ni acceso al modelo) devolvía 503 y bloqueaba el desarrollo y las pruebas E2E del usuario. Además `auth.user_id` (atributo inexistente en `AuthenticatedUser`, que expone `.id`) rompía ambos endpoints con 500 antes de invocar el modelo.
+
+#### Decisión
+
+1. **Protocol `JsonLlm`** (`app/integrations/llm.py`) con método único `invoke_json(prompt, temperature, system) -> JsonModel | None` (sync). Implementaciones: `BedrockClient` (convenience methods) y `OpenAIJsonlClient` (OpenAI SDK sync, `max_tokens=4096`, sin streaming).
+2. **Factoría en la capa de DI** (`get_llm_client()` en `app/core/dependencies.py`): lee `AI_COMPLETION_PROVIDER` — `"openai"` para desarrollo local, `"bedrock"` como default para producción. Los servicios (`RecommendationService`, `ImportService`) reciben `llm_client: JsonLlm` por inyección y no conocen el proveedor.
+3. **`llm_errors.py`** (renombrado desde `bedrock_errors.py`): `map_llm_error` traduce errores de ambos proveedores (Bedrock `ClientError`/`BotoCoreError`; OpenAI `RateLimit`, `Authentication`, `APIConnection`, `APIStatus`) a 503 con diagnóstico accionable; `ValueError` → 502.
+
+#### Razones
+
+- **Desarrollo local sin AWS:** un proveedor OpenAI con `OPENAI_API_KEY` de test permite E2E reales del flujo sin gastar Bedrock.
+- **Producción intacta:** el default sigue siendo Bedrock/Claude Sonnet 4.5 (ADR-012); el cambio es config, no código.
+- **Sustituibilidad:** el Protocol permite cambiar de proveedor sin tocar servicios (misma filosofía que ADR-013 en GlyphAI).
+
+#### Consecuencias
+
+- `apps/api/.env` (local) lleva `AI_COMPLETION_PROVIDER=openai`.
+- Los tests de `test_external_search`/import/recommendations pasan sin credenciales AWS.
+- youtube_discovery sigue con su `get_bedrock_client` local (fuera de alcance).
+- mypy no valida `openai/` por un INTERNAL ERROR preexistente (excluido en `pyproject.toml`).
+
