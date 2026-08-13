@@ -4,12 +4,14 @@
 > Es la fuente de verdad para agentes IA que trabajen en este proyecto. Contiene las convenciones, arquitectura, flujos de trabajo y contexto necesarios para operar correctamente.
 
 <!-- codebase-memory-mcp:start -->
+
 # Codebase Knowledge Graph (codebase-memory-mcp)
 
 This project uses codebase-memory-mcp to maintain a knowledge graph of the codebase.
 ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 
 ## Priority Order
+
 1. `search_graph` — find functions, classes, routes, variables by pattern
 2. `trace_path` — trace who calls a function or what it calls
 3. `get_code_snippet` — read specific function/class source code
@@ -17,11 +19,13 @@ ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 5. `get_architecture` — high-level project summary
 
 ## When to fall back to grep/glob
+
 - Searching for string literals, error messages, config values
 - Searching non-code files (Dockerfiles, shell scripts, configs)
 - When MCP tools return insufficient results
 
 ## Examples
+
 - Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
 - Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
 - Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
@@ -45,14 +49,14 @@ Es un proyecto **full-stack con objetivo formativo y de portfolio**, construido 
 
 ### Stack principal
 
-| Capa | Tecnología |
-|------|-----------|
-| Frontend | React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui |
-| Backend | FastAPI + Python 3.11+ + Pydantic + SQLAlchemy + Alembic |
-| Base de datos | PostgreSQL |
-| Infra local | Docker + Docker Compose |
-| Monorepo | Turborepo + pnpm workspaces |
-| IA tools | MCPs (Playwright, PostgreSQL, Filesystem, Git) + Memory Bank |
+| Capa          | Tecnología                                                   |
+| ------------- | ------------------------------------------------------------ |
+| Frontend      | React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui      |
+| Backend       | FastAPI + Python 3.11+ + Pydantic + SQLAlchemy + Alembic     |
+| Base de datos | PostgreSQL                                                   |
+| Infra local   | Docker + Docker Compose                                      |
+| Monorepo      | Turborepo + pnpm workspaces                                  |
+| IA tools      | MCPs (Playwright, PostgreSQL, Filesystem, Git) + Memory Bank |
 
 ### Fase actual
 
@@ -134,19 +138,19 @@ async def get_entry(entry_id, db=Depends(get_db)):
 
 ## 5. Convenciones de nombres
 
-| Artefacto | Convención | Ejemplo |
-|-----------|-----------|---------|
-| Archivos TS/TSX | kebab-case | `entry-card.tsx` |
-| Componentes React | PascalCase | `EntryCard` |
-| Hooks | camelCase con prefijo `use` | `useEntries` |
-| Funciones y variables TS | camelCase | `getUserById` |
-| Constantes TS | UPPER_SNAKE_CASE | `MAX_ENTRIES` |
-| Archivos Python | snake_case | `entry_router.py` |
-| Funciones y variables Python | snake_case | `get_user_by_id` |
-| Clases Python | PascalCase | `EntryService` |
-| Rutas API | kebab-case | `/api/v1/user-entries` |
-| Tablas de BD | snake_case plural | `user_entries` |
-| Columnas de BD | snake_case | `created_at` |
+| Artefacto                    | Convención                  | Ejemplo                |
+| ---------------------------- | --------------------------- | ---------------------- |
+| Archivos TS/TSX              | kebab-case                  | `entry-card.tsx`       |
+| Componentes React            | PascalCase                  | `EntryCard`            |
+| Hooks                        | camelCase con prefijo `use` | `useEntries`           |
+| Funciones y variables TS     | camelCase                   | `getUserById`          |
+| Constantes TS                | UPPER_SNAKE_CASE            | `MAX_ENTRIES`          |
+| Archivos Python              | snake_case                  | `entry_router.py`      |
+| Funciones y variables Python | snake_case                  | `get_user_by_id`       |
+| Clases Python                | PascalCase                  | `EntryService`         |
+| Rutas API                    | kebab-case                  | `/api/v1/user-entries` |
+| Tablas de BD                 | snake_case plural           | `user_entries`         |
+| Columnas de BD               | snake_case                  | `created_at`           |
 
 ---
 
@@ -193,9 +197,31 @@ Router → Service → Repository → Base de datos
 
 ---
 
+## 6.5. Flujo SDD (Specification-Driven Development)
+
+El proyecto sigue el flujo SDD: **spec → plan → tasks → código → tests → validación**. Cada fase se aprueba antes de pasar a la siguiente; la especificación formal es el contrato revisable que antecede al plan.
+
+### Niveles de especificación (Tiers)
+
+| Tier | Cuándo                                                             | Artefacto                                                     |
+| ---- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 1    | Fix trivial (< 10 min): typo, bug puntual                          | Sin spec, directo al código                                   |
+| 2    | Feature pequeña: un endpoint, un componente                        | Sección `## Especificación` compacta inline en el task doc    |
+| 3    | Feature grande: auth, importaciones, descubrimiento, integraciones | Spec propia en `docs/specs/SPEC-<slug>.md` + gate de revisión |
+
+### Reglas del flujo
+
+1. **La spec se escribe y aprueba antes de desglosar en tareas.** Para Tier 3, la spec vive en `docs/specs/` (plantilla `TEMPLATE-SPEC.md`); para Tier 2, en la sección `## Especificación` del task doc.
+2. **Gate de aprobación:** la spec se somete a revisión en plan mode (con los "Criterios de salida" de `TEMPLATE-SPEC.md`) antes de generar el task doc. Regla de oro: _la spec está lista cuando puedes escribir los tests solo leyéndola_.
+3. **El task doc entra como salida del plan aprobado.** Se crea con `docs/tasks/TEMPLATE.md`, se añade a `docs/tasks/backlog.md` y se enlaza la spec en su sección Especificación.
+4. **Trazabilidad:** spec → task doc → criterios de aceptación → código → tests. Cada criterio de aceptación traza a un requisito de la spec.
+5. **Auditoría:** ejecuta el checklist de auditoría SDD de `docs/specs/README.md` periódicamente (fin de milestone o sesión significativa) para comprobar que el flujo se sigue estrictamente.
+
+---
+
 ## 7. Estructura de tareas
 
-Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. Úsalo al crear nuevas tareas o al documentar trabajo en curso.
+Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. Úsalo al crear nuevas tareas o al documentar trabajo en curso. La sección `## Especificación` (antes de `## Tareas técnicas`) contiene el contrato de la tarea: enlace a la spec Tier 3 en `docs/specs/` o bloque compacto para Tier 2.
 
 ### Template
 
@@ -203,35 +229,44 @@ Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. 
 # [TIPO] Título descriptivo de la tarea
 
 ## Contexto
+
 ¿Qué existe actualmente? ¿Qué antecede a esta tarea?
 
 ## Objetivo
+
 ¿Qué se quiere conseguir con esta tarea?
 
+## Especificación
+
+Contrato técnico: enlace a `docs/specs/SPEC-<slug>.md` (Tier 3) o bloque inline (Tier 2). N/A para Tier 1.
+
 ## Tareas técnicas
+
 - [ ] Subtarea 1
 - [ ] Subtarea 2
 
 ## Criterios de aceptación
+
 - ✅ El usuario puede X
 - ✅ La API devuelve Y
 - ✅ Los tests pasan
 
 ## Notas técnicas
+
 Decisiones, referencias, consideraciones a tener en cuenta.
 ```
 
 ### Tipos válidos
 
-| Tipo | Uso |
-|------|-----|
-| `[FEAT]` | Nueva funcionalidad |
-| `[FIX]` | Corrección de bug |
+| Tipo         | Uso                                         |
+| ------------ | ------------------------------------------- |
+| `[FEAT]`     | Nueva funcionalidad                         |
+| `[FIX]`      | Corrección de bug                           |
 | `[REFACTOR]` | Mejora interna sin cambio de comportamiento |
-| `[DOCS]` | Documentación |
-| `[SETUP]` | Configuración de entorno o infraestructura |
-| `[TEST]` | Añadir o corregir tests |
-| `[CHORE]` | Tareas de mantenimiento (deps, CI, etc.) |
+| `[DOCS]`     | Documentación                               |
+| `[SETUP]`    | Configuración de entorno o infraestructura  |
+| `[TEST]`     | Añadir o corregir tests                     |
+| `[CHORE]`    | Tareas de mantenimiento (deps, CI, etc.)    |
 
 ---
 
@@ -239,31 +274,31 @@ Decisiones, referencias, consideraciones a tener en cuenta.
 
 ### Turborepo
 
-| Comando | Descripción |
-|---------|-------------|
-| `pnpm dev` | Lanza frontend y backend en paralelo |
-| `pnpm build` | Build de todos los workspaces |
-| `pnpm lint` | Linting de todos los workspaces |
-| `pnpm test` | Tests de todos los workspaces |
-| `pnpm clean` | Limpia builds y node_modules |
+| Comando      | Descripción                          |
+| ------------ | ------------------------------------ |
+| `pnpm dev`   | Lanza frontend y backend en paralelo |
+| `pnpm build` | Build de todos los workspaces        |
+| `pnpm lint`  | Linting de todos los workspaces      |
+| `pnpm test`  | Tests de todos los workspaces        |
+| `pnpm clean` | Limpia builds y node_modules         |
 
 ### Docker
 
-| Comando | Descripción |
-|---------|-------------|
-| `docker compose up -d` | Levanta todos los servicios en background |
-| `docker compose down` | Para y elimina los contenedores |
+| Comando                      | Descripción                               |
+| ---------------------------- | ----------------------------------------- |
+| `docker compose up -d`       | Levanta todos los servicios en background |
+| `docker compose down`        | Para y elimina los contenedores           |
 | `docker compose logs -f api` | Sigue los logs del backend en tiempo real |
-| `docker compose ps` | Estado de los servicios |
+| `docker compose ps`          | Estado de los servicios                   |
 
 ### pnpm workspaces
 
-| Comando | Descripción |
-|---------|-------------|
-| `pnpm --filter web dev` | Dev solo del frontend |
-| `pnpm --filter api dev` | Dev solo del backend |
+| Comando                       | Descripción                    |
+| ----------------------------- | ------------------------------ |
+| `pnpm --filter web dev`       | Dev solo del frontend          |
+| `pnpm --filter api dev`       | Dev solo del backend           |
 | `pnpm --filter web add <pkg>` | Añadir dependencia al frontend |
-| `pnpm --filter api add <pkg>` | Añadir dependencia al backend |
+| `pnpm --filter api add <pkg>` | Añadir dependencia al backend  |
 
 ---
 
@@ -272,10 +307,12 @@ Decisiones, referencias, consideraciones a tener en cuenta.
 > ⚠️ **REQUISITO DE SEGURIDAD**: Nunca uses `gh` directamente. Siempre usa el wrapper `bash scripts/gh.sh`.
 
 El wrapper **no contiene tokens hardcodeados**. Lee las credenciales del entorno:
+
 - **Operaciones de repo** (push, issues, PRs, etc.) → usan `gh auth login` de la cuenta personal del usuario.
 - **Operaciones de project** (`gh project ...`) → usan `GH_PROJECT_TOKEN` (env var) si está definida; si no, hace fallback a `gh` con el auth del usuario.
 
 Configuración inicial (una sola vez):
+
 ```bash
 gh auth login                                        # para operaciones de repo
 gh auth login --scopes project,read:org              # si también gestionas project boards
@@ -285,15 +322,15 @@ export GH_PROJECT_TOKEN="ghp_xxx"                    # token classic con scopes 
 
 El wrapper **bloquea explícitamente** cualquier comando que mencione `turing-challenge`.
 
-| Comando | Descripción |
-|---------|-------------|
-| `bash scripts/gh.sh project list` | Listar proyectos |
-| `bash scripts/gh.sh project view <id>` | Ver detalle de proyecto |
-| `bash scripts/gh.sh project item-list <id>` | Listar items de un proyecto |
-| `bash scripts/gh.sh project view <id> --owner marmedsan6` | Ver detalle de proyecto |
-| `bash scripts/gh.sh project item-list <id> --owner marmedsan6` | Listar items de un proyecto |
+| Comando                                                         | Descripción                  |
+| --------------------------------------------------------------- | ---------------------------- |
+| `bash scripts/gh.sh project list`                               | Listar proyectos             |
+| `bash scripts/gh.sh project view <id>`                          | Ver detalle de proyecto      |
+| `bash scripts/gh.sh project item-list <id>`                     | Listar items de un proyecto  |
+| `bash scripts/gh.sh project view <id> --owner marmedsan6`       | Ver detalle de proyecto      |
+| `bash scripts/gh.sh project item-list <id> --owner marmedsan6`  | Listar items de un proyecto  |
 | `bash scripts/gh.sh project field-list <id> --owner marmedsan6` | Listar campos de un proyecto |
-| `bash scripts/gh.sh ...` | Cualquier comando gh |
+| `bash scripts/gh.sh ...`                                        | Cualquier comando gh         |
 
 El proyecto **#2 "Backlog del proyecto"** (privado, `marmedsan6`) contiene las tareas y el backlog del desarrollo de GlyphLog. Es el tablero principal del proyecto. El proyecto **#1** es otro proyecto personal no relacionado.
 
@@ -305,14 +342,14 @@ Los tokens **no** viven en el repositorio. `scripts/gh.sh` está gitignored y so
 
 Los MCPs (Model Context Protocol servers) amplían las capacidades del agente con acceso a herramientas externas. Documentación completa en `docs/mcps/`.
 
-| MCP | Propósito | Cuándo usarlo |
-|-----|-----------|---------------|
-| **Codebase Memory MCP** | Grafo de conocimiento del código | Indexar funciones, clases, rutas; trazar llamadas; detectar código muerto; analizar impacto de cambios |
-| **Playwright** | Testing E2E y automatización de navegador | Validar flujos de usuario complejos, comprobar que una feature funciona end-to-end |
-| **PostgreSQL** | Consultas directas a la base de datos | Debuggear datos, verificar el resultado de migraciones, explorar el esquema actual |
-| **Filesystem** | Operaciones de archivos y directorios | Refactors de estructura de carpetas, generación de scaffolds, mover o renombrar archivos |
-| **Git** | Análisis del repositorio | Revisar historial de cambios, entender contexto de commits anteriores, comparar ramas |
-| **Context7** | Documentación actualizada de librerías | Obtener APIs actuales de FastAPI, SQLAlchemy, React, Tailwind, etc. Añade `use context7` al prompt |
+| MCP                     | Propósito                                 | Cuándo usarlo                                                                                          |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Codebase Memory MCP** | Grafo de conocimiento del código          | Indexar funciones, clases, rutas; trazar llamadas; detectar código muerto; analizar impacto de cambios |
+| **Playwright**          | Testing E2E y automatización de navegador | Validar flujos de usuario complejos, comprobar que una feature funciona end-to-end                     |
+| **PostgreSQL**          | Consultas directas a la base de datos     | Debuggear datos, verificar el resultado de migraciones, explorar el esquema actual                     |
+| **Filesystem**          | Operaciones de archivos y directorios     | Refactors de estructura de carpetas, generación de scaffolds, mover o renombrar archivos               |
+| **Git**                 | Análisis del repositorio                  | Revisar historial de cambios, entender contexto de commits anteriores, comparar ramas                  |
+| **Context7**            | Documentación actualizada de librerías    | Obtener APIs actuales de FastAPI, SQLAlchemy, React, Tailwind, etc. Añade `use context7` al prompt     |
 
 ---
 
@@ -322,13 +359,13 @@ El `memory-bank/` es el sistema de contexto persistente del proyecto. Proporcion
 
 ### Archivos principales
 
-| Archivo | Cuándo leerlo |
-|---------|--------------|
+| Archivo                          | Cuándo leerlo                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------- |
 | `memory-bank/project-context.md` | **Siempre al inicio de una sesión.** Contiene el estado actual del proyecto. |
-| `memory-bank/decisions.md` | Antes de tomar cualquier decisión de arquitectura o elegir una librería. |
-| `memory-bank/patterns.md` | Antes de crear nuevos componentes, hooks, servicios o endpoints. |
-| `memory-bank/knowledge/` | Cuando necesitas conocimiento acumulado por área técnica específica. |
-| `memory-bank/sessions/` | Para revisar el trabajo de sesiones anteriores y evitar duplicar esfuerzo. |
+| `memory-bank/decisions.md`       | Antes de tomar cualquier decisión de arquitectura o elegir una librería.     |
+| `memory-bank/patterns.md`        | Antes de crear nuevos componentes, hooks, servicios o endpoints.             |
+| `memory-bank/knowledge/`         | Cuando necesitas conocimiento acumulado por área técnica específica.         |
+| `memory-bank/sessions/`          | Para revisar el trabajo de sesiones anteriores y evitar duplicar esfuerzo.   |
 
 ### Instrucción importante
 
@@ -336,6 +373,7 @@ El `memory-bank/` es el sistema de contexto persistente del proyecto. Proporcion
 > Si tomaste una decisión de arquitectura → `decisions.md`.
 > Si estableciste un patrón nuevo → `patterns.md`.
 > Si completaste trabajo significativo → crear entrada en `sessions/`.
+> Si una spec cambió de estado o se implementó → actualizar `docs/specs/README.md` y `docs/tasks/backlog.md`.
 
 ---
 
@@ -435,14 +473,14 @@ Debes seguir estas directrices estrictamente:
 
 Términos específicos del dominio de GlyphLog. Usarlos de forma consistente en código, tests y documentación.
 
-| Término | Definición |
-|---------|-----------|
-| **Entry / Entrada** | Ítem registrado en la colección: un anime, manga o videojuego concreto |
-| **Entry Type** | Tipo de entrada: `anime \| manga \| game` |
+| Término             | Definición                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Entry / Entrada** | Ítem registrado en la colección: un anime, manga o videojuego concreto                               |
+| **Entry Type**      | Tipo de entrada: `anime \| manga \| game`                                                            |
 | **Status / Estado** | Estado de seguimiento de una entrada: `watching \| completed \| on_hold \| dropped \| plan_to_watch` |
-| **Collection** | Conjunto completo de entradas de un usuario |
-| **MVP** | Primera versión funcional con autenticación básica y CRUD de entradas |
-| **Workspace** | Cada app o paquete dentro del monorepo (`web`, `api`, paquetes compartidos) |
+| **Collection**      | Conjunto completo de entradas de un usuario                                                          |
+| **MVP**             | Primera versión funcional con autenticación básica y CRUD de entradas                                |
+| **Workspace**       | Cada app o paquete dentro del monorepo (`web`, `api`, paquetes compartidos)                          |
 
 ---
 
@@ -469,34 +507,34 @@ Para minimizar el gasto de tokens en cada sesión, sigue estas reglas en orden d
 
 ### Al explorar código existente
 
-| En vez de... | Usa... |
-|---|---|
-| `grep` para buscar definiciones | `search_graph` (name_pattern) |
-| `glob` para encontrar archivos | `search_graph` (file_pattern) |
-| `read` de archivos grandes | `get_code_snippet` (solo la función/clase relevante) |
-| Leer varios archivos para trazar dependencias | `trace_path` (inbound/outbound) |
-| `grep` para buscar usos de una función | `trace_path` con direction="inbound" |
+| En vez de...                                  | Usa...                                               |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `grep` para buscar definiciones               | `search_graph` (name_pattern)                        |
+| `glob` para encontrar archivos                | `search_graph` (file_pattern)                        |
+| `read` de archivos grandes                    | `get_code_snippet` (solo la función/clase relevante) |
+| Leer varios archivos para trazar dependencias | `trace_path` (inbound/outbound)                      |
+| `grep` para buscar usos de una función        | `trace_path` con direction="inbound"                 |
 
 ### Uso de subagentes
 
 Cada subagente tiene contexto acotado y gasta menos tokens que el agente principal explorando:
 
-| Subagente | Cuándo usarlo |
-|---|---|
-| `senior-dev` | Implementar features completas (React + FastAPI) |
-| `tech-lead` | Revisar código, evaluar arquitectura, detectar smells |
-| `qa-senior` | Testing E2E con Playwright, reportes de bugs |
+| Subagente    | Cuándo usarlo                                         |
+| ------------ | ----------------------------------------------------- |
+| `senior-dev` | Implementar features completas (React + FastAPI)      |
+| `tech-lead`  | Revisar código, evaluar arquitectura, detectar smells |
+| `qa-senior`  | Testing E2E con Playwright, reportes de bugs          |
 
 ### Skills disponibles para tareas específicas
 
-| Skill | Cuándo usarla |
-|---|---|
-| `quick-context` | Al iniciar sesión — resumen del proyecto en 40 líneas |
+| Skill                   | Cuándo usarla                                                  |
+| ----------------------- | -------------------------------------------------------------- |
+| `quick-context`         | Al iniciar sesión — resumen del proyecto en 40 líneas          |
 | `thermo-nuclear-review` | Code review ultra-estricto (calidad, abstracciones, spaghetti) |
-| `qa-senior` | Planes de prueba, templates de bug reports, testing E2E |
-| `fix-issue` | Crear issues con formato INVEST, clasificar bugs |
-| `user-story` | Crear historias de usuario con formato INVEST |
-| `deploy-to-prod` | Deploy a producción (Oracle Cloud + Cloudflare) |
+| `qa-senior`             | Planes de prueba, templates de bug reports, testing E2E        |
+| `fix-issue`             | Crear issues con formato INVEST, clasificar bugs               |
+| `user-story`            | Crear historias de usuario con formato INVEST                  |
+| `deploy-to-prod`        | Deploy a producción (Oracle Cloud + Cloudflare)                |
 
 ### Flujo ideal de una tarea
 
@@ -512,4 +550,4 @@ qa-senior → testear
 
 ---
 
-*Última actualización: Julio 2026 — ver `memory-bank/project-context.md` para el estado actual del proyecto.*
+_Última actualización: Julio 2026 — ver `memory-bank/project-context.md` para el estado actual del proyecto._
