@@ -8,22 +8,22 @@
 
 ## Índice
 
-| ID | Título | Estado | Fecha |
-|----|--------|--------|-------|
-| [ADR-001](#adr-001) | SPA sobre SSR | Aceptada | junio 2025 |
-| [ADR-002](#adr-002) | Turborepo como gestor de monorepo | Aceptada | junio 2025 |
-| [ADR-003](#adr-003) | shadcn/ui como sistema de componentes | Aceptada | junio 2025 |
-| [ADR-004](#adr-004) | JWT en sessionStorage | Aceptada | junio 2025 |
-| [ADR-005](#adr-005) | PyJWT en lugar de python-jose | Aceptada | junio 2025 |
-| [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend | Aceptada | julio 2026 |
-| [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada | julio 2026 |
-| [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables | Aceptada | julio 2026 |
-| [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada | Aceptada | julio 2026 |
-| [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>` | Aceptada | julio 2026 |
+| ID                  | Título                                                                  | Estado   | Fecha       |
+| ------------------- | ----------------------------------------------------------------------- | -------- | ----------- |
+| [ADR-001](#adr-001) | SPA sobre SSR                                                           | Aceptada | junio 2025  |
+| [ADR-002](#adr-002) | Turborepo como gestor de monorepo                                       | Aceptada | junio 2025  |
+| [ADR-003](#adr-003) | shadcn/ui como sistema de componentes                                   | Aceptada | junio 2025  |
+| [ADR-004](#adr-004) | JWT en sessionStorage                                                   | Aceptada | junio 2025  |
+| [ADR-005](#adr-005) | PyJWT en lugar de python-jose                                           | Aceptada | junio 2025  |
+| [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend                  | Aceptada | julio 2026  |
+| [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada | julio 2026  |
+| [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables         | Aceptada | julio 2026  |
+| [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada                 | Aceptada | julio 2026  |
+| [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>`                | Aceptada | julio 2026  |
 | [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
-| [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock | Aceptada | agosto 2026 |
-| [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado | Aceptada | agosto 2026 |
-| [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod) | Aceptada | agosto 2026 |
+| [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock         | Aceptada | agosto 2026 |
+| [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado                         | Aceptada | agosto 2026 |
+| [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod)         | Aceptada | agosto 2026 |
 
 ---
 
@@ -245,17 +245,20 @@ En el backend se evaluaron tres librerías para verificar el `id_token`:
 #### Razones
 
 **Backend (`google-auth`)**:
+
 - Es la librería **oficial** de Google para verificar tokens — recibe parches de seguridad oportunos.
 - `verify_oauth2_token()` valida firma, `aud` y `exp` automáticamente.
 - API directa y bien documentada; mucho más simple que `authlib`.
 - No almacena secretos ni hace flujos OAuth por sí sola — solo verifica.
 
 **Frontend (`google.accounts.id` directo)**:
+
 - `useGoogleLogin({ flow: 'implicit' })` devuelve un **`access_token`** OAuth 2.0, NO un `id_token` JWT. El backend espera `id_token` para verificarlo con `google.oauth2.id_token.verify_oauth2_token`. Usar `useGoogleLogin` requeriría cambiar el backend (llamar a `https://openidconnect.googleapis.com/v1/userinfo` con el access_token), añadiendo una llamada de red extra y un secreto (`client_secret`) que el frontend nunca debe tener.
 - `<GoogleLogin />` renderiza un botón nativo de Google (iframe) que no se puede estilizar consistentemente con shadcn/ui.
 - `google.accounts.id` directo da control total sobre el botón y devuelve un `CredentialResponse.credential` que es el `id_token` JWT esperado por el backend.
 
 **`@react-oauth/google` queda instalada como dependencia pero el código de aplicación no la usa** (se documenta en `App.tsx`). Razones:
+
 - El bundle pesa ~5 KB gzip — despreciable.
 - La usaremos más adelante (refresh tokens, hooks utilitarios como `useGoogleOAuth`).
 - Quitar la dependencia obligaría a reinstalar para cualquier experimento futuro.
@@ -395,7 +398,7 @@ Tras implementar el seguimiento de progreso (ADR-008), surgió la necesidad de s
 Cada tipo de entrada tiene una **única unidad de progreso obligatoria**, gestionada íntegramente por el backend:
 
 | Tipo de entrada | Unidad fija |
-|-----------------|-------------|
+| --------------- | ----------- |
 | `anime`         | `episodes`  |
 | `manga`         | `chapters`  |
 | `game`          | `hours`     |
@@ -628,6 +631,7 @@ GlyphLog necesita un sistema de recomendaciones personalizadas que analice los g
 Implementar recomendaciones usando **Claude Sonnet 4.5** vía **AWS Bedrock**.
 
 El sistema:
+
 1. Analiza la colección completa del usuario (entradas, ratings, estados)
 2. Genera un prompt estructurado con patrones detectados
 3. Invoca Claude para obtener recomendaciones en formato JSON
@@ -638,6 +642,7 @@ El sistema:
 #### Razones
 
 **Por qué Claude Sonnet 4.5:**
+
 - **Reasoning superior**: Mejor que GPT-4, Gemini Pro, Llama 3 en benchmarks de razonamiento complejo
 - **Context window**: 200k tokens permite analizar colecciones grandes
 - **Structured output**: JSON mode forzado elimina errores de parsing
@@ -645,12 +650,14 @@ El sistema:
 - **Prompt engineering efectivo**: Responde bien a instrucciones estructuradas con pocos ejemplos
 
 **Por qué AWS Bedrock vs API directa de Anthropic:**
+
 - **Precio**: ~20% más barato que Claude API directa (~$0.003/1k input vs ~$0.0036/1k)
 - **Integración AWS nativa**: Ya usamos AWS para hosting
 - **Compliance**: Bedrock cumple con SOC2, HIPAA (futuro multi-tenant)
 - **Control de región**: Datos permanecen en us-east-1
 
 **Por qué LLM vs alternativas:**
+
 - **Sistemas basados en reglas (collaborative filtering)**: Requieren base de datos masiva de usuarios, GlyphLog es single-user por ahora
 - **APIs de recomendación (MAL, AniList)**: Solo cubren anime/manga, no juegos; recomendaciones genéricas sin personalización
 - **LLMs locales (Llama 3, Mistral)**: Requieren GPU, complejidad operacional, calidad inferior
@@ -659,6 +666,7 @@ El sistema:
 #### Consecuencias
 
 **Positivas:**
+
 - Recomendaciones de **alta calidad** con razones explicativas
 - Feature **diferenciadora** vs competidores (MyAnimeList, AniList no tienen recomendaciones con IA)
 - **Escalable**: Funciona igual con 5 o 500 entradas
@@ -666,6 +674,7 @@ El sistema:
 - **Sin entrenamiento**: Funciona desde el primer día sin dataset
 
 **Negativas:**
+
 - **Costo variable**: ~$0.30-$0.60 por generación (30-50k tokens)
 - **Latencia alta**: 30-60 segundos típico (vs <1s para sistemas de reglas)
 - **Dependencia externa crítica**: Sin acceso a Bedrock, feature no funciona
@@ -674,16 +683,19 @@ El sistema:
 #### Implementación
 
 **Backend:**
+
 - `apps/api/app/services/recommendation_service.py`: Lógica principal
 - `apps/api/app/integrations/bedrock/client.py`: Cliente AWS Bedrock
 - `apps/api/app/schemas/recommendation.py`: Schemas Pydantic
 
 **Frontend:**
+
 - `apps/web/src/pages/recommendations/recommendations.page.tsx`: UI
 - Disclaimer prominente: modelo, costo, tiempo estimado
 - Loading state descriptivo: "Claude está analizando tu colección..."
 
 **Configuración:**
+
 - Timeout: 90s
 - Retry: 1 intento con backoff
 - Temperature: 0.8 (mayor creatividad)
@@ -692,43 +704,52 @@ El sistema:
 #### Métricas de éxito
 
 **Alcanzadas:**
+
 - Tasa de éxito: >95% (97% actual)
 - Latencia p95: <60s (55s actual)
 
 **En progreso:**
+
 - Match percentage promedio: >75% (78% actual)
 
 **Pendientes:**
+
 - Conversión (recomendación → entrada): >20% (tracking por implementar)
 
 #### Alternativas consideradas
 
 **Opción 1: Sistema basado en reglas (collaborative filtering)**
+
 - **Pros**: Rápido (<1s), sin costo APIs, predecible
 - **Contras**: Requiere base de datos grande (millones de usuarios), difícil mantener, rígido, no explica razones
 - **Veredicto**: Rechazado - GlyphLog es single-user, no tenemos dataset
 
 **Opción 2: APIs existentes (MAL, AniList recommendations)**
+
 - **Pros**: Datos de millones de usuarios, gratis
 - **Contras**: Solo anime/manga (no juegos), no personalizadas, sin razones explicativas
 - **Veredicto**: Rechazado - No cubre juegos, calidad inferior
 
 **Opción 3: LLM local (Llama 3 70B, Mistral Large)**
+
 - **Pros**: Sin costo APIs, privacidad total, offline
 - **Contras**: Requiere GPU potente (A100/H100), complejidad deployment, calidad inferior a Claude, latencia similar
 - **Veredicto**: Rechazado - Overkill operacional, costo de infra > costo APIs
 
 **Opción 4: Claude API directa (Anthropic)**
+
 - **Pros**: API más simple, mismo modelo
 - **Contras**: ~20% más caro que Bedrock, menos integración con AWS
 - **Veredicto**: Viable pero no óptimo
 
 **Opción 5: GPT-4 Turbo (OpenAI)**
+
 - **Pros**: API madura, JSON mode, precio similar
 - **Contras**: Reasoning inferior a Claude en benchmarks, context window menor (128k vs 200k)
 - **Veredicto**: Rechazado - Claude superior en calidad
 
 **Opción 6: Gemini 1.5 Pro (Google)**
+
 - **Pros**: Context window enorme (2M tokens), precio muy bajo
 - **Contras**: Calidad inferior a Claude/GPT-4, menos estable, output menos consistente
 - **Veredicto**: Rechazado - Calidad insuficiente
@@ -736,16 +757,19 @@ El sistema:
 #### Roadmap futuro
 
 **Fase 1 (Q3 2026):**
+
 - Sistema de feedback (thumbs up/down)
 - Tracking de conversiones
 - Mejora de prompts con feedback
 
 **Fase 2 (Q4 2026):**
+
 - Cache de recomendaciones (24h)
 - Pre-generación nocturna
 - Paginación (generar 50, mostrar 10)
 
 **Fase 3 (Q1 2027):**
+
 - Aprendizaje incremental
 - Recomendaciones contextuales ("fin de semana", "vacaciones")
 - Comparación con usuarios similares
@@ -790,3 +814,43 @@ Recomendaciones e importación de MAL dependían directamente de `BedrockClient`
 - youtube_discovery sigue con su `get_bedrock_client` local (fuera de alcance).
 - mypy no valida `openai/` por un INTERNAL ERROR preexistente (excluido en `pyproject.toml`).
 
+---
+
+## ADR-015
+
+### Flujo de trabajo SDD con fase de especificación formal
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+El proyecto documentaba cada feature en `docs/tasks/*.md` mezclando spec + plan + implementación en un solo archivo, y la fase de especificación formal (contratos API, schemas, data models, edge cases) no existía como artefacto previo al plan. Un audit de los 11 task docs mostró que ninguno contiene schemas Pydantic a nivel de campo ni una sección dedicada de edge cases, y que `docs/tasks/backlog.md` (referenciado en dos READMEs) no existía en disco.
+
+#### Decisión
+
+Adoptar SDD (Specification-Driven Development) con tres niveles de especificación según el tamaño del cambio (Tier 1: fixes triviales sin spec; Tier 2: spec compacta inline en el task doc; Tier 3: spec propia en `docs/specs/`). El flujo es `spec → plan → tasks → código → tests → validación`, con dos gates: la spec se somete a aprobación en plan mode (con la checklist de "Criterios de salida" de `TEMPLATE-SPEC.md`), y el task doc se genera solo tras la aprobación. Se creó `docs/specs/` con `TEMPLATE-SPEC.md` y `README.md` (que incluye la auditoría SDD), se añadió la sección `## Especificación` a `docs/tasks/TEMPLATE.md` y se creó `docs/tasks/backlog.md`.
+
+#### Razones
+
+- **Decidir antes de implementar:** las decisiones de diseño (contratos, esquemas, edge cases) se toman y aprueban antes de invertir horas de código.
+- **Trazabilidad:** spec → task doc → criterios de aceptación → código → tests; cada criterio traza a un requisito de la spec.
+- **Escalabilidad del overhead:** Tier 3 acota el peso de la spec formal a features grandes (auth, importaciones, integraciones); los fixes triviales no pagan el coste.
+- **Cierre de la referencia rota:** `backlog.md` revive el índice de estado central.
+
+#### Consecuencias
+
+- La especificación formal se escribe **antes** de implementar; los task docs existentes (como `FEAT-youtube-discovery.md`) quedan como históricos y no se reescriben retroactivamente.
+- Las specs Tier 3 requieren plan mode + checklist de salida antes de generar tasks; sin aprobación no se escribe el task doc.
+- Al cerrar sesión, el estado de las specs se actualiza en `docs/specs/README.md` y el backlog en `docs/tasks/backlog.md`.
+- Los ADRs y sesiones del memory bank continúan documentando decisiones y validación; la spec alimenta ambos.
+
+#### Alternativas consideradas
+
+**Opción 1: specs solo dentro de task docs**
+
+- **Veredicto**: Rechazado — mantiene la confluencia spec + plan + implementación que se busca evitar; sin artefacto independiente revisable.
+
+**Opción 2: script de validación de specs**
+
+- **Veredicto**: Rechazado — añade un script a mantener; la checklist de "Criterios de salida" en `TEMPLATE-SPEC.md` cubre la auto-revisión sin herramientas extra (decisión del usuario).
