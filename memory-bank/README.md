@@ -34,16 +34,16 @@ memory-bank/
 
 ### Descripción de cada archivo
 
-| Archivo | Propósito | Frecuencia de lectura |
-|---------|-----------|----------------------|
-| `project-context.md` | Visión global: qué es el proyecto, en qué fase está, qué está pendiente | Siempre al inicio de sesión |
-| `decisions.md` | Por qué se eligió cada tecnología o enfoque | Antes de tomar decisiones de arquitectura |
-| `patterns.md` | Cómo escribir código en este proyecto (ejemplos reales) | Antes de crear componentes, hooks, endpoints |
-| `knowledge/frontend.md` | Lo aprendido sobre la capa frontend | Al trabajar en `apps/web` |
-| `knowledge/backend.md` | Lo aprendido sobre la capa backend | Al trabajar en `apps/api` |
-| `knowledge/database.md` | Esquema, migraciones y queries relevantes | Al trabajar con BD o Alembic |
-| `knowledge/interview-qa.md` | Repaso rápido de conceptos y preguntas estrella de entrevistas | Preparación de entrevistas / Onboarding |
-| `sessions/` | Historial de trabajo pasado | Cuando se necesita contexto de sesiones anteriores |
+| Archivo                     | Propósito                                                               | Frecuencia de lectura                              |
+| --------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
+| `project-context.md`        | Visión global: qué es el proyecto, en qué fase está, qué está pendiente | Siempre al inicio de sesión                        |
+| `decisions.md`              | Por qué se eligió cada tecnología o enfoque                             | Antes de tomar decisiones de arquitectura          |
+| `patterns.md`               | Cómo escribir código en este proyecto (ejemplos reales)                 | Antes de crear componentes, hooks, endpoints       |
+| `knowledge/frontend.md`     | Lo aprendido sobre la capa frontend                                     | Al trabajar en `apps/web`                          |
+| `knowledge/backend.md`      | Lo aprendido sobre la capa backend                                      | Al trabajar en `apps/api`                          |
+| `knowledge/database.md`     | Esquema, migraciones y queries relevantes                               | Al trabajar con BD o Alembic                       |
+| `knowledge/interview-qa.md` | Repaso rápido de conceptos y preguntas estrella de entrevistas          | Preparación de entrevistas / Onboarding            |
+| `sessions/`                 | Historial de trabajo pasado                                             | Cuando se necesita contexto de sesiones anteriores |
 
 ---
 
@@ -68,6 +68,7 @@ memory-bank/
 9. Si se estableció un patrón nuevo de código, añadirlo a `patterns.md`.
 10. Si se acumuló conocimiento específico de frontend/backend/BD, actualizar el archivo de `knowledge/` correspondiente.
 11. Crear una entrada en `sessions/YYYY-MM-DD.md` si la sesión fue significativa (nueva feature, refactor relevante, decisión importante).
+12. Si una spec (en `docs/specs/`) cambió de estado o se implementó, actualizar `docs/specs/README.md` y `docs/tasks/backlog.md`.
 
 ---
 
@@ -76,6 +77,7 @@ memory-bank/
 ### `project-context.md`
 
 Actualizar cuando:
+
 - Cambia la fase del proyecto
 - Se completa una feature importante
 - Se toma una decisión que afecta el scope del MVP
@@ -84,6 +86,7 @@ Actualizar cuando:
 ### `decisions.md`
 
 Añadir una nueva entrada ADR cuando:
+
 - Se elige una librería o framework nuevo
 - Se decide un enfoque arquitectónico (ej: cómo estructurar la autenticación)
 - Se descarta una alternativa que podría ser tentadora en el futuro
@@ -92,6 +95,7 @@ Añadir una nueva entrada ADR cuando:
 ### `patterns.md`
 
 Actualizar cuando:
+
 - Se establece la estructura definitiva de un tipo de archivo (componente, hook, endpoint)
 - Se decide un patrón de manejo de errores, loading states, etc.
 - Se adopta una convención nueva que no estaba documentada
@@ -99,6 +103,7 @@ Actualizar cuando:
 ### `knowledge/*.md`
 
 Actualizar cuando:
+
 - Se resuelve un problema técnico no trivial
 - Se descubre un bug o limitación relevante de una herramienta
 - Se documenta cómo funciona algo específico del proyecto
@@ -124,17 +129,22 @@ Cada archivo de sesión en `sessions/` sigue este formato:
 # Sesión YYYY-MM-DD
 
 ## Objetivo de la sesión
+
 Qué se quería conseguir.
 
 ## Trabajo realizado
+
 - Lista de tareas completadas
 
 ## Decisiones tomadas
+
 - Decisiones con impacto que ya fueron registradas en decisions.md
 
 ## Problemas encontrados
+
 - Problemas y cómo se resolvieron (o si quedaron pendientes)
 
 ## Próximos pasos
+
 - Qué queda pendiente para la siguiente sesión
 ```
