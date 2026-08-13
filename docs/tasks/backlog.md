@@ -16,10 +16,11 @@
 | [FIX-google-oauth-local-setup](./FIX-google-oauth-local-setup.md)     | Google OAuth en entorno local                           | FIX   | completada  | —    | Comportamiento degradado 503                             |
 | [PLAN-batch-fixes-julio-2026](./PLAN-batch-fixes-julio-2026.md)       | Batch de fixes y mejoras de julio 2026                  | PLAN  | completada  | —    | Plan puro, sin spec subyacente                           |
 | [google-oauth-cloud-setup](./google-oauth-cloud-setup.md)             | Setup de Google OAuth en producción                     | SETUP | completada  | —    | Contract: POST /api/v1/auth/google, scopes, errores      |
-| —                                                                     | Flujo SDD (specs, template, backlog)                    | SETUP | en-progreso | —    | ADR-015; este plan                                       |
+| [TEST-e2e-acceptance-tests](./TEST-e2e-acceptance-tests.md)           | Suite de acceptance tests E2E (RF-0..RF-7)              | TEST  | completada  | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | 47 tests Chromium; LLM mockeado; fix auth + rate limit dev |
+| —                                                                     | Flujo SDD (specs, template, backlog)                    | SETUP | en-progreso | —    | ADR-015; este plan                                   |
 
 ## Especificaciones
 
 | ID  | Estado | Plan/Task derivado |
 | --- | ------ | ------------------ |
-| —   | —      | —                  |
+| [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | implementada | [TEST-e2e-acceptance-tests](./TEST-e2e-acceptance-tests.md) |

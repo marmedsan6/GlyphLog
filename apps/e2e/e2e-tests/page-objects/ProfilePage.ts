@@ -3,7 +3,7 @@ import { AppLayout } from './AppLayout';
 
 /**
  * Página de perfil del usuario (requiere autenticación).
- * Permite ver y editar username, bio, avatar.
+ * Permite ver y editar username, bio, avatar y gestionar dispositivos.
  */
 export class ProfilePage extends AppLayout {
   constructor(page: Page) {
@@ -13,19 +13,11 @@ export class ProfilePage extends AppLayout {
   // --- Locator Getters ---
 
   get heading() {
-    return this.page.getByRole('heading', { name: 'Mi perfil' });
+    return this.page.getByText('Mi perfil', { exact: true });
   }
 
   get editButton() {
     return this.page.getByRole('button', { name: 'Editar perfil' });
-  }
-
-  get usernameDisplay() {
-    return this.page.getByText('Nombre de usuario').locator('..').locator('p');
-  }
-
-  get bioDisplay() {
-    return this.page.getByText('Bio').locator('..').locator('p');
   }
 
   get usernameInput() {
@@ -44,6 +36,10 @@ export class ProfilePage extends AppLayout {
     return this.page.getByRole('button', { name: 'Cancelar' });
   }
 
+  get deviceSection() {
+    return this.page.getByText('Dispositivos emparejados', { exact: true });
+  }
+
   // --- Actions ---
 
   async navigate() {
@@ -55,12 +51,11 @@ export class ProfilePage extends AppLayout {
     await this.editButton.click();
   }
 
-  async editUsername(username: string) {
+  async saveUsernameAndBio(username: string, bio: string) {
+    await this.clickEdit();
     await this.usernameInput.fill(username);
-  }
-
-  async editBio(bio: string) {
     await this.bioInput.fill(bio);
+    await this.saveButton.click();
   }
 
   async save() {

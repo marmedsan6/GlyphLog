@@ -529,6 +529,7 @@ Cada subagente tiene contexto acotado y gasta menos tokens que el agente princip
 
 | Skill                   | Cuándo usarla                                                  |
 | ----------------------- | -------------------------------------------------------------- |
+| `sdd`                   | Orquestar el flujo SDD completo: idea → spec → task → código → tests → cierre |
 | `quick-context`         | Al iniciar sesión — resumen del proyecto en 40 líneas          |
 | `thermo-nuclear-review` | Code review ultra-estricto (calidad, abstracciones, spaghetti) |
 | `qa-senior`             | Planes de prueba, templates de bug reports, testing E2E        |

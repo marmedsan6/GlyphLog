@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { LoginPage } from '../../page-objects/LoginPage';
+import { API_BASE_URL } from '../../utils/test-config';
 
 /**
  * Smoke tests para la página de login.
@@ -12,10 +13,10 @@ interface TestCredentials {
 }
 
 async function registerTestUser(page: Page): Promise<TestCredentials> {
-  const email = `e2e-login-${Date.now()}@glyphlog.test`;
+  const email = `e2e-login-${Date.now()}@example.com`;
   const password = 'TestPass123!';
 
-  const response = await page.request.post('/api/v1/auth/register', {
+  const response = await page.request.post(`${API_BASE_URL}/auth/register`, {
     data: { email, password },
   });
 

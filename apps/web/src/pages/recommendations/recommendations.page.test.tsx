@@ -60,7 +60,7 @@ function makeResponse(
       avg_rating: 8.5,
       completion_rate: 75.0,
       tokens_used: 45000,
-      model: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
+      model: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     },
     ...overrides,
   }
@@ -289,7 +289,7 @@ describe('RecommendationsPage', () => {
     renderWithProviders(<RecommendationsPage />)
 
     expect(
-      screen.getByText(/Este sistema usa Claude Sonnet 4.5 en AWS Bedrock/)
+      screen.getByText(/Este sistema usa Claude Haiku 4.5 en AWS Bedrock/)
     ).toBeInTheDocument()
   })
 

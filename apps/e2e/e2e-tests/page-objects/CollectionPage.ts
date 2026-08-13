@@ -3,7 +3,7 @@ import { AppLayout } from './AppLayout';
 
 /**
  * Colección del usuario (requiere autenticación).
- * Muestra grid de entradas, filtros, paginación.
+ * Muestra grid de entradas, filtros, paginación, búsqueda y ordenamiento.
  */
 export class CollectionPage extends AppLayout {
   constructor(page: Page) {
@@ -24,20 +24,21 @@ export class CollectionPage extends AppLayout {
     return this.page.getByRole('link', { name: /nueva entrada/i });
   }
 
-  get filterButtons() {
-    return this.page.locator('[data-testid="entry-filters"] button');
+  get filterGroup() {
+    return this.page.getByRole('group', { name: 'Filtrar por tipo' });
   }
 
-  get sortSelector() {
-    return this.page.getByRole('combobox');
+  get sortButton() {
+    return this.page.getByRole('button', { name: /ordenar por/i });
   }
 
+  /** Cada EntryCard es un <Link> a /entries/:id (excluye /entries/new). */
   get entryCards() {
-    return this.page.locator('[data-testid="entry-card"]');
+    return this.page.locator('a[href^="/entries/"]:not([href="/entries/new"])');
   }
 
   get emptyState() {
-    return this.page.getByText('Aún no tienes entradas');
+    return this.page.getByText('Aún no tienes entradas en tu colección.');
   }
 
   get createFirstEntryButton() {
@@ -45,7 +46,11 @@ export class CollectionPage extends AppLayout {
   }
 
   get pagination() {
-    return this.page.locator('[data-testid="entry-pagination"]');
+    return this.page.getByRole('navigation', { name: 'Paginación de colección' });
+  }
+
+  get searchResultsBanner() {
+    return this.page.getByText(/Resultados de búsqueda para/i);
   }
 
   // --- Actions ---
@@ -59,8 +64,18 @@ export class CollectionPage extends AppLayout {
     await this.newEntryButton.click();
   }
 
-  async filterByType(type: 'anime' | 'manga' | 'game') {
-    const label = type === 'game' ? 'videojuegos' : type;
-    await this.page.getByRole('button', { name: new RegExp(label, 'i') }).click();
+  async filterByType(type: 'all' | 'anime' | 'manga' | 'game') {
+    const labels: Record<string, string> = {
+      all: 'Todos',
+      anime: 'Anime',
+      manga: 'Manga',
+      game: 'Juego',
+    };
+    await this.filterGroup.getByRole('button', { name: labels[type], exact: true }).click();
+  }
+
+  async sortBy(label: 'Más reciente' | 'Más antiguo' | 'Título A-Z' | 'Título Z-A') {
+    await this.sortButton.click();
+    await this.page.getByRole('menuitemradio', { name: label }).click();
   }
 }

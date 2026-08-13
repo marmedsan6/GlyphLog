@@ -2,7 +2,7 @@
 Cliente centralizado para AWS Bedrock (Claude).
 
 Wrapper para llamadas a Bedrock con retry, logging y validación de output.
-Configurado para usar Sonnet 4.5 en us-east-1.
+Configurado para usar Claude Haiku 4.5 en us-east-1.
 """
 
 import json
@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockClient:
-    """Cliente para interactuar con AWS Bedrock (Claude Sonnet 4.5)."""
+    """Cliente para interactuar con AWS Bedrock (Claude Haiku 4.5)."""
 
     def __init__(
         self,
-        model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0",
         region: str = "us-east-1",
         max_tokens: int = 4096,
     ):
@@ -29,7 +29,7 @@ class BedrockClient:
         Inicializa el cliente de Bedrock.
 
         Args:
-            model_id: ID del modelo de Claude en Bedrock
+            model_id: ID del modelo de Claude en Bedrock (inference profile)
             region: Región de AWS
             max_tokens: Máximo de tokens en la respuesta
         """
