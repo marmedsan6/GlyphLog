@@ -45,6 +45,12 @@ services:
       - DEBUG=true
       - ALLOWED_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
 
+      # Rate limiting relajado en DEV para permitir la suite E2E (registra un
+      # usuario único por test contra la BD real). En producción se usan los
+      # defaults estrictos del config.py (3-5 peticiones/minuto).
+      - RATE_LIMIT_REGISTER=100/minute
+      - RATE_LIMIT_LOGIN=100/minute
+
       # Client ID de Google OAuth para validar id_tokens en el backend.
       # Si está vacío, POST /api/v1/auth/google responde 503 (modo degradado).
       # El MISMO valor debe inyectarse en el servicio web como VITE_GOOGLE_CLIENT_ID.

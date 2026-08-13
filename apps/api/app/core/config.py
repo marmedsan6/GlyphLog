@@ -36,11 +36,14 @@ class Settings(BaseSettings):
 
     # ── AWS Bedrock (Claude) ───────────────────────────────────────────────────
     # Modelo de Claude en Bedrock para funciones de IA (importador, recomendaciones, analytics).
-    # Por defecto: Sonnet 4.5 en us-east-1.
+    # Por defecto: Haiku 4.5 en us-east-1 (más rápido y barato que Sonnet).
     # Credenciales se leen del AWS profile (default) o variables de entorno
     # (AWS_ACCESS_KEY_ID, etc.)
-    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    bedrock_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     bedrock_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
 
     # ── Generación estructurada (JSON) ─────────────────────────────────────────
     # Proveedor para recomendaciones e importación (los endpoints que piden JSON

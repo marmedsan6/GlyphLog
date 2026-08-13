@@ -4,6 +4,7 @@ import logging
 from urllib.parse import quote
 from uuid import UUID
 
+from app.core.config import settings
 from app.integrations.llm import JsonLlm
 from app.models.entry import EntryStatus, EntryType
 from app.repositories.entry_repository import EntryRepository
@@ -99,13 +100,15 @@ class RecommendationService:
 
     def _calculate_metadata(self, entries: list) -> RecommendationMetadata:
         """Calcula metadata del usuario basada en su colección."""
+        model_name = self._get_model_name()
+
         if not entries:
             return RecommendationMetadata(
                 analyzed_entries=0,
                 favorite_genres=[],
                 avg_rating=0.0,
                 completion_rate=0.0,
-                model="claude-sonnet-4.5",
+                model=model_name,
             )
 
         completed_count = sum(1 for e in entries if e.status == EntryStatus.completed)
@@ -122,8 +125,17 @@ class RecommendationService:
             favorite_genres=favorite_genres,
             avg_rating=float(avg_rating),
             completion_rate=float(completion_rate),
-            model="claude-sonnet-4.5",
+            model=model_name,
         )
+
+    def _get_model_name(self) -> str:
+        """Devuelve un nombre legible del modelo configurado."""
+        model_id = settings.bedrock_model_id
+        if "haiku" in model_id.lower():
+            return "claude-haiku-4.5"
+        if "sonnet" in model_id.lower():
+            return "claude-sonnet-4.5"
+        return model_id
 
     def _build_recommendation_prompt(
         self, entries: list, limit: int, entry_type: EntryType | None

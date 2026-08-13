@@ -8,7 +8,7 @@ import { RegisterPage } from '../../page-objects/RegisterPage';
  */
 
 function testEmail(): string {
-  return `e2e-reg-${Date.now()}@glyphlog.test`;
+  return `e2e-reg-${Date.now()}@example.com`;
 }
 
 test.describe('Register Page', () => {

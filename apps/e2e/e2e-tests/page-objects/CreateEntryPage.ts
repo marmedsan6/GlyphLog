@@ -3,7 +3,7 @@ import { AppLayout } from './AppLayout';
 
 /**
  * Página de creación de entrada (requiere autenticación).
- * Usa react-hook-form con zod + shadcn/ui Form components.
+ * Usa react-hook-form con zod. Los campos de tipo y estado son <select> nativos.
  */
 export class CreateEntryPage extends AppLayout {
   constructor(page: Page) {
@@ -13,19 +13,24 @@ export class CreateEntryPage extends AppLayout {
   // --- Locator Getters ---
 
   get heading() {
-    return this.page.getByRole('heading', { name: 'Nueva entrada' });
+    return this.page.getByText('Nueva entrada', { exact: true });
   }
 
   get titleInput() {
-    return this.page.getByRole('textbox', { name: /título/i });
+    return this.page.getByLabel('Título');
   }
 
+  /** Los <select> nativos usan id={field.name}, no el htmlFor del FormLabel. */
   get typeSelector() {
-    return this.page.getByRole('combobox', { name: /tipo/i });
+    return this.page.locator('#type');
   }
 
   get statusSelector() {
-    return this.page.getByRole('combobox', { name: /estado/i });
+    return this.page.locator('#status');
+  }
+
+  get progressTotalInput() {
+    return this.page.getByLabel('Total esperado (opcional)');
   }
 
   get submitButton() {
@@ -55,22 +60,17 @@ export class CreateEntryPage extends AppLayout {
     const labels: Record<string, string> = {
       anime: 'Anime',
       manga: 'Manga',
-      game: 'Juego',
+      game: 'Videojuego',
     };
-    await this.typeSelector.click();
-    await this.page.getByRole('option', { name: labels[type] }).click();
+    await this.typeSelector.selectOption({ label: labels[type] });
   }
 
   async selectStatus(status: string) {
-    const labels: Record<string, string> = {
-      watching: 'Viendo',
-      completed: 'Completado',
-      on_hold: 'En pausa',
-      dropped: 'Abandonado',
-      plan_to_watch: 'Planeado',
-    };
-    await this.statusSelector.click();
-    await this.page.getByRole('option', { name: labels[status] }).click();
+    await this.statusSelector.selectOption(status);
+  }
+
+  async fillProgressTotal(total: number) {
+    await this.progressTotalInput.fill(String(total));
   }
 
   async submit() {
@@ -81,11 +81,15 @@ export class CreateEntryPage extends AppLayout {
     title: string;
     type: 'anime' | 'manga' | 'game';
     status?: string;
+    progressTotal?: number;
   }) {
     await this.fillTitle(opts.title);
     await this.selectType(opts.type);
     if (opts.status) {
       await this.selectStatus(opts.status);
+    }
+    if (opts.progressTotal != null) {
+      await this.fillProgressTotal(opts.progressTotal);
     }
     await this.submit();
   }
