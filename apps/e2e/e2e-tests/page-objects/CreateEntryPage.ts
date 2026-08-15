@@ -25,6 +25,15 @@ export class CreateEntryPage extends AppLayout {
     return this.page.locator('#type');
   }
 
+  /** Selector de categoría del buscador inteligente de catálogo. */
+  get externalSearchTypeSelector() {
+    return this.page.getByLabel('Categoría de búsqueda');
+  }
+
+  get externalSearchInput() {
+    return this.page.getByPlaceholder(/Buscar título en MAL \/ RAWG/);
+  }
+
   get statusSelector() {
     return this.page.locator('#status');
   }

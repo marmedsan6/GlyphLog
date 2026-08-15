@@ -49,8 +49,36 @@ export class CollectionPage extends AppLayout {
     return this.page.getByRole('navigation', { name: 'Paginación de colección' });
   }
 
+  get nextPageButton() {
+    return this.pagination.getByRole('button', { name: 'Siguiente' });
+  }
+
+  get previousPageButton() {
+    return this.pagination.getByRole('button', { name: 'Anterior' });
+  }
+
   get searchResultsBanner() {
     return this.page.getByText(/Resultados de búsqueda para/i);
+  }
+
+  /**
+   * Localiza la card de una entrada por su título y expone sus acciones
+   * de progreso rápido e inline. Útil para RF-8.
+   *
+   * - `quickProgressButton`: botón "+1 ep" / "✓" (QuickProgressButton).
+   * - `inlineEditorButton`: botón de edición inline en modo lectura (su
+   *   aria-label incluye `: <valor>`).
+   * - `inlineProgressInput`: el `<input type="number">` que aparece al editar.
+   */
+  entryCard(title: string) {
+    const card = this.page.locator('a[href^="/entries/"]', { hasText: title }).first();
+
+    return {
+      card,
+      quickProgressButton: card.getByLabel(/Incrementar progreso de/),
+      inlineEditorButton: card.getByLabel(new RegExp(`Editar progreso de .+: `)),
+      inlineProgressInput: card.locator('input[type="number"]'),
+    };
   }
 
   // --- Actions ---

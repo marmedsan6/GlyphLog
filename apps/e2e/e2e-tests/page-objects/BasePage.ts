@@ -1,14 +1,23 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 
 /**
  * Base class for all Page Objects
- * Provides common methods for page interactions
+ *
+ * Solo expone primitivas de navegación y espera. Las interacciones con
+ * elementos concretos viven en getters `Locator` de cada Page Object, para
+ * aprovechar el auto-waiting de Playwright (evitar helpers que devuelven
+ * booleanos/texto desde selectores string).
  */
 export class BasePage {
   protected page: Page;
 
   constructor(page: Page) {
     this.page = page;
+  }
+
+  /** Elemento raíz <html> (útil para verificar el tema oscuro). */
+  get html() {
+    return this.page.locator('html');
   }
 
   /**
@@ -20,74 +29,12 @@ export class BasePage {
   }
 
   /**
-   * Click an element by selector
-   * @param selector - CSS selector or data-testid
-   */
-  async click(selector: string) {
-    await this.page.locator(selector).click();
-  }
-
-  /**
-   * Fill an input field
-   * @param selector - CSS selector or data-testid
-   * @param text - Text to fill
-   */
-  async fill(selector: string, text: string) {
-    await this.page.locator(selector).fill(text);
-  }
-
-  /**
-   * Type text character by character (slower than fill, but simulates user typing)
-   * @param selector - CSS selector or data-testid
-   * @param text - Text to type
-   */
-  async type(selector: string, text: string) {
-    await this.page.locator(selector).type(text);
-  }
-
-  /**
-   * Get text content of an element
-   * @param selector - CSS selector or data-testid
-   * @returns Text content
-   */
-  async getText(selector: string): Promise<string> {
-    return await this.page.locator(selector).textContent() || '';
-  }
-
-  /**
-   * Check if element is visible
-   * @param selector - CSS selector or data-testid
-   * @returns boolean
-   */
-  async isVisible(selector: string): Promise<boolean> {
-    return await this.page.locator(selector).isVisible();
-  }
-
-  /**
-   * Wait for element to be visible
-   * @param selector - CSS selector or data-testid
-   * @param timeout - Timeout in ms (default 5000)
-   */
-  async waitForElement(selector: string, timeout: number = 5000) {
-    await this.page.locator(selector).waitFor({ timeout });
-  }
-
-  /**
    * Get a locator object for more complex interactions
    * @param selector - CSS selector or data-testid
    * @returns Locator object
    */
   getLocator(selector: string): Locator {
     return this.page.locator(selector);
-  }
-
-  /**
-   * Check if element exists in DOM
-   * @param selector - CSS selector or data-testid
-   * @returns boolean
-   */
-  async elementExists(selector: string): Promise<boolean> {
-    return (await this.page.locator(selector).count()) > 0;
   }
 
   /**

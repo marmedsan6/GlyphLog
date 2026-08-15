@@ -74,6 +74,61 @@ class TestExternalSearchService:
         # El contador no debe subir porque lee de caché
         assert mock_anilist_client.search_anime_manga.call_count == 1
 
+    async def test_search_by_type_anime_only_queries_anilist_anime(
+        self,
+        test_external_service: ExternalSearchService,
+        mock_anilist_client: AsyncMock,
+        mock_rawg_client: AsyncMock,
+    ) -> None:
+        """Con type=anime solo se consulta AniList (anime), nunca RAWG ni manga."""
+        mock_anilist_client.search_by_type.return_value = [
+            ExternalSearchResult(title="Naruto", type=EntryType.anime, source="AniList")
+        ]
+
+        response = await test_external_service.search("naruto", EntryType.anime)
+
+        assert len(response.results) == 1
+        assert response.results[0].type == EntryType.anime
+        mock_anilist_client.search_by_type.assert_called_once()
+        mock_anilist_client.search_anime_manga.assert_not_called()
+        mock_rawg_client.search_games.assert_not_called()
+
+    async def test_search_by_type_game_only_queries_rawg(
+        self,
+        test_external_service: ExternalSearchService,
+        mock_anilist_client: AsyncMock,
+        mock_rawg_client: AsyncMock,
+    ) -> None:
+        """Con type=game solo se consulta RAWG, nunca AniList."""
+        mock_rawg_client.search_games.return_value = [
+            ExternalSearchResult(title="Witcher 3", type=EntryType.game, source="RAWG")
+        ]
+
+        response = await test_external_service.search("witcher", EntryType.game)
+
+        assert len(response.results) == 1
+        assert response.results[0].type == EntryType.game
+        mock_rawg_client.search_games.assert_called_once()
+        mock_anilist_client.search_by_type.assert_not_called()
+        mock_anilist_client.search_anime_manga.assert_not_called()
+
+    async def test_search_by_type_uses_type_in_cache_key(
+        self,
+        test_external_service: ExternalSearchService,
+        mock_anilist_client: AsyncMock,
+        mock_rawg_client: AsyncMock,
+    ) -> None:
+        """La misma query con distinto type no comparte caché."""
+        mock_anilist_client.search_anime_manga.return_value = []
+        mock_anilist_client.search_by_type.return_value = []
+
+        await test_external_service.search("naruto")
+        assert mock_anilist_client.search_anime_manga.call_count == 1
+
+        await test_external_service.search("naruto", EntryType.anime)
+        # El tipo cambia la clave de caché, así que vuelve a consultar.
+        assert mock_anilist_client.search_by_type.call_count == 1
+
     async def test_search_resilient_to_failures(
         self,
         test_external_service: ExternalSearchService,
@@ -262,6 +317,37 @@ class TestExternalSearchService:
         results = await anilist.search_anime_manga(mock_http_client, "naruto")
 
         assert results is None
+
+    async def test_anilist_client_search_by_type_parses_single_type(self) -> None:
+        """search_by_type parsea solo el tipo solicitado (anime o manga)."""
+        anilist = AniListClient()
+
+        mock_http_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_response = AsyncMock(spec=httpx.Response)
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "Page": {
+                    "media": [
+                        {
+                            "title": {"english": "Berserk", "romaji": "Berserk"},
+                            "startDate": {"year": 1989},
+                            "chapters": 380,
+                            "coverImage": {"large": "http://example.com/berserk.jpg"},
+                        },
+                    ]
+                }
+            }
+        }
+        mock_http_client.post.return_value = mock_response
+
+        results = await anilist.search_by_type(mock_http_client, "berserk", EntryType.manga)
+
+        assert results is not None
+        assert len(results) == 1
+        assert results[0].title == "Berserk"
+        assert results[0].type == EntryType.manga
+        assert results[0].progress_total == Decimal("380")
 
 
 class TestPlaytimeToHours:

@@ -40,6 +40,14 @@ export class ProfilePage extends AppLayout {
     return this.page.getByText('Dispositivos emparejados', { exact: true });
   }
 
+  get importSectionHeading() {
+    return this.page.getByText('Importaciones', { exact: true });
+  }
+
+  get importLink() {
+    return this.page.getByRole('link', { name: 'Importar entradas' });
+  }
+
   // --- Actions ---
 
   async navigate() {

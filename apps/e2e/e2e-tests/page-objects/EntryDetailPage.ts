@@ -71,6 +71,32 @@ export class EntryDetailPage extends AppLayout {
     return this.deleteDialog.getByRole('button', { name: 'Cancelar' });
   }
 
+  // Historial de progreso (ProgressTimeline)
+  get progressTimelineCard() {
+    return this.page.getByTestId('progress-timeline-card');
+  }
+
+  get timelineEvents() {
+    return this.page.locator('[data-testid^="timeline-event-"]');
+  }
+
+  // Modal de reinicio de progreso (ResetProgressModal)
+  get resetProgressDialog() {
+    return this.page.getByRole('alertdialog', { name: 'Reiniciar progreso' });
+  }
+
+  get confirmResetButton() {
+    return this.resetProgressDialog.getByRole('button', { name: 'Reiniciar y guardar' });
+  }
+
+  get cancelResetButton() {
+    return this.resetProgressDialog.getByRole('button', { name: 'Cancelar' });
+  }
+
+  get resetReasonInput() {
+    return this.resetProgressDialog.locator('#reset-reason');
+  }
+
   // Formulario de edición
   get editFormTitle() {
     return this.page.getByRole('heading', { name: 'Editar entrada' });
@@ -82,6 +108,11 @@ export class EntryDetailPage extends AppLayout {
 
   get saveChangesButton() {
     return this.page.getByRole('button', { name: 'Guardar cambios' });
+  }
+
+  /** Selector nativo de tipo del formulario de edición (id="type"). */
+  get editTypeSelector() {
+    return this.page.locator('#type');
   }
 
   // --- Actions ---
@@ -115,5 +146,17 @@ export class EntryDetailPage extends AppLayout {
 
   async cancelDelete() {
     await this.cancelDeleteButton.click();
+  }
+
+  /** Cambia el tipo en el formulario de edición y guarda (sin cambiar título). */
+  async changeTypeAndSave(type: 'anime' | 'manga' | 'game') {
+    const labels: Record<string, string> = {
+      anime: 'Anime',
+      manga: 'Manga',
+      game: 'Videojuego',
+    };
+    await this.clickEdit();
+    await this.editTypeSelector.selectOption({ label: labels[type] });
+    await this.saveChangesButton.click();
   }
 }

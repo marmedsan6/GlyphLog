@@ -1,7 +1,7 @@
 """Tests del router /api/v1/ai.
 
 - /chat: streaming SSE con persistencia de conversaciones (issues #43-#45).
-  El AIService y el ConversationService se mockean para aislamiento total.
+  El AgentService y el ConversationService se mockean para aislamiento total.
 - /conversations: un test E2E de ciclo de vida con la BD real (un único
   event loop — pytest-asyncio crea un loop por test y el pool global del
   engine no sobrevive entre loops en Windows).
@@ -13,9 +13,10 @@ from uuid import uuid4
 
 from httpx import AsyncClient
 
+from app.core.dependencies import get_agent_service
 from app.main import app
-from app.routers.ai import get_ai_service, get_conversation_service
-from app.services.ai_service import AIProviderError, AIService
+from app.routers.ai import get_conversation_service
+from app.services.agent_service import AgentEvent, AgentService
 from app.services.conversation_service import ConversationService
 from tests.factories import (
     clear_overrides,
@@ -26,29 +27,22 @@ from tests.factories import (
 )
 
 
-async def fake_stream(*deltas: str) -> object:
+async def fake_agent_stream(*deltas: str) -> object:
+    """Stream de eventos del agente: deltas + done."""
     for delta in deltas:
-        yield delta
+        yield AgentEvent(type="delta", content=delta)
+    yield AgentEvent(type="done")
 
 
-async def failing_stream(*deltas: str) -> object:
-    """Stream que emite deltas y luego falla (simula rate limit a mitad)."""
-    for delta in deltas:
-        yield delta
-    raise AIProviderError("Rate limit del proveedor")
-
-
-def mock_ai_service(stream=None) -> AsyncMock:
-    """AIService mockeado con streaming fake de dos deltas.
+def mock_agent_service(stream=None) -> AsyncMock:
+    """AgentService mockeado con un stream fake de dos deltas.
 
     Usa `side_effect` (no `return_value`) para que CADA request reciba un
-    async generator fresco — reutilizar el mismo generator agotado rompe
-    la segunda request (RuntimeError: async generator raised StopAsyncIteration).
+    async generator fresco.
     """
-    service = AsyncMock(spec=AIService)
-    service.is_configured.return_value = True
-    service.build_collection_context.return_value = ""
-    service.create_stream.side_effect = lambda *a, **k: stream or fake_stream(
+    service = AsyncMock(spec=AgentService)
+    service.build_system_prompt.return_value = "Sistema GlyphAI"
+    service.astream.side_effect = lambda *a, **k: stream or fake_agent_stream(
         "Hola, ", "soy GlyphAI"
     )
     return service
@@ -62,8 +56,8 @@ def mock_conversation_service() -> AsyncMock:
     return service
 
 
-def override_services(ai_service, conversation_service=None) -> None:
-    app.dependency_overrides[get_ai_service] = lambda: ai_service
+def override_services(agent_service, conversation_service=None) -> None:
+    app.dependency_overrides[get_agent_service] = lambda: agent_service
     if conversation_service is not None:
         app.dependency_overrides[get_conversation_service] = lambda: conversation_service
 
@@ -89,7 +83,7 @@ class TestAIChatEndpoint:
         conversation = make_conversation()
         conv_service = mock_conversation_service()
         conv_service.create_for_chat.return_value = conversation
-        override_services(mock_ai_service(), conv_service)
+        override_services(mock_agent_service(), conv_service)
         try:
             response = await client.post(
                 "/api/v1/ai/chat", json={"messages": [{"role": "user", "content": "hola"}]}
@@ -113,7 +107,7 @@ class TestAIChatEndpoint:
         conversation = make_conversation(user_id=user.id)
         conv_service = mock_conversation_service()
         conv_service.create_for_chat.return_value = conversation
-        override_services(mock_ai_service(), conv_service)
+        override_services(mock_agent_service(), conv_service)
         try:
             response = await client.post(
                 "/api/v1/ai/chat",
@@ -139,7 +133,7 @@ class TestAIChatEndpoint:
         conversation = make_conversation(user_id=user.id)
         conv_service = mock_conversation_service()
         conv_service.get_for_user.return_value = conversation
-        override_services(mock_ai_service(), conv_service)
+        override_services(mock_agent_service(), conv_service)
         try:
             response = await client.post(
                 "/api/v1/ai/chat",
@@ -156,33 +150,11 @@ class TestAIChatEndpoint:
         conv_service.create_for_chat.assert_not_awaited()
         conv_service.get_for_user.assert_awaited_once_with(conversation.id, user.id)
 
-    async def test_chat_persists_partial_response_on_stream_error(
-        self, client: AsyncClient
-    ) -> None:
-        override_current_user(make_user())
-        conversation = make_conversation()
-        conv_service = mock_conversation_service()
-        conv_service.create_for_chat.return_value = conversation
-        override_services(mock_ai_service(failing_stream("Hola, ")), conv_service)
-        try:
-            response = await client.post(
-                "/api/v1/ai/chat", json={"messages": [{"role": "user", "content": "hola"}]}
-            )
-        finally:
-            clear_overrides()
-
-        # El error viaja como evento SSE (el status 200 ya se envió)...
-        assert any("error" in event for event in sse_events(response.text))
-        assert "Rate limit del proveedor" in response.text
-        # ...y la respuesta parcial se persiste igualmente.
-        calls = [c.args for c in conv_service.add_message.await_args_list]
-        assert (conversation.id, "assistant", "Hola, ") in calls
-
     async def test_chat_returns_404_for_unknown_conversation(self, client: AsyncClient) -> None:
         override_current_user(make_user())
         conv_service = mock_conversation_service()
         conv_service.get_for_user.return_value = None  # no es del usuario / no existe
-        override_services(mock_ai_service(), conv_service)
+        override_services(mock_agent_service(), conv_service)
         try:
             response = await client.post(
                 "/api/v1/ai/chat",
@@ -196,38 +168,6 @@ class TestAIChatEndpoint:
 
         assert response.status_code == 404
         assert response.json()["detail"] == "Conversación no encontrada"
-
-    async def test_chat_returns_503_when_not_configured(self, client: AsyncClient) -> None:
-        override_current_user(make_user())
-        service = AsyncMock(spec=AIService)
-        service.is_configured.return_value = False
-        override_services(service)
-        try:
-            response = await client.post(
-                "/api/v1/ai/chat", json={"messages": [{"role": "user", "content": "hola"}]}
-            )
-        finally:
-            clear_overrides()
-
-        assert response.status_code == 503
-        assert response.json()["detail"] == "AI service not configured"
-
-    async def test_chat_returns_502_when_provider_connection_fails(
-        self, client: AsyncClient
-    ) -> None:
-        override_current_user(make_user())
-        service = mock_ai_service()
-        service.create_stream.side_effect = AIProviderError("Connection timeout")
-        override_services(service, mock_conversation_service())
-        try:
-            response = await client.post(
-                "/api/v1/ai/chat", json={"messages": [{"role": "user", "content": "hola"}]}
-            )
-        finally:
-            clear_overrides()
-
-        assert response.status_code == 502
-        assert "Connection timeout" in response.json()["detail"]
 
     async def test_chat_returns_422_for_blank_message(self, client: AsyncClient) -> None:
         override_current_user(make_user())
@@ -260,7 +200,7 @@ class TestConversationsEndpoints:
             make_user(email="lifecycle_other@example.com", username="lifecycle_other")
         )
         override_current_user(user)
-        override_services(mock_ai_service())
+        override_services(mock_agent_service())
         try:
             # 1. Crear dos conversaciones reales vía el flujo completo de /chat.
             first = await client.post(

@@ -1,0 +1,24 @@
+{
+	"mcpServers": {
+		"playwright": {
+			"transport": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@playwright/mcp"
+			]
+		},
+		"codebase-memory-mcp": {
+			"transport": "stdio",
+			"command": "/home/mariobox/.local/bin/codebase-memory-mcp",
+			"args": []
+		},
+		"context7": {
+			"transport": "http",
+			"url": "https://mcp.context7.com/mcp",
+			"headers": {
+				"CONTEXT7_API_KEY": "ctx7sk-f2bd3806-fe42-4ef4-9a14-1744a196d6cc"
+			}
+		}
+	}
+}

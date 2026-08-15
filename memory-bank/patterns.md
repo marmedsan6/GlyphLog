@@ -47,52 +47,29 @@ export function EntryCard({ entry }: EntryCardProps) {
 ### Estructura base
 
 ```typescript
-// apps/web/src/hooks/use-entries.ts
+// apps/web/src/hooks/useEntries.ts
 
-import { useState, useEffect } from "react";
-import { entriesService } from "@/services/entries-service";
-import type { Entry } from "@/types/entry";
+import { useQuery } from "@tanstack/react-query";
+import { getEntries } from "@/services/entry.service";
 
-interface UseEntriesReturn {
-  entries: Entry[];
-  isLoading: boolean;
-  error: string | null;
-  refetch: () => void;
-}
-
-export function useEntries(): UseEntriesReturn {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchEntries = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await entriesService.getAll();
-      setEntries(data);
-    } catch (err) {
-      setError("No se pudieron cargar las entradas. Inténtalo de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEntries();
-  }, []);
-
-  return { entries, isLoading, error, refetch: fetchEntries };
+export function useEntries(params?: EntryListParams) {
+  return useQuery({
+    queryKey: ["entries", params],
+    queryFn: () => getEntries(params),
+  });
 }
 ```
 
 ### Reglas
 
 - Nombre siempre con prefijo `use` en `camelCase`.
-- El archivo es `kebab-case`: `use-entries.ts`.
-- Definir y exportar el tipo de retorno del hook.
+- El archivo es `kebab-case`: `use-entries.ts` (los hooks ya existentes conservan su nombre histórico; los nuevos siguen `kebab-case`).
+- **El server state (datos de la API) se gestiona con TanStack Query**, nunca con `useState` + `useEffect`. El hook delega en `useQuery`/`useMutation` y no gestiona manualmente `isLoading`/`error`.
+- La `queryKey` refleja los parámetros que afectan al resultado (filtros, paginación, búsqueda) para que la caché invalide correctamente.
+- Las mutaciones invalidan la query key raíz del recurso afectado (ver sección 9.1).
+- Definir y exportar el tipo de retorno del hook cuando no es trivial.
 - Separar el fetching de datos del renderizado. El hook no devuelve JSX.
-- Los errores deben ser mensajes legibles por el usuario, no mensajes técnicos crudos.
+- Los errores de UI se leen de `error` (de TanStack Query) y se formatean con `getApiErrorMessage`, no con mensajes crudos.
 
 ---
 
@@ -505,16 +482,18 @@ Este patrón establece la arquitectura estándar para integrar LLMs en el proyec
 ```python
 # apps/api/app/services/recommendation_service.py
 
+from app.integrations.llm import JsonLlm
+
 class RecommendationService:
-    """Servicio para generar recomendaciones personalizadas con Claude."""
+    """Servicio para generar recomendaciones personalizadas con un LLM."""
 
     def __init__(
         self,
-        bedrock_client: BedrockClient,          # Cliente LLM
+        llm_client: JsonLlm,                      # Cliente LLM (proveedor agnóstico)
         entry_repository: EntryRepository,      # Acceso a datos
         external_search_service: ExternalSearchService,  # Enriquecimiento
     ):
-        self.bedrock_client = bedrock_client
+        self.llm_client = llm_client
         self.entry_repository = entry_repository
         self.external_search_service = external_search_service
 
@@ -522,13 +501,13 @@ class RecommendationService:
         self, user_id: UUID, entry_type: EntryType | None = None, limit: int = 10
     ) -> GenerateRecommendationsResponse:
         """
-        Genera recomendaciones personalizadas usando Claude.
-        
+        Genera recomendaciones personalizadas usando un LLM.
+
         Flujo:
         1. Obtener colección del usuario
         2. Calcular metadata
         3. Construir prompt estructurado
-        4. Invocar Claude
+        4. Invocar el LLM
         5. Validar respuesta con Pydantic
         6. Enriquecer con APIs externas
         7. Devolver response estructurado
@@ -536,10 +515,12 @@ class RecommendationService:
         # ... implementación
 ```
 
+**Proveedor agnóstico (ADR-014):** el servicio depende del protocolo `JsonLlm` (`invoke_json(prompt, temperature, system) -> JsonModel | None`), no de un cliente concreto. La factoría `get_llm_client()` (en `app/core/dependencies.py`) resuelve el proveedor según `AI_COMPLETION_PROVIDER` (`"openai"` en local, `"bedrock"` por defecto en producción). Los servicios nunca importan `BedrockClient` ni `OpenAIJsonlClient` directamente.
+
 **Responsabilidades del servicio:**
 - Preparar datos de entrada (colección del usuario, filtros)
 - Construir prompt con formato estructurado
-- Invocar LLM a través del cliente
+- Invocar el LLM a través del cliente inyectado
 - Parsear y validar respuesta
 - Enriquecer con datos adicionales (opcional)
 - Devolver response tipado
@@ -682,10 +663,10 @@ class Recommendation(BaseModel):
 
 **En el servicio:**
 ```python
-recommendations_data = bedrock_client.invoke_json(prompt=prompt, temperature=0.8)
+recommendations_data = self.llm_client.invoke_json(prompt=prompt, temperature=0.8)
 
 if not isinstance(recommendations_data, list):
-    raise ValueError("Claude no devolvió un array JSON")
+    raise ValueError("El modelo no devolvió un array JSON")
 
 # Validar cada recomendación
 recommendations: list[Recommendation] = []
@@ -730,7 +711,7 @@ def __init__(self, model_id: str, region: str, max_tokens: int = 4096):
 async def generate_recommendations(...) -> GenerateRecommendationsResponse:
     try:
         # Invocar con timeout implícito (90s en cliente)
-        recommendations_data = self.bedrock_client.invoke_json(
+        recommendations_data = self.llm_client.invoke_json(
             prompt=prompt,
             temperature=0.8,
         )
@@ -755,7 +736,9 @@ async def generate_recommendations(...) -> GenerateRecommendationsResponse:
 
 #### 5. Error handling granular
 
-**Jerarquía de errores:**
+> **Nota (ADR-014):** en la implementación actual, el mapeo de errores de ambos proveedores se centraliza en `app/integrations/llm_errors.py` mediante `map_llm_error` (traduce `ClientError`/`BotoCoreError` de Bedrock y los errores de OpenAI a 503 con diagnóstico, y `ValueError` a 502). La jerarquía de excepciones custom que se muestra a continuación es ilustrativa del principio (errores específicos por causa), no el código real en uso.
+
+**Jerarquía de errores (principio):**
 ```python
 # apps/api/app/exceptions.py
 
@@ -892,7 +875,7 @@ onError: (error) => {
 
 Ver implementación de referencia:
 - **Backend**: `apps/api/app/services/recommendation_service.py`
-- **Cliente Bedrock**: `apps/api/app/integrations/bedrock/client.py`
+- **Protocolo LLM**: `apps/api/app/integrations/llm.py` (y `bedrock/client.py` para la implementación Bedrock)
 - **Schemas**: `apps/api/app/schemas/recommendation.py`
 - **Router**: `apps/api/app/routers/recommendations.py`
 - **Frontend**: `apps/web/src/pages/recommendations/recommendations.page.tsx`
@@ -907,7 +890,7 @@ Ver implementación de referencia:
    @router.post("/generate")
    async def generate_recommendations(...):
        prompt = f"Recommend me anime: {entries}"
-       response = bedrock_client.invoke(prompt)
+       response = llm_client.invoke_json(prompt)
        return response
    ```
    
@@ -924,7 +907,7 @@ Ver implementación de referencia:
 3. **Asumir response válido sin validación:**
    ```python
    # ❌ MAL - No validar respuesta
-   recommendations_data = bedrock_client.invoke_json(prompt)
+   recommendations_data = self.llm_client.invoke_json(prompt)
    return recommendations_data  # Puede estar malformado
    ```
    
@@ -951,7 +934,7 @@ Ver implementación de referencia:
    # ❌ MAL - Retry sin límite
    while True:
        try:
-           return bedrock_client.invoke(prompt)
+           return self.llm_client.invoke_json(prompt)
        except:
            continue
    ```

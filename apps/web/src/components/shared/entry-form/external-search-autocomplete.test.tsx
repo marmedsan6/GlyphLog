@@ -81,6 +81,28 @@ describe('ExternalSearchAutocomplete', () => {
     })
   })
 
+  it('renders category selector defaulting to Animes and propagates selection', async () => {
+    const user = userEvent.setup()
+
+    renderWithForm(
+      <ExternalSearchAutocomplete
+        onSelectCover={vi.fn()}
+        onClearCover={vi.fn()}
+        isAutocompleted={false}
+        setIsAutocompleted={vi.fn()}
+      />
+    )
+
+    const selector = screen.getByLabelText('Categoría de búsqueda')
+    expect(selector).toHaveValue('anime')
+
+    await user.selectOptions(selector, 'game')
+    expect(selector).toHaveValue('game')
+
+    // El hook recibe el type elegido (game) en la última invocación.
+    expect(mockUseExternalSearch).toHaveBeenLastCalledWith('', 'game')
+  })
+
   it('fills progress_total when selecting an anime with episodes', async () => {
     const user = userEvent.setup()
     const handleSourceChange = vi.fn()

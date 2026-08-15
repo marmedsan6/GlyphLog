@@ -10,15 +10,15 @@ from uuid import uuid4
 
 import pytest
 
+from app.integrations.bedrock.client import BedrockClient
 from app.models.entry import EntryStatus, EntryType
 from app.repositories.ai_repository import AIRepository
 from app.schemas.ai import ChatMessage
+from app.services.ai_context import MAX_COLLECTION_ENTRIES, MAX_CONTEXT_CHARS
 from app.services.ai_service import (
-    MAX_COLLECTION_ENTRIES,
-    MAX_CONTEXT_CHARS,
+    AIProviderError,
     AIService,
     AIServiceNotConfiguredError,
-    AIProviderError,
 )
 from tests.factories import make_entry
 
@@ -117,6 +117,50 @@ class TestAIServiceAnthropic:
         assert await collect(stream) == ["adi", "ós"]
 
 
+class TestAIServiceBedrock:
+    """Tests del proveedor bedrock (Claude vía AWS, streaming síncrono envuelto)."""
+
+    def make_bedrock(self, chunks: list[str]) -> AIService:
+        mock_bedrock = MagicMock(spec=BedrockClient)
+        mock_bedrock.open_chat_stream.return_value = iter(chunks)
+        return AIService(
+            provider="bedrock",
+            bedrock_client=mock_bedrock,
+        )
+
+    async def test_streams_text_deltas_from_bedrock(self) -> None:
+        service = self.make_bedrock(["Hola", " desde", " Bedrock"])
+        stream = await service.create_stream([ChatMessage(role="user", content="hola")])
+
+        assert await collect(stream) == ["Hola", " desde", " Bedrock"]
+
+    async def test_drops_system_messages_from_history(self) -> None:
+        mock_bedrock = MagicMock(spec=BedrockClient)
+        mock_bedrock.open_chat_stream.return_value = iter(["ok"])
+        service = AIService(provider="bedrock", bedrock_client=mock_bedrock)
+        messages = [
+            ChatMessage(role="system", content="Eres GlyphAI"),
+            ChatMessage(role="user", content="hola"),
+        ]
+
+        stream = await service.create_stream(messages, system="Eres GlyphAI")
+        await collect(stream)
+
+        # El system prompt viaja por separado; solo el mensaje del usuario queda
+        # en el array de mensajes enviado a la API de Anthropic.
+        sent_messages = mock_bedrock.open_chat_stream.call_args.args[0]
+        assert sent_messages == [{"role": "user", "content": "hola"}]
+        assert mock_bedrock.open_chat_stream.call_args.args[2] == "Eres GlyphAI"
+
+    async def test_connection_error_raises_ai_provider_error(self) -> None:
+        mock_bedrock = MagicMock(spec=BedrockClient)
+        mock_bedrock.open_chat_stream.side_effect = Exception("Connection timeout")
+        service = AIService(provider="bedrock", bedrock_client=mock_bedrock)
+
+        with pytest.raises(AIProviderError):
+            await service.create_stream([ChatMessage(role="user", content="hola")])
+
+
 class TestAIServiceConfig:
     async def test_not_configured_raises_when_openai_key_missing(self) -> None:
         service = AIService(provider="openai", openai_api_key="")
@@ -184,6 +228,24 @@ class TestBuildCollectionContext:
 
         assert "rating 9.5/10" in context
         assert "progreso 28/28" in context
+
+    async def test_includes_genres_notes_and_year(self) -> None:
+        entry = make_entry(
+            title="Berserk",
+            entry_type=EntryType.manga,
+            entry_status=EntryStatus.completed,
+            rating=10,
+            year=1989,
+            notes="Obra maestra",
+            genres=["Action", "Dark Fantasy"],
+        )
+        service = self.make_service([entry])
+
+        context = await service.build_collection_context(uuid4())
+
+        assert "géneros: Action, Dark Fantasy" in context
+        assert "año 1989" in context
+        assert "notas: Obra maestra" in context
 
     async def test_prioritizes_completed_with_rating_in_large_collection(self) -> None:
         user_id = uuid4()

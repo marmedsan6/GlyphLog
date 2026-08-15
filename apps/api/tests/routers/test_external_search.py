@@ -98,6 +98,45 @@ class TestExternalSearchEndpoint:
         finally:
             clear_overrides()
 
+    async def test_search_accepts_type_param(
+        self,
+        client: AsyncClient,
+        override_service: None,
+        test_external_service: ExternalSearchService,
+        mock_anilist_client: AsyncMock,
+    ) -> None:
+        """El endpoint propaga el parámetro type y valida contra EntryType."""
+        user = make_user()
+        override_current_user(user)
+        mock_anilist_client.search_by_type.return_value = [
+            ExternalSearchResult(
+                title="Berserk", type=EntryType.manga, source="AniList"
+            )
+        ]
+
+        try:
+            response = await client.get("/api/v1/external/search?q=berserk&type=manga")
+            assert response.status_code == 200
+            body = response.json()
+            assert len(body["results"]) == 1
+            assert body["results"][0]["type"] == "manga"
+            mock_anilist_client.search_by_type.assert_called_once()
+        finally:
+            clear_overrides()
+
+    async def test_search_rejects_invalid_type(
+        self, client: AsyncClient
+    ) -> None:
+        """Un type que no es anime|manga|game debe rechazarse con 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.get("/api/v1/external/search?q=berserk&type=foo")
+            assert response.status_code == 422
+        finally:
+            clear_overrides()
+
 
 class TestExternalGameDetailEndpoint:
     """Tests de integración HTTP para el endpoint /external/games/{slug}."""

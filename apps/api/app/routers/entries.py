@@ -1,10 +1,14 @@
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from app.core.dependencies import get_entry_service
+from app.core.dependencies import (
+    get_catalog_enrichment_service,
+    get_entry_service,
+)
 from app.core.security import AuthenticatedUser, get_current_user, get_current_user_flexible
 from app.core.uploads import save_cover_image
 from app.models.entry import EntryType
@@ -22,7 +26,10 @@ from app.schemas.progress import (
     ProgressResetRequest,
     ProgressUpdateRequest,
 )
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.entry_service import EntryService, InvalidPaginationError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -61,6 +68,7 @@ async def create_entry(
     cover_image: UploadFile | None = File(None),
     auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: EntryService = Depends(get_entry_service),
+    enrichment: CatalogEnrichmentService = Depends(get_catalog_enrichment_service),
 ) -> EntryResponse | JSONResponse:
     # Validar datos del formulario PRIMERO (antes de guardar archivos)
     # para evitar archivos huérfanos en disco si la validación falla.
@@ -79,7 +87,24 @@ async def create_entry(
         cover_image_path = await save_cover_image(cover_image)
         data.cover_image = cover_image_path
 
-    return await service.create(user_id=auth.id, data=data)
+    created = await service.create(user_id=auth.id, data=data)
+
+    # Auto-populado de géneros (best-effort): si el usuario no aportó géneros,
+    # se intenta rellenar desde el catálogo externo. Un fallo aquí no debe
+    # romper la creación.
+    if not created.genres:
+        try:
+            genres = await enrichment.find_genres(created.title, created.type)
+            if genres:
+                created = await service.update(
+                    entry_id=created.id,
+                    user_id=auth.id,
+                    data=EntryUpdate(genres=genres),
+                )
+        except Exception:
+            logger.warning(f"No se pudieron auto-poblar géneros para '{created.title}'")
+
+    return created
 
 
 @router.get("/{entry_id}", response_model=EntryResponse)

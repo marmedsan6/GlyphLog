@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { bgOpacity, hoverBgOpacity } from '@/lib/tailwind-opacity'
 import type { EntryFormValues, ProgressTotalSource } from './entry-form-schema'
-import type { ExternalSearchResult } from '@/types'
+import type { EntryType, ExternalSearchResult } from '@/types'
 
 interface ExternalSearchAutocompleteProps {
   onSelectCover: (url: string | null) => void
@@ -28,9 +28,10 @@ export function ExternalSearchAutocomplete({
 }: ExternalSearchAutocompleteProps) {
   const { setValue } = useFormContext<EntryFormValues>()
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState<EntryType>('anime')
   const [isOpen, setIsOpen] = useState(false)
   const debouncedQuery = useDebounce(searchQuery, 600)
-  const { results, isLoading, isError } = useExternalSearch(debouncedQuery)
+  const { results, isLoading, isError } = useExternalSearch(debouncedQuery, searchType)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [selectedItem, setSelectedItem] = useState<ExternalSearchResult | null>(null)
 
@@ -134,6 +135,22 @@ export function ExternalSearchAutocomplete({
             <span className="text-sm font-medium text-foreground">
               Buscador inteligente de catálogo
             </span>
+          </div>
+          <div className="mb-2">
+            <select
+              id="external-search-type"
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value as EntryType)}
+              aria-label="Categoría de búsqueda"
+              className={cn(
+                'focus:border-primary/50 h-9 w-full rounded-md border border-border px-3 text-sm transition-all duration-200 focus:bg-background focus:outline-none',
+                bgOpacity.muted[0.3]
+              )}
+            >
+              <option value="anime">Animes</option>
+              <option value="manga">Mangas</option>
+              <option value="game">Videojuegos</option>
+            </select>
           </div>
           <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />

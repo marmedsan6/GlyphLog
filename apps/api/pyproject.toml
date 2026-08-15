@@ -39,9 +39,10 @@ strict = true
 ignore_missing_imports = true
 
 # Los SDK de OpenAI y Anthropic crashean el análisis de mypy 1.16 (INTERNAL
-# ERROR en openai/_client.py). Se excluyen del análisis; sus tipos se tratan
+# ERROR en openai/_client.py). Lo mismo ocurre con langsmith (traído por
+# langchain-core) y langchain. Se excluyen del análisis; sus tipos se tratan
 # como Any, que es suficiente para nuestro uso (llamadas con kwargs).
 [[tool.mypy.overrides]]
-module = ["openai.*", "anthropic.*"]
+module = ["openai.*", "anthropic.*", "langchain.*", "langchain_aws.*", "langsmith.*", "langgraph.*"]
 follow_imports = "skip"
 ignore_missing_imports = true

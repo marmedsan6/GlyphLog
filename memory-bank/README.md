@@ -1,6 +1,8 @@
 # Memory Bank — GlyphLog
 
-El Memory Bank es el sistema de contexto persistente de GlyphLog. Su propósito es mantener información acumulada entre sesiones de trabajo con agentes de IA, evitando que cada sesión parta de cero.
+> ⚠️ **Nota (agosto 2026):** Engram es ahora la **fuente primaria de memoria** del proyecto (memoria automática entre sesiones). El memory bank conserva únicamente lo que Engram no sustituye: **decisiones arquitectónicas (ADRs), patrones de código y conocimiento técnico acumulado**. Las instrucciones de "actualizar al final de cada sesión" de más abajo quedan **legacy**: el contexto de sesión, los bugs resueltos y los descubrimientos van a Engram automáticamente. Ver `AGENTS.md` §10 para el reparto de responsabilidades.
+
+El Memory Bank es el repositorio de **decisiones y patrones** de GlyphLog, no un registro de sesión.
 
 ---
 

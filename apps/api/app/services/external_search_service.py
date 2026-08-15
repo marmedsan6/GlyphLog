@@ -6,12 +6,13 @@ from typing import Any
 import httpx
 from cachetools import TTLCache
 
+from app.integrations.anilist_client import AniListClient
+from app.integrations.rawg_client import RawgClient, _playtime_to_hours
+from app.models.entry import EntryType
 from app.schemas.external_search import (
     ExternalSearchResponse,
     GameDetailResponse,
 )
-from app.integrations.anilist_client import AniListClient
-from app.integrations.rawg_client import RawgClient, _playtime_to_hours
 
 logger = logging.getLogger(__name__)
 
@@ -51,23 +52,36 @@ class ExternalSearchService:
         # Caché de detalles de juegos: TTL de 1 hora también
         self.game_detail_cache = ThreadSafeCache(maxsize=500, ttl=3600)
 
-    async def search(self, query: str) -> ExternalSearchResponse:
+    async def search(
+        self, query: str, entry_type: EntryType | None = None
+    ) -> ExternalSearchResponse:
         # Sanitizar y normalizar query
         normalized_query = query.strip().lower()
 
+        # La clave de caché incorpora el tipo para no devolver resultados de
+        # otra categoría ante la misma query.
+        cache_key = f"{normalized_query}::{entry_type.value if entry_type else 'all'}"
+
         # Buscar en caché
-        cached_results = self.cache.get(normalized_query)
+        cached_results = self.cache.get(cache_key)
         if cached_results is not None:
             return ExternalSearchResponse(results=cached_results)
 
-        # Si no está en caché, consultar APIs externas en paralelo.
-        # AniList combina anime + manga en 1 sola petición GraphQL,
-        # por lo que solo necesitamos 2 tareas (antes eran 3 con Jikan).
+        # Según el tipo solicitado, consultamos solo la fuente correspondiente
+        # (eficiencia: elegir anime no consulta RAWG ni el bloque de manga).
         async with httpx.AsyncClient() as client:
-            tasks = [
-                self.anilist_client.search_anime_manga(client, query),
-                self.rawg_client.search_games(client, query),
-            ]
+            if entry_type == EntryType.anime:
+                tasks = [self.anilist_client.search_by_type(client, query, EntryType.anime)]
+            elif entry_type == EntryType.manga:
+                tasks = [self.anilist_client.search_by_type(client, query, EntryType.manga)]
+            elif entry_type == EntryType.game:
+                tasks = [self.rawg_client.search_games(client, query)]
+            else:
+                # Sin tipo: consulta combinada de AniList (anime + manga) y RAWG.
+                tasks = [
+                    self.anilist_client.search_anime_manga(client, query),
+                    self.rawg_client.search_games(client, query),
+                ]
 
             # return_exceptions=True para que si una llamada falla, no cancele las demás.
             # Cumple: "Si una API falla (timeout, error, rate limit), las demás siguen funcionando"
@@ -91,7 +105,7 @@ class ExternalSearchService:
             # Guardar en caché únicamente si todas las llamadas a
             # APIs externas activas tuvieron éxito
             if not has_failures:
-                self.cache.set(normalized_query, results)
+                self.cache.set(cache_key, results)
 
             return ExternalSearchResponse(results=results)
 

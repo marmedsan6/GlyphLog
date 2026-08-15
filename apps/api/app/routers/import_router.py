@@ -5,7 +5,11 @@ from typing import NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.dependencies import get_entry_repository, get_llm_client
+from app.core.dependencies import (
+    get_catalog_enrichment_service,
+    get_entry_repository,
+    get_llm_client,
+)
 from app.core.llm_errors import map_llm_error
 from app.core.security import AuthenticatedUser, get_current_user
 from app.integrations.llm import JsonLlm
@@ -16,6 +20,7 @@ from app.schemas.import_schema import (
     ImportParseRequest,
     ImportParseResponse,
 )
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.import_service import ImportService
 
 logger = logging.getLogger(__name__)
@@ -26,9 +31,10 @@ router = APIRouter(prefix="/import", tags=["import"])
 def get_import_service(
     llm_client: JsonLlm = Depends(get_llm_client),
     entry_repo: EntryRepository = Depends(get_entry_repository),
+    enrichment: CatalogEnrichmentService = Depends(get_catalog_enrichment_service),
 ) -> ImportService:
     """Dependency para obtener el servicio de importación."""
-    return ImportService(llm_client, entry_repo)
+    return ImportService(llm_client, entry_repo, enrichment)
 
 
 def _map_parse_error(error: Exception) -> NoReturn:

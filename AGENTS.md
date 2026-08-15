@@ -219,6 +219,28 @@ El proyecto sigue el flujo SDD: **spec → plan → tasks → código → tests 
 
 ---
 
+## 6.6. Routing orgánico de implementación
+
+Antes de empezar cualquier tarea, elige la **ruta de implementación más pequeña que resuelva el resultado**. No trates el tamaño ni el número de archivos como una puntuación de riesgo ni como un umbral automático de SDD: son una señal de cuánto contexto necesitas.
+
+| Ruta | Cuándo usarla | Qué haces |
+| ---- | ------------- | --------- |
+| **Directa inline** | Entender/decidir requiere **1–3 archivos**, o el cambio es **un archivo mecánico ya entendido** sin investigación ni decisión de diseño pendiente. | Ejecuta la acción acotada directamente, sin crear estado SDD. |
+| **Directa delegada** | Entender requiere **4+ archivos**; leer prepara una escritura; hay investigación amplia; o un escritor toca **2+ archivos no triviales**. | Delega la exploración acotada y/o un único escritor con contexto fresco, sin crear artefactos SDD. |
+| **SDD opcional** | El trabajo tiene ambigüedad sustancial, o los artefactos durables (propuesta, spec, design, tasks) reducirían materialmente la incertidumbre. | Ofrece SDD (sección 6.5). Selecciónalo **solo** tras una petición explícita del usuario o una propuesta aceptada. |
+
+Reglas derivadas:
+
+- **Regla de 4 archivos**: si para entender un flujo necesitas leer 4+ archivos, delega la exploración o lanza una fase de exploración.
+- **Regla de escritura múltiple**: si vas a tocar 2+ archivos no triviales, usa un único escritor delegado o exige review fresca antes de terminar.
+- **Regla de revisión pre-entrega**: antes de commit/push/PR tras cambios de código, ejecuta una revisión fresca salvo que el diff sea trivial (Tier 1).
+- **Regla de incidente**: tras un `cwd` incorrecto, accidente de worktree/git, recuperación de merge, o workaround de entorno, ejecuta una auditoría fresca antes de continuar.
+- **Regla de sesión larga**: tras ~20 tool calls, 5 lecturas exploratorias o 2 ediciones no mecánicas con complejidad creciente, pausa y delega, replanifica o justifica por qué no.
+
+La delegación se aplica **por acción** (tests, builds, revisiones) sin cambiar la ruta de implementación ni crear un run SDD. Si un trabajo aparentemente simple revela ambigüedad sustancial, ofrece SDD en el siguiente límite seguro — nunca inscribas SDD en silencio.
+
+---
+
 ## 7. Estructura de tareas
 
 Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. Úsalo al crear nuevas tareas o al documentar trabajo en curso. La sección `## Especificación` (antes de `## Tareas técnicas`) contiene el contrato de la tarea: enlace a la spec Tier 3 en `docs/specs/` o bloque compacto para Tier 2.
@@ -353,27 +375,31 @@ Los MCPs (Model Context Protocol servers) amplían las capacidades del agente co
 
 ---
 
-## 10. Memory Bank
+## 10. Memoria persistente (Engram + Memory Bank)
 
-El `memory-bank/` es el sistema de contexto persistente del proyecto. Proporciona a los agentes información acumulada entre sesiones.
+GlyphLog usa **dos capas de memoria** con responsabilidades distintas. La regla de oro: **cuanto menos tenga que acordarse un agente de actualizar archivos manualmente, mejor funciona la memoria.**
 
-### Archivos principales
+### 10.1 Engram — memoria automática (fuente primaria)
 
-| Archivo                          | Cuándo leerlo                                                                |
-| -------------------------------- | ---------------------------------------------------------------------------- |
-| `memory-bank/project-context.md` | **Siempre al inicio de una sesión.** Contiene el estado actual del proyecto. |
-| `memory-bank/decisions.md`       | Antes de tomar cualquier decisión de arquitectura o elegir una librería.     |
-| `memory-bank/patterns.md`        | Antes de crear nuevos componentes, hooks, servicios o endpoints.             |
-| `memory-bank/knowledge/`         | Cuando necesitas conocimiento acumulado por área técnica específica.         |
-| `memory-bank/sessions/`          | Para revisar el trabajo de sesiones anteriores y evitar duplicar esfuerzo.   |
+**Engram** es la memoria persistente automática del proyecto. El agente guarda decisiones, bugs, descubrimientos y contexto entre sesiones **sin intervención manual**, mediante las herramientas MCP `mem_save`, `mem_search`, `mem_context`, `mem_session_summary`.
 
-### Instrucción importante
+- Se accede con `mem_search` para recuperar decisiones, bugs y patrones sin re-explorar.
+- **No requiere actualización manual al final de la sesión**: el agente guarda en el momento.
+- `engram sync` exporta la memoria a `.engram/` para versionarla en git (portabilidad entre máquinas).
 
-> **Al final de cada sesión de trabajo, actualizar los archivos relevantes del memory bank.**
-> Si tomaste una decisión de arquitectura → `decisions.md`.
-> Si estableciste un patrón nuevo → `patterns.md`.
-> Si completaste trabajo significativo → crear entrada en `sessions/`.
-> Si una spec cambió de estado o se implementó → actualizar `docs/specs/README.md` y `docs/tasks/backlog.md`.
+### 10.2 Memory Bank — decisiones y patrones (fuente de decisiones)
+
+El `memory-bank/` ya **no es un registro de sesión**: ese rol lo cumple Engram. El memory bank conserva los artefactos que Engram no sustituye:
+
+| Archivo | Rol actual | Cuándo actualizarlo |
+|---|---|---|
+| `memory-bank/decisions.md` | Log de decisiones arquitectónicas (ADRs) | Al tomar una decisión de arquitectura o elegir librería |
+| `memory-bank/patterns.md` | Convenciones y patrones de código | Al establecer un patrón nuevo o corregir uno obsoleto |
+| `memory-bank/knowledge/` | Conocimiento acumulado por área (incluye entrevistas) | Al documentar conocimiento técnico no trivial |
+| `memory-bank/project-context.md` | Visión global de estado (legado, en revisión) | Solo si Engram no cubre el resumen de estado |
+| `memory-bank/sessions/` | Historial (legado) | Sustituido por Engram; no crear nuevas entradas manuales |
+
+> **Regla:** si algo es una *decisión* o un *patrón*, va al memory bank. Si es *contexto de sesión, un bug resuelto o un descubrimiento*, va a Engram automáticamente.
 
 ---
 
@@ -536,6 +562,15 @@ Cada subagente tiene contexto acotado y gasta menos tokens que el agente princip
 | `fix-issue`             | Crear issues con formato INVEST, clasificar bugs               |
 | `user-story`            | Crear historias de usuario con formato INVEST                  |
 | `deploy-to-prod`        | Deploy a producción (Oracle Cloud + Cloudflare)                |
+
+### Skill registry
+
+Antes de usar una skill, verifica su disponibilidad real en el entorno. El **skill registry** es el catálogo vivo de skills instaladas:
+
+- Al iniciar sesión, lista las skills disponibles (p. ej. `~/.commandcode/skills/`, `~/.agents/skills/`) y las convenciones del proyecto que les apliquen.
+- **No asumas que una skill existe** solo porque aparece en una tabla: confírmala contra el registro real del entorno antes de invocarla.
+- Si necesitas una skill que no está instalada, búscala primero (patrón "find-skills") antes de crear una nueva — evita reinventar.
+- Cuando el flujo lo requiera, pasa la ruta exacta del `SKILL.md` relevante a los subagentes, en lugar de un resumen generado.
 
 ### Flujo ideal de una tarea
 
