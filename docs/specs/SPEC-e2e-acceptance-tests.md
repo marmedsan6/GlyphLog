@@ -26,6 +26,8 @@ El objetivo de esta spec es transformar los smoke tests en una suite de **accept
 
 Ampliar la suite E2E de Playwright para que cubra el *happy path* de los flujos de negocio principales de GlyphLog (colección, detalle, progreso, perfil, importación, recomendaciones y GlyphAI), corrigiendo previamente el helper de autenticación.
 
+En una segunda iteración (RF-8..RF-11) se amplió la cobertura a los flujos de progreso rápido/inline, historial y reset de progreso, búsqueda global y paginación, con criterios de aceptación extraídos de las HUs del GitHub Project #2.
+
 ## Requisitos funcionales
 
 Los requisitos se agrupan por flujo. Cada uno se desglosará en un task doc derivado tras aprobar esta spec.
@@ -73,6 +75,37 @@ Los requisitos se agrupan por flujo. Cada uno se desglosará en un task doc deri
 ### RF-7 — GlyphAI (chat)
 
 - **RF-7.1** — Como usuario, quiero abrir GlyphAI, enviar un mensaje y ver la respuesta del asistente para interactuar con la IA.
+
+### RF-8 — Progreso rápido desde la tarjeta (quick progress)
+
+> Origen: HUs del GitHub Project #2 — issues #34 (acciones rápidas) y #39 (edición inline desde EntryCard).
+
+- **RF-8.1** — Como usuario, quiero incrementar el progreso de una entrada desde su tarjeta con un botón rápido (`+1 ep`/`+1 cap`/`+0.5h`) para actualizarla sin abrir el detalle.
+- **RF-8.2** — Como usuario, quiero que al alcanzar el total con el botón rápido aparezca el diálogo "¿Completar entrada?" y, al confirmar, la entrada pase a estado "Completado".
+- **RF-8.3** — Como usuario, quiero editar el progreso inline (texto clicable → input numérico, `Enter` confirma) para fijar un valor concreto desde la colección.
+- **RF-8.4** — Como usuario, quiero que un valor inline superior al total sea rechazado con un mensaje de validación ("El valor no puede superar N").
+
+### RF-9 — Historial y reset de progreso
+
+> Origen: HUs del GitHub Project #2 — issues #33 (actualización manual), #35 (historial) y protección de reinicio del `entry_service`.
+
+- **RF-9.1** — Como usuario, quiero que una entrada sin historial NO muestre la sección "Historial de progreso" en su detalle.
+- **RF-9.2** — Como usuario, quiero ver el timeline con al menos un evento tras actualizar el progreso de una entrada.
+- **RF-9.3** — Como usuario con una entrada con historial, al intentar cambiar su tipo el sistema debe pedirme confirmar el reinicio ("Reiniciar progreso"); al confirmar, el tipo cambia y el progreso se reinicia.
+
+### RF-10 — Búsqueda global (header)
+
+> Origen: HU del GitHub Project #2 — issue #21 (barra de búsqueda global).
+
+- **RF-10.1** — Como usuario, quiero escribir en la barra del header y pulsar Enter para navegar a `/collection?search=<query>` con solo las coincidencias.
+- **RF-10.2** — Como usuario, quiero usar "Ver todos los resultados para..." del dropdown para navegar a la colección filtrada.
+- **RF-10.3** — Como usuario, quiero limpiar la búsqueda desde el header para volver a ver la colección completa.
+
+### RF-11 — Paginación de colección
+
+> Origen: HU del GitHub Project #2 — issue #8 (listar entradas): "hay controles de paginación cuando hay más de 15 entradas".
+
+- **RF-11.1** — Como usuario con más de 15 entradas, quiero ver controles de paginación y navegar entre páginas (Siguiente/Anterior) sin perder el contador total.
 
 ## API contract
 
@@ -126,8 +159,13 @@ Cada uno debe poder convertirse en test. Dado que el alcance es *happy path*, se
 - [ ] Usuario recién registrado → colección vacía con estado vacío visible (RF-1.1).
 - [ ] Colección con entradas de un solo tipo → el filtro por ese tipo las muestra y el resto las oculta (RF-1.3).
 - [ ] Búsqueda sin coincidencias → no rompe el render (lista vacía o estado acorde) (RF-1.5).
-- [ ] Progreso alcanzando el total → aparece prompt "¿Completar entrada?" (RF-3.2).
+- [ ] Progreso alcanzando el total → aparece prompt "¿Completar entrada?" (RF-3.2, RF-8.2).
 - [ ] Eliminación cancelada → la entrada se conserva (RF-2.3).
+- [ ] Incremento rápido alcanza el total → diálogo de completado (RF-8.2).
+- [ ] Valor inline superior al total → mensaje "El valor no puede superar N" (RF-8.4).
+- [ ] Entrada sin historial → timeline ausente (RF-9.1).
+- [ ] Cambio de tipo con historial → diálogo de reinicio, y al confirmar se aplica el cambio (RF-9.3).
+- [ ] Colección con >15 entradas → paginación visible y navegable (RF-11).
 
 ## Fuera de alcance
 
@@ -140,7 +178,7 @@ Cada uno debe poder convertirse en test. Dado que el alcance es *happy path*, se
 
 ## Criterios de salida
 
-- [ ] Los 8 flujos (RF-0 a RF-7) están especificados a nivel de comportamiento con su happy path claro.
+- [ ] Los 12 flujos (RF-0 a RF-11) están especificados a nivel de comportamiento con su happy path claro.
 - [ ] La estrategia de mock del LLM queda definida para import, recomendaciones y chat.
 - [ ] El bug del token (sessionStorage + clave `glyphlog_access_token`) queda identificado como prerequisito RF-0.
 - [ ] Edge cases enumerados y convertibles en tests.

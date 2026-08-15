@@ -17,6 +17,7 @@
 | [PLAN-batch-fixes-julio-2026](./PLAN-batch-fixes-julio-2026.md)       | Batch de fixes y mejoras de julio 2026                  | PLAN  | completada  | —    | Plan puro, sin spec subyacente                           |
 | [google-oauth-cloud-setup](./google-oauth-cloud-setup.md)             | Setup de Google OAuth en producción                     | SETUP | completada  | —    | Contract: POST /api/v1/auth/google, scopes, errores      |
 | [TEST-e2e-acceptance-tests](./TEST-e2e-acceptance-tests.md)           | Suite de acceptance tests E2E (RF-0..RF-7)              | TEST  | completada  | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | 47 tests Chromium; LLM mockeado; fix auth + rate limit dev |
+| [TEST-e2e-acceptance-progress-search](./TEST-e2e-acceptance-progress-search.md) | Ampliación acceptance tests E2E (RF-8..RF-11) | TEST  | completada  | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | 11 tests nuevos; quick progress, historial/reset, búsqueda global, paginación |
 | —                                                                     | Flujo SDD (specs, template, backlog)                    | SETUP | en-progreso | —    | ADR-015; este plan                                   |
 
 ## Especificaciones

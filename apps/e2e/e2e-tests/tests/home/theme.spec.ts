@@ -1,37 +1,31 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { HomePage } from '../../page-objects/HomePage';
 
-class ThemeToggle {
-  readonly button;
-  readonly html;
-
-  constructor(page: Page) {
-    this.button = page.getByRole('button', { name: 'Cambiar tema' });
-    this.html = page.locator('html');
-  }
-}
+/**
+ * Tests del toggle de tema (claro/oscuro) usando HomePage.
+ * El tema persiste en el <html> como clase CSS `dark`.
+ */
 
 test.describe('Theme Toggle', () => {
-  test('should display theme toggle button on home page', async ({ page }) => {
-    const theme = new ThemeToggle(page);
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await expect(theme.button).toBeVisible();
+  let homePage: HomePage;
+
+  test.beforeEach(async ({ page }) => {
+    homePage = new HomePage(page);
+    await homePage.navigate();
   });
 
-  test('should toggle to dark theme when clicking theme button', async ({ page }) => {
-    const theme = new ThemeToggle(page);
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await theme.button.click();
-    await expect(theme.html).toHaveClass(/dark/);
+  test('should display theme toggle button on home page', async () => {
+    await expect(homePage.themeToggle).toBeVisible();
   });
 
-  test('should toggle back to light theme after two clicks', async ({ page }) => {
-    const theme = new ThemeToggle(page);
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await theme.button.click();
-    await theme.button.click();
-    await expect(theme.html).not.toHaveClass(/dark/);
+  test('should toggle to dark theme when clicking theme button', async () => {
+    await homePage.themeToggle.click();
+    await expect(homePage.html).toHaveClass(/dark/);
+  });
+
+  test('should toggle back to light theme after two clicks', async () => {
+    await homePage.themeToggle.click();
+    await homePage.themeToggle.click();
+    await expect(homePage.html).not.toHaveClass(/dark/);
   });
 });

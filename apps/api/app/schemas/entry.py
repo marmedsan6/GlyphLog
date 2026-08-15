@@ -60,6 +60,9 @@ class EntryCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=5000)
     # Ruta relativa asignada por el servicio de uploads
     cover_image: str | None = Field(default=None, max_length=500)
+    # Géneros de la obra (ej. ["Action", "Drama"]). Se auto-popula desde el
+    # catálogo si se deja vacío.
+    genres: list[str] | None = Field(default=None)
     # Configuración de seguimiento de progreso (ADR-008)
     progress_unit: ProgressUnit | None = Field(default=None)
     progress_total: float | None = Field(default=None, ge=0)
@@ -81,6 +84,24 @@ class EntryCreate(BaseModel):
             return v.strip()
         return v
 
+    @field_validator("genres")
+    @classmethod
+    def genres_clean(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for genre in v:
+            stripped = genre.strip()
+            if not stripped:
+                continue
+            key = stripped.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(stripped)
+        return cleaned or None
+
     @model_validator(mode="after")
     def validate_progress_configuration(self) -> "EntryCreate":
         """Valida que la unidad de progreso sea compatible con el tipo y que
@@ -101,6 +122,7 @@ class EntryUpdate(BaseModel):
     year: int | None = Field(default=None, ge=1950, le=2100)
     notes: str | None = Field(default=None, max_length=5000)
     cover_image: str | None = Field(default=None, max_length=500)
+    genres: list[str] | None = None
     # Configuración de seguimiento de progreso (ADR-008)
     progress_unit: ProgressUnit | None = None
     progress_total: float | None = Field(default=None, ge=0)
@@ -124,6 +146,24 @@ class EntryUpdate(BaseModel):
         if v is not None:
             return v.strip()
         return v
+
+    @field_validator("genres")
+    @classmethod
+    def genres_clean(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for genre in v:
+            stripped = genre.strip()
+            if not stripped:
+                continue
+            key = stripped.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(stripped)
+        return cleaned or None
 
     @model_validator(mode="before")
     @classmethod
@@ -163,6 +203,7 @@ class EntryResponse(BaseModel):
     year: int | None
     notes: str | None
     cover_image: str | None
+    genres: list[str] | None
     # Configuración de seguimiento de progreso (ADR-008)
     progress_unit: ProgressUnit | None
     progress_total: float | None
@@ -187,6 +228,7 @@ class EntryListItem(BaseModel):
     status: EntryStatus
     rating: float | None
     cover_image: str | None
+    genres: list[str] | None = None
     progress_unit: ProgressUnit | None = None
     progress_total: float | None = None
     current_progress: float | None = None
@@ -218,6 +260,7 @@ class EntryCreateForm:
         year: str | None = Form(None),
         notes: str | None = Form(None),
         cover_image_url: str | None = Form(None),
+        genres: str | None = Form(None),
         progress_unit: str | None = Form(None),
         progress_total: str | None = Form(None),
     ) -> None:
@@ -228,6 +271,7 @@ class EntryCreateForm:
         self.year = year
         self.notes = notes
         self.cover_image_url = cover_image_url
+        self.genres = genres
         self.progress_unit = progress_unit
         self.progress_total = progress_total
 
@@ -237,6 +281,7 @@ class EntryCreateForm:
         year_value = int(self.year) if self.year else None
         notes_value = self.notes if self.notes else None
         cover_image_value = self.cover_image_url if self.cover_image_url else None
+        genres_value = self._parse_genres() if self.genres else None
         progress_total_value = float(self.progress_total) if self.progress_total else None
         progress_unit_value = ProgressUnit(self.progress_unit) if self.progress_unit else None
         return EntryCreate(
@@ -247,6 +292,26 @@ class EntryCreateForm:
             year=year_value,
             notes=notes_value,
             cover_image=cover_image_value,
+            genres=genres_value,
             progress_unit=progress_unit_value,
             progress_total=progress_total_value,
         )
+
+    def _parse_genres(self) -> list[str] | None:
+        """Parsea el campo `genres` del form (JSON string o lista).
+
+        El form es multipart, así que los géneros llegan como string JSON
+        (ej. '["Action","Drama"]'). Si no es JSON válido, se devuelve None y
+        la validación del form la gestionará el router.
+        """
+        import json
+
+        if self.genres is None:
+            return None
+        try:
+            parsed = json.loads(self.genres)
+        except (TypeError, ValueError):
+            return None
+        if not isinstance(parsed, list):
+            return None
+        return [str(item) for item in parsed if isinstance(item, str)]

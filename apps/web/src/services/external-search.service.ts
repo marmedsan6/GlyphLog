@@ -1,9 +1,12 @@
 import { apiClient } from '@/lib/api-client'
-import type { ExternalSearchResponse, GameDetailResponse } from '@/types'
+import type { EntryType, ExternalSearchResponse, GameDetailResponse } from '@/types'
 
-export async function searchExternal(query: string): Promise<ExternalSearchResponse> {
+export async function searchExternal(
+  query: string,
+  type?: EntryType
+): Promise<ExternalSearchResponse> {
   const response = await apiClient.get<ExternalSearchResponse>('/external/search', {
-    params: { q: query },
+    params: { q: query, ...(type ? { type } : {}) },
   })
   return response.data
 }

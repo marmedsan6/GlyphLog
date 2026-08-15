@@ -13,6 +13,7 @@ class ExternalSearchResult(BaseModel):
     source: str
     progress_total: Decimal | None = None
     slug: str | None = None
+    genres: list[str] = []
 
 
 class ExternalSearchResponse(BaseModel):

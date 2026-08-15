@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.dependencies import get_external_search_service
 from app.core.security import AuthenticatedUser, get_current_user_flexible
+from app.models.entry import EntryType
 from app.schemas.external_search import ExternalSearchResponse, GameDetailResponse
 from app.services.external_search_service import ExternalSearchService
 
@@ -11,6 +12,9 @@ router = APIRouter(prefix="/external", tags=["external-search"])
 @router.get("/search", response_model=ExternalSearchResponse)
 async def search_external(
     q: str = Query(..., description="Query de búsqueda para el catálogo externo"),
+    type: EntryType | None = Query(
+        None, description="Filtrar por tipo (anime | manga | game)"
+    ),
     auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: ExternalSearchService = Depends(get_external_search_service),
 ) -> ExternalSearchResponse:
@@ -22,7 +26,7 @@ async def search_external(
             detail="La consulta de búsqueda debe tener al menos 3 caracteres",
         )
 
-    return await service.search(stripped_q)
+    return await service.search(stripped_q, entry_type=type)
 
 
 @router.get("/games/{slug}", response_model=GameDetailResponse)

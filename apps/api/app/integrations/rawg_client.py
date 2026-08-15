@@ -65,6 +65,7 @@ class RawgClient:
                         pass
 
                 cover_image = item.get("background_image")
+                genres = [g.get("name") for g in item.get("genres", []) if g.get("name")]
 
                 results.append(
                     ExternalSearchResult(
@@ -74,6 +75,7 @@ class RawgClient:
                         type=EntryType.game,
                         source="RAWG",
                         slug=item.get("slug"),
+                        genres=genres,
                     )
                 )
             return results

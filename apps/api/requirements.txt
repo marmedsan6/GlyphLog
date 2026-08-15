@@ -29,11 +29,16 @@ httpx==0.27.0
 # Procesamiento de imágenes para conversión de avatares a WebP.
 Pillow==11.2.1
 # AWS SDK para invocar modelos de Claude en Bedrock.
-boto3==1.35.96
+boto3==1.43.64
 # Cliente oficial de OpenAI para el chat de GlyphAI (streaming SSE).
 openai==2.53.0
 # Cliente oficial de Anthropic (fallback del chat de GlyphAI).
 anthropic==0.120.2
+# LangChain + LangGraph para el agente de GlyphAI (tools, RAG, streaming).
+# langchain-aws requiere boto3>=1.43.64 (de ahí la subida de boto3).
+langchain-core==1.5.4
+langchain-aws==1.2.1
+langgraph==1.2.11
 # Caché en memoria con TTL para APIs externas (performance optimization).
 cachetools==5.5.0
 # Cliente oficial de Google para YouTube Data API v3.

@@ -65,3 +65,73 @@ export async function createEntryViaApi(
   const entry = await response.json();
   return { id: entry.id, title: entry.title, type: entry.type };
 }
+
+/**
+ * Crea N entradas vía API de forma secuencial y devuelve sus metadatos.
+ * Útil para tests de paginación (límite por página = 15).
+ */
+export async function createEntriesViaApi(
+  page: Page,
+  token: string,
+  count: number,
+  options: { type?: EntryType; titlePrefix?: string } = {}
+): Promise<CreatedEntry[]> {
+  const type = options.type ?? 'anime';
+  const prefix = options.titlePrefix ?? 'E2E Entry';
+  const created: CreatedEntry[] = [];
+
+  for (let i = 1; i <= count; i += 1) {
+    // Sufijo estable por índice para poder asercionar títulos concretos.
+    created.push(
+      await createEntryViaApi(page, token, {
+        title: `${prefix} ${String(i).padStart(2, '0')}`,
+        type,
+      })
+    );
+  }
+
+  return created;
+}
+
+/**
+ * Actualiza el progreso de una entrada vía API (POST /entries/{id}/progress).
+ * Crea un ProgressEvent inmutable, necesario para los tests de historial/reset.
+ */
+export async function updateProgressViaApi(
+  page: Page,
+  token: string,
+  entryId: string,
+  newValue: number,
+  markCompleted = false
+): Promise<void> {
+  const response = await page.request.post(
+    `${API_BASE_URL}/entries/${entryId}/progress`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { new_value: newValue, mark_completed: markCompleted },
+    }
+  );
+
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Failed to update progress: ${response.status()} ${body}`);
+  }
+}
+
+/**
+ * Lee las entradas del usuario vía API (GET /entries).
+ * Devuelve los títulos para poder asercionar qué se importó realmente en la BD.
+ */
+export async function getEntryTitlesViaApi(page: Page, token: string): Promise<string[]> {
+  const response = await page.request.get(`${API_BASE_URL}/entries/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Failed to list entries: ${response.status()} ${body}`);
+  }
+
+  const data = await response.json();
+  return data.entries.map((entry: { title: string }) => entry.title);
+}

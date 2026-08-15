@@ -2,9 +2,11 @@
 
 ## Resumen
 
-GlyphLog sigue una arquitectura **cliente-servidor desacoplada**. El frontend es una SPA (Single Page Application) que se comunica con el backend a través de una API REST. Ambas aplicaciones conviven en un **monorepo gestionado con Turborepo**, lo que permite cacheo de builds, pipelines de CI unificados y una experiencia de desarrollo coherente.
+GlyphLog sigue una arquitectura **cliente-servidor desacoplada**. El frontend es una SPA (Single Page Application) que se comunica con el backend a través de una API REST. Ambos conviven en un **monorepo gestionado con Turborepo**, lo que permite cacheo de builds, pipelines de CI unificados y una experiencia de desarrollo coherente.
 
-Para el entorno de desarrollo local, **Docker Compose** levanta los servicios de infraestructura (PostgreSQL), mientras que frontend y backend corren directamente en el host con sus servidores de desarrollo nativos.
+Además de la SPA y la API, el monorepo incluye una **extensión de Chrome** (`apps/extension`, GlyphLog Companion) que consume la API autenticándose con device tokens.
+
+Para el desarrollo local, **Docker Compose** levanta PostgreSQL; frontend y backend corren directamente en el host con sus servidores de desarrollo nativos.
 
 ---
 
@@ -14,6 +16,7 @@ Para el entorno de desarrollo local, **Docker Compose** levanta los servicios de
 graph TD
     subgraph Cliente
         Browser["Browser\n(React SPA)"]
+        Extension["Extensión Chrome\n(Companion)"]
     end
 
     subgraph Monorepo["Monorepo — Turborepo"]
@@ -27,6 +30,7 @@ graph TD
     end
 
     Browser -->|HTTP / JSON| API
+    Extension -->|device token| API
     Web -->|build| Browser
     API -->|SQLAlchemy ORM| DB
     Docker -->|provisiona| DB
@@ -40,11 +44,12 @@ graph TD
 
 | Decisión | Alternativa considerada | Razón |
 |---|---|---|
-| SPA (React + Vite) | SSR con Next.js | App personal sin requisitos de SEO. El despliegue estático es gratuito en Vercel/Netlify y simplifica la infraestructura. |
-| FastAPI | Django REST Framework, Express | Ecosistema Python, tipado nativo con Pydantic, documentación OpenAPI automática y rendimiento asíncrono sin configuración extra. |
-| PostgreSQL | SQLite, MySQL | Robustez para datos relacionales estructurados, soporte completo de enums y UUID, y disponibilidad gratuita en Oracle Cloud Always Free. |
-| Turborepo | Nx, scripts manuales | Cacheo inteligente de tareas, definición declarativa de pipelines y excelente DX sin configuración excesiva. |
-| Docker Compose (solo dev) | Docker en producción también | Simplifica el entorno local sin añadir complejidad operacional. Producción usa PaaS gestionados. |
+| SPA (React + Vite) | SSR con Next.js | App personal sin requisitos de SEO; despliegue estático simple. |
+| FastAPI | Django REST Framework, Express | Ecosistema Python, tipado con Pydantic, OpenAPI automático, asíncrono. |
+| PostgreSQL | SQLite, MySQL | Robustez relacional, enums y UUID, disponibilidad gratuita en Oracle Cloud. |
+| Turborepo | Nx, scripts manuales | Cacheo de tareas, pipelines declarativos, DX sin complejidad. |
+| Docker Compose (solo dev) | Docker en producción | Simplifica el entorno local. Producción usa VM + Nginx + Cloudflare. |
+| Router → Service → Repository | Queries en router | Separación de responsabilidades y testeabilidad (ADR-001/ADR-008). |
 
 ---
 
@@ -63,7 +68,7 @@ sequenceDiagram
     API->>DB: SELECT user WHERE email = ?
     DB-->>API: User row
     API-->>SPA: 200 OK { access_token }
-    SPA->>SPA: Guarda token en memoria / localStorage
+    SPA->>SPA: Guarda token en sessionStorage
 
     Note over Usuario, DB: Flujo: Crear entrada
     Usuario->>SPA: Rellena formulario nueva entrada
@@ -72,7 +77,7 @@ sequenceDiagram
     API->>DB: INSERT INTO entries ...
     DB-->>API: Entry row creada
     API-->>SPA: 201 Created { entry }
-    SPA->>SPA: Actualiza estado local / caché
+    SPA->>SPA: Invalida caché TanStack Query
 ```
 
 ---
@@ -80,7 +85,7 @@ sequenceDiagram
 ## Principios de diseño
 
 - **Separación de responsabilidades**: el frontend no contiene lógica de negocio; el backend no genera HTML.
-- **Contrato explícito**: la API define tipos estrictos con Pydantic; el frontend los refleja con TypeScript.
+- **Contrato explícito**: la API define tipos estrictos con Pydantic; el frontend los refleja con TypeScript (tipos OpenAPI regenerados).
 - **Sin over-engineering**: no se añaden abstracciones hasta que el problema concreto las justifica.
 - **Desplegable independientemente**: frontend y backend pueden desplegarse y escalarse por separado.
 - **Entorno reproducible**: cualquier desarrollador puede levantar el proyecto con `docker compose up` + `pnpm dev`.
