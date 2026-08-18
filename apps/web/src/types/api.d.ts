@@ -233,7 +233,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/external/games/{slug}": {
+    "/api/v1/external/games/playtime": {
         parameters: {
             query?: never;
             header?: never;
@@ -241,19 +241,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Game Detail
-         * @description Obtiene el detalle de un juego desde RAWG.
+         * Get Game Playtime
+         * @description Obtiene el tiempo de juego (horas) de un juego desde HowLongToBeat.
          *
-         *     El listado de búsqueda (`/external/search`) no trae el `playtime` de RAWG,
-         *     así que el frontend hace esta llamada adicional cuando el usuario
-         *     selecciona un juego de los resultados de autocompletado (lazy fetch).
-         *     El objetivo es precargar `progress_total` para el tipo `game`.
+         *     El listado de búsqueda de IGDB no trae el playtime, así que el frontend
+         *     hace esta llamada adicional cuando el usuario selecciona un juego de los
+         *     resultados de autocompletado (lazy fetch), para precargar `progress_total`
+         *     en horas para el tipo `game`.
          *
-         *     El endpoint degrada con elegancia: si RAWG no está configurado o el
-         *     juego no existe, devuelve `playtime_raw=None` y `playtime_hours=None`
-         *     para que el frontend no rompa el flujo de autocompletado.
+         *     Degrada con elegancia: si HLTB no encuentra el juego o falla, devuelve
+         *     `playtime_hours=None` para que el frontend no rompa el flujo.
          */
-        get: operations["get_game_detail_api_v1_external_games__slug__get"];
+        get: operations["get_game_playtime_api_v1_external_games_playtime_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -463,6 +462,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/discover/youtube/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Channels
+         * @description Analiza canales de YouTube y genera sugerencias de contenido.
+         *
+         *     Proceso:
+         *     1. Obtiene los últimos 10-20 vídeos de cada canal
+         *     2. Extrae transcripts/subtítulos de los vídeos
+         *     3. Analiza con Claude/Bedrock para extraer menciones
+         *     4. Cruza con la colección del usuario
+         *     5. Devuelve sugerencias enriquecidas
+         *
+         *     **Notas:**
+         *     - Máximo 5 canales por request
+         *     - El análisis puede tardar 60-90 segundos
+         *     - Consume ~40-60k tokens de Bedrock por análisis
+         *     - Requiere YOUTUBE_API_KEY configurada
+         *
+         *     **Quota de YouTube API:**
+         *     - 10,000 units/día
+         *     - Este endpoint consume ~100-500 units (1-5 canales × 20 vídeos)
+         */
+        post: operations["analyze_channels_api_v1_discover_youtube_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/chat": {
         parameters: {
             query?: never;
@@ -478,6 +514,9 @@ export interface paths {
          *
          *     Formato de eventos:
          *     ```
+         *     data: {"conversation_id": "..."}
+         *
+         *
          *     data: {"delta": "texto"}
          *
          *
@@ -543,6 +582,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Chat Recommendations
+         * @description Genera recomendaciones y las persiste en la conversación del chat.
+         *
+         *     Delega en el servicio de recomendaciones (misma lógica que
+         *     `/recommendations/generate`) y persiste un único mensaje `assistant` con:
+         *     - `content`: resumen textual legible (para que el agente pueda refinar).
+         *     - `metadata`: `{ "recommendations": [...] }` (para render de tarjetas).
+         *
+         *     `conversation_id` se omite → se crea una conversación nueva.
+         */
+        post: operations["generate_chat_recommendations_api_v1_ai_recommendations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -575,6 +641,46 @@ export interface components {
             /** Device Name */
             device_name: string;
         };
+        /**
+         * AnalysisMetadata
+         * @description Metadata sobre el proceso de análisis de canales de YouTube.
+         *
+         *     Proporciona transparencia al usuario sobre el alcance del análisis,
+         *     recursos consumidos y resultados obtenidos.
+         */
+        AnalysisMetadata: {
+            /**
+             * Channels Analyzed
+             * @description Número de canales procesados
+             */
+            channels_analyzed: number;
+            /**
+             * Videos Analyzed
+             * @description Número total de vídeos analizados
+             */
+            videos_analyzed: number;
+            /**
+             * Titles Found
+             * @description Número total de títulos encontrados
+             */
+            titles_found: number;
+            /**
+             * New Suggestions
+             * @description Títulos NO presentes en la colección del usuario
+             */
+            new_suggestions: number;
+            /**
+             * Tokens Used
+             * @description Tokens consumidos en la llamada a Bedrock/Claude
+             */
+            tokens_used: number;
+            /**
+             * Analyzed At
+             * Format: date-time
+             * @description Timestamp del análisis
+             */
+            analyzed_at: string;
+        };
         /** AvatarUploadResponse */
         AvatarUploadResponse: {
             /** Avatar Url */
@@ -601,6 +707,8 @@ export interface components {
             notes?: string | null;
             /** Cover Image Url */
             cover_image_url?: string | null;
+            /** Genres */
+            genres?: string | null;
             /** Progress Unit */
             progress_unit?: string | null;
             /** Progress Total */
@@ -646,6 +754,10 @@ export interface components {
             role: "user" | "assistant" | "system";
             /** Content */
             content: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Created At
              * Format: date-time
@@ -770,6 +882,8 @@ export interface components {
             rating: number | null;
             /** Cover Image */
             cover_image: string | null;
+            /** Genres */
+            genres?: string[] | null;
             progress_unit?: components["schemas"]["ProgressUnit"] | null;
             /** Progress Total */
             progress_total?: number | null;
@@ -805,6 +919,8 @@ export interface components {
             notes: string | null;
             /** Cover Image */
             cover_image: string | null;
+            /** Genres */
+            genres: string[] | null;
             progress_unit: components["schemas"]["ProgressUnit"] | null;
             /** Progress Total */
             progress_total: number | null;
@@ -850,6 +966,8 @@ export interface components {
             notes?: string | null;
             /** Cover Image */
             cover_image?: string | null;
+            /** Genres */
+            genres?: string[] | null;
             progress_unit?: components["schemas"]["ProgressUnit"] | null;
             /** Progress Total */
             progress_total?: number | null;
@@ -876,22 +994,63 @@ export interface components {
             progress_total?: string | null;
             /** Slug */
             slug?: string | null;
+            /**
+             * Genres
+             * @default []
+             */
+            genres: string[];
         };
         /**
-         * GameDetailResponse
-         * @description Respuesta del endpoint de detalle de un juego externo (RAWG).
+         * GamePlaytimeResponse
+         * @description Respuesta del endpoint de tiempo de juego (HowLongToBeat).
          *
-         *     `playtime_raw` es el campo original de RAWG en minutos.
-         *     `playtime_hours` es la conversión a Decimal con 2 decimales para usar
-         *     directamente como `progress_total` en horas (unidad fija de games).
+         *     `playtime_hours` es la duración de la historia principal en horas (Decimal
+         *     con 2 decimales) para usar directamente como `progress_total` en horas
+         *     (unidad fija de games). None si no se encontró el juego o falló la consulta.
          */
-        GameDetailResponse: {
-            /** Slug */
-            slug: string;
-            /** Playtime Raw */
-            playtime_raw?: number | null;
+        GamePlaytimeResponse: {
+            /** Title */
+            title: string;
             /** Playtime Hours */
             playtime_hours?: string | null;
+        };
+        /**
+         * GenerateChatRecommendationsRequest
+         * @description Request para generar recomendaciones dentro del chat de GlyphAI.
+         *
+         *     `type` es obligatorio (a diferencia del endpoint de /recommendations):
+         *     la función del chat siempre pide elegir entre anime/manga/game.
+         */
+        GenerateChatRecommendationsRequest: {
+            /** @description Tipo de entrada (anime | manga | game) */
+            type: components["schemas"]["EntryType"];
+            /**
+             * Conversation Id
+             * @description Conversación a la que asociar la lista; se crea si se omite
+             */
+            conversation_id?: string | null;
+        };
+        /**
+         * GenerateChatRecommendationsResponse
+         * @description Response de generación de recomendaciones en el chat.
+         *
+         *     Incluye el id de la conversación (creada o reanudada) para que el frontend
+         *     pueda enlazar la lista al hilo y seguir refinando por chat.
+         */
+        GenerateChatRecommendationsResponse: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             * @description Conversación asociada
+             */
+            conversation_id: string;
+            /**
+             * Recommendations
+             * @description Recomendaciones
+             */
+            recommendations: components["schemas"]["Recommendation"][];
+            /** @description Metadata */
+            metadata: components["schemas"]["RecommendationMetadata"];
         };
         /**
          * GenerateRecommendationsRequest
@@ -987,7 +1146,7 @@ export interface components {
             source: components["schemas"]["ImportSource"];
             /**
              * Content
-             * @description Contenido de la lista
+             * @description Contenido de la lista (hasta 1MB, suficiente para exports de MAL de ~250k caracteres)
              */
             content: string;
         };
@@ -1276,7 +1435,7 @@ export interface components {
             year?: number | null;
             /**
              * External Url
-             * @description URL externa (AniList/RAWG)
+             * @description URL externa (AniList/IGDB)
              */
             external_url?: string | null;
             /**
@@ -1572,6 +1731,92 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * YoutubeAnalysisRequest
+         * @description Request body para analizar canales de YouTube.
+         */
+        YoutubeAnalysisRequest: {
+            /**
+             * Channel Urls
+             * @description URLs de canales de YouTube (máximo 5)
+             */
+            channel_urls: string[];
+        };
+        /**
+         * YoutubeAnalysisResponse
+         * @description Response del análisis de canales de YouTube.
+         */
+        YoutubeAnalysisResponse: {
+            /**
+             * Suggestions
+             * @description Lista de sugerencias extraídas
+             */
+            suggestions: components["schemas"]["YoutubeSuggestion"][];
+            /** @description Metadata del análisis */
+            metadata: components["schemas"]["AnalysisMetadata"];
+        };
+        /**
+         * YoutubeSuggestion
+         * @description Sugerencia de contenido extraída del análisis de vídeos de YouTube.
+         *
+         *     Representa un anime/manga/juego mencionado por un YouTuber, con contexto
+         *     sobre el vídeo, opinión del creador y si ya está en la colección del usuario.
+         */
+        YoutubeSuggestion: {
+            /**
+             * Title
+             * @description Título del anime/manga/juego mencionado
+             */
+            title: string;
+            /** @description Tipo de entrada: anime, manga o game */
+            type: components["schemas"]["EntryType"];
+            /**
+             * Mentioned By
+             * @description Nombre del canal que lo mencionó
+             */
+            mentioned_by: string;
+            /**
+             * Video Title
+             * @description Título del vídeo donde se mencionó
+             */
+            video_title: string;
+            /**
+             * Video Url
+             * Format: uri
+             * @description URL del vídeo de YouTube
+             */
+            video_url: string;
+            /**
+             * Opinion
+             * @description Opinión del YouTuber: 'positive', 'mixed' o 'negative'
+             */
+            opinion: string;
+            /**
+             * Rating
+             * @description Rating explícito del YouTuber (1-10), si lo mencionó
+             */
+            rating?: number | null;
+            /**
+             * Timestamp
+             * @description Timestamp aproximado en el vídeo (ej: '12:34')
+             */
+            timestamp?: string | null;
+            /**
+             * In Collection
+             * @description True si el usuario ya tiene este título en su colección
+             */
+            in_collection: boolean;
+            /**
+             * External Url
+             * @description URL del título en AniList/RAWG para más info
+             */
+            external_url?: string | null;
+            /**
+             * Cover Image Url
+             * @description URL de la imagen de portada desde AniList/RAWG
+             */
+            cover_image_url?: string | null;
         };
     };
     responses: never;
@@ -2117,6 +2362,8 @@ export interface operations {
             query: {
                 /** @description Query de búsqueda para el catálogo externo */
                 q: string;
+                /** @description Filtrar por tipo (anime | manga | game) */
+                type?: components["schemas"]["EntryType"] | null;
             };
             header?: never;
             path?: never;
@@ -2144,13 +2391,14 @@ export interface operations {
             };
         };
     };
-    get_game_detail_api_v1_external_games__slug__get: {
+    get_game_playtime_api_v1_external_games_playtime_get: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
+            query: {
+                /** @description Título del juego para buscar en HowLongToBeat */
+                title: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -2161,7 +2409,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GameDetailResponse"];
+                    "application/json": components["schemas"]["GamePlaytimeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2396,6 +2644,39 @@ export interface operations {
             };
         };
     };
+    analyze_channels_api_v1_discover_youtube_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YoutubeAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YoutubeAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     chat_api_v1_ai_chat_post: {
         parameters: {
             query?: never;
@@ -2509,6 +2790,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_chat_recommendations_api_v1_ai_recommendations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateChatRecommendationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateChatRecommendationsResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

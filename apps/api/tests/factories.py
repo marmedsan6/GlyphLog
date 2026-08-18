@@ -115,6 +115,7 @@ def make_chat_message(
     content: str = "Hola",
     message_id: UUID | None = None,
     created_at: datetime | None = None,
+    metadata: dict | None = None,
 ) -> ChatMessage:
     """Crea una instancia de ChatMessage en memoria (sin sesión de BD)."""
     return ChatMessage(
@@ -122,6 +123,7 @@ def make_chat_message(
         conversation_id=conversation_id,
         role=role,
         content=content,
+        metadata=metadata,
         created_at=created_at or datetime.now(timezone.utc),
     )
 

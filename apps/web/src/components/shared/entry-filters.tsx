@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { EntryFilterType } from '@/hooks/useEntries'
 
 interface FilterOption {
@@ -22,16 +22,20 @@ export function EntryFilters({ activeType, onChange }: EntryFiltersProps) {
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por tipo">
       {FILTER_OPTIONS.map((option) => (
-        <Button
+        <button
           key={option.value}
           type="button"
-          variant={activeType === option.value ? 'default' : 'outline'}
-          size="sm"
           onClick={() => onChange(option.value)}
           aria-pressed={activeType === option.value}
+          className={cn(
+            'rounded-[2px] border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors',
+            activeType === option.value
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
+          )}
         >
           {option.label}
-        </Button>
+        </button>
       ))}
     </div>
   )

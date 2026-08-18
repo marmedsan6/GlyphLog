@@ -11,6 +11,8 @@ export interface ImageUploaderProps {
   onRemove?: () => void
   error?: string | null
   allowChange?: boolean
+  // 'landscape' (default) para edición, 'portrait' para el layout de creación.
+  previewVariant?: 'landscape' | 'portrait'
 }
 
 export function ImageUploader({
@@ -20,6 +22,7 @@ export function ImageUploader({
   onRemove,
   error,
   allowChange = true,
+  previewVariant = 'landscape',
 }: ImageUploaderProps) {
   const [newPreview, setNewPreview] = useState<string | null>(null)
   const [cropperSrc, setCropperSrc] = useState<string | null>(null)
@@ -92,6 +95,7 @@ export function ImageUploader({
   }
 
   const showClearButton = (allowChange && hasImage) || (onRemove && !allowChange)
+  const isPortrait = previewVariant === 'portrait'
 
   return (
     <div className="space-y-2">
@@ -120,7 +124,11 @@ export function ImageUploader({
           <img
             src={previewUrl}
             alt="Portada"
-            className="h-40 w-full rounded-md border border-border object-cover"
+            className={
+              isPortrait
+                ? 'aspect-[3/4] w-full rounded-md border border-border object-cover'
+                : 'h-40 w-full rounded-md border border-border object-cover'
+            }
           />
           {showClearButton && (
             <Button
@@ -136,7 +144,13 @@ export function ImageUploader({
           )}
         </div>
       ) : (
-        <div className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-md border border-border bg-muted text-muted-foreground">
+        <div
+          className={
+            isPortrait
+              ? 'flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-md border border-border bg-muted text-muted-foreground'
+              : 'flex h-40 w-full flex-col items-center justify-center gap-2 rounded-md border border-border bg-muted text-muted-foreground'
+          }
+        >
           <ImageOff className="h-10 w-10" />
           <span className="text-xs">Sin imagen</span>
         </div>

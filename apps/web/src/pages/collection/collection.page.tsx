@@ -12,12 +12,9 @@ function EntryCardSkeleton() {
   return (
     <Card className="overflow-hidden">
       <div className="aspect-[3/4] animate-pulse bg-muted" />
-      <CardContent className="space-y-3 p-4">
-        <div className="flex gap-2">
-          <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
-          <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
-        </div>
-        <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+      <CardContent className="space-y-3 p-3">
+        <div className="h-4 w-16 animate-pulse rounded-[2px] bg-muted" />
+        <div className="h-5 w-3/4 animate-pulse rounded-[2px] bg-muted" />
       </CardContent>
     </Card>
   )
@@ -35,9 +32,11 @@ function CollectionSkeleton() {
 
 function EmptyCollection() {
   return (
-    <div className="rounded-md border border-border p-8 text-center">
-      <p className="mb-4 text-muted-foreground">Aún no tienes entradas en tu colección.</p>
-      <Button asChild>
+    <div className="rounded-[2px] border-2 border-dashed border-border p-8 text-center">
+      <p className="mb-4 font-serif text-lg text-muted-foreground">
+        Aún no tienes entradas en tu colección.
+      </p>
+      <Button asChild variant="ink">
         <Link to="/entries/new">Crear primera entrada</Link>
       </Button>
     </div>
@@ -65,19 +64,24 @@ export function CollectionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Mi Colección</h1>
-          <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? 'entrada' : 'entradas'}
-          </p>
+      <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-serif text-4xl font-semibold leading-tight text-foreground">
+              Mi Colección
+            </h1>
+            <p className="mt-1 font-mono text-sm text-muted-foreground">
+              {total} {total === 1 ? 'entrada' : 'entradas'} archivadas
+            </p>
+          </div>
+          <Button asChild variant="ink">
+            <Link to="/entries/new">+ Nueva entrada</Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link to="/entries/new">+ Nueva entrada</Link>
-        </Button>
+        <div className="mt-4 border-b-2 border-border" />
       </div>
 
-      <div className="border-border/40 flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <EntryFilters activeType={type} onChange={setType} />
         <EntrySortSelector sortBy={sortBy} sortOrder={sortOrder} onSortChange={setSort} />
       </div>

@@ -32,10 +32,6 @@ export class AppLayout extends BasePage {
     return this.page.getByRole('link', { name: 'Colección' });
   }
 
-  get navRecommendations() {
-    return this.page.getByRole('link', { name: 'Recomendaciones' });
-  }
-
   get navChat() {
     return this.page.getByRole('link', { name: 'GlyphAI' });
   }

@@ -15,9 +15,18 @@ from httpx import AsyncClient
 
 from app.core.dependencies import get_agent_service
 from app.main import app
-from app.routers.ai import get_conversation_service
+from app.models.entry import EntryType
+from app.routers.ai import (
+    get_chat_recommendation_service,
+    get_conversation_service,
+)
+from app.routers.youtube_discovery import get_youtube_discovery_service
+from app.schemas.recommendation import Recommendation, RecommendationMetadata
+from app.schemas.youtube_discovery import AnalysisMetadata, YoutubeSuggestion
 from app.services.agent_service import AgentEvent, AgentService
 from app.services.conversation_service import ConversationService
+from app.services.recommendation_service import InsufficientCollectionError
+from app.services.youtube_discovery_service import YoutubeDiscoveryService
 from tests.factories import (
     clear_overrides,
     make_conversation,
@@ -297,3 +306,280 @@ class TestConversationsEndpoints:
             clear_overrides()
 
         assert response.status_code == 404
+
+
+def _recommendation() -> Recommendation:
+    return Recommendation(
+        title="Steins;Gate",
+        type=EntryType.anime,
+        match_percentage=92,
+        reason="Ciencia ficción como tus favoritos",
+        genres=["Sci-Fi", "Thriller"],
+        year=2011,
+        external_url="https://anilist.co/search/Steins%3BGate",
+        cover_image_url="https://example.com/cover.jpg",
+        similar_to=["Attack on Titan"],
+    )
+
+
+def _metadata() -> RecommendationMetadata:
+    return RecommendationMetadata(
+        analyzed_entries=6,
+        favorite_genres=["Sci-Fi"],
+        avg_rating=8.5,
+        completion_rate=66.7,
+        model="claude-haiku-4.5",
+    )
+
+
+def mock_recommendation_service(
+    *, raise_error: Exception | None = None
+) -> AsyncMock:
+    service = AsyncMock()
+    result = AsyncMock()
+    result.recommendations = [_recommendation()]
+    result.metadata = _metadata()
+    if raise_error is not None:
+        service.generate_recommendations.side_effect = raise_error
+    else:
+        service.generate_recommendations.return_value = result
+    return service
+
+
+class TestGenerateChatRecommendations:
+    async def test_requires_auth(self, client: AsyncClient) -> None:
+        response = await client.post(
+            "/api/v1/ai/recommendations", json={"type": "anime"}
+        )
+        assert response.status_code == 401
+
+    async def test_generates_and_persists_recommendations(self, client: AsyncClient) -> None:
+        user = make_user()
+        override_current_user(user)
+        conversation = make_conversation(user_id=user.id)
+
+        rec_service = mock_recommendation_service()
+        conv_service = mock_conversation_service()
+        conv_service.create_for_chat.return_value = conversation
+
+        app.dependency_overrides[get_chat_recommendation_service] = lambda: rec_service
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        try:
+            response = await client.post(
+                "/api/v1/ai/recommendations",
+                json={"type": "anime"},
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["conversation_id"] == str(conversation.id)
+        assert body["recommendations"][0]["title"] == "Steins;Gate"
+        assert body["metadata"]["favorite_genres"] == ["Sci-Fi"]
+
+        # Se persiste el turno del usuario y el mensaje del asistente con metadata.
+        rec_service.generate_recommendations.assert_awaited_once_with(
+            user_id=user.id,
+            entry_type=EntryType.anime,
+            limit=5,
+            strict=True,
+        )
+        calls = [c.args for c in conv_service.add_message.await_args_list]
+        # Primer call: mensaje user disparador.
+        assert calls[0][0] == conversation.id
+        assert calls[0][1] == "user"
+        assert calls[0][2] == "Recomiéndame anime"
+        # Segundo call: mensaje assistant con content + metadata.
+        assert calls[1][0] == conversation.id
+        assert calls[1][1] == "assistant"
+        assert "Steins;Gate" in calls[1][2]
+        assert "recommendations" in calls[1][3]
+
+    async def test_returns_404_for_unknown_conversation(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        conv_service = mock_conversation_service()
+        conv_service.get_for_user.return_value = None
+
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        app.dependency_overrides[get_chat_recommendation_service] = (
+            lambda: mock_recommendation_service()
+        )
+        try:
+            response = await client.post(
+                "/api/v1/ai/recommendations",
+                json={"type": "anime", "conversation_id": str(uuid4())},
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Conversación no encontrada"
+
+    async def test_returns_422_for_insufficient_collection(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        rec_service = mock_recommendation_service(
+            raise_error=InsufficientCollectionError(
+                "Necesitas al menos 5 entradas en tu colección para recibir recomendaciones."
+            )
+        )
+        conv_service = mock_conversation_service()
+
+        app.dependency_overrides[get_chat_recommendation_service] = lambda: rec_service
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        try:
+            response = await client.post(
+                "/api/v1/ai/recommendations", json={"type": "anime"}
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 422
+        assert "5 entradas" in response.json()["detail"]
+
+    async def test_returns_422_for_invalid_type(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        try:
+            response = await client.post(
+                "/api/v1/ai/recommendations", json={"type": "libro"}
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 422
+
+
+def _suggestion() -> YoutubeSuggestion:
+    return YoutubeSuggestion(
+        title="Death Note",
+        type=EntryType.anime,
+        mentioned_by="The Anime Man",
+        video_title="Top 10 Psychological Thrillers",
+        video_url="https://www.youtube.com/watch?v=abc123",
+        opinion="positive",
+        rating=9,
+        timestamp="3:42",
+        in_collection=False,
+        external_url=None,
+        cover_image_url=None,
+    )
+
+
+def _analysis_metadata() -> AnalysisMetadata:
+    from datetime import datetime
+
+    return AnalysisMetadata(
+        channels_analyzed=1,
+        videos_analyzed=20,
+        titles_found=1,
+        new_suggestions=1,
+        tokens_used=0,
+        analyzed_at=datetime(2026, 8, 15, 12, 0, 0),
+    )
+
+
+def mock_youtube_service(
+    *, raise_error: Exception | None = None
+) -> AsyncMock:
+    service = AsyncMock(spec=YoutubeDiscoveryService)
+    if raise_error is not None:
+        service.analyze_channels.side_effect = raise_error
+    else:
+        service.analyze_channels.return_value = ([_suggestion()], _analysis_metadata())
+    return service
+
+
+class TestGenerateChatYoutube:
+    async def test_requires_auth(self, client: AsyncClient) -> None:
+        response = await client.post(
+            "/api/v1/ai/youtube",
+            json={"channel_urls": ["https://www.youtube.com/@TheAnimeMan"]},
+        )
+        assert response.status_code == 401
+
+    async def test_generates_and_persists_suggestions(self, client: AsyncClient) -> None:
+        user = make_user()
+        override_current_user(user)
+        conversation = make_conversation(user_id=user.id)
+
+        yt_service = mock_youtube_service()
+        conv_service = mock_conversation_service()
+        conv_service.create_for_chat.return_value = conversation
+
+        app.dependency_overrides[get_youtube_discovery_service] = lambda: yt_service
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        try:
+            response = await client.post(
+                "/api/v1/ai/youtube",
+                json={"channel_urls": ["https://www.youtube.com/@TheAnimeMan"]},
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["conversation_id"] == str(conversation.id)
+        assert body["suggestions"][0]["title"] == "Death Note"
+
+        # El servicio se invoca con las URLs y el user_id del usuario.
+        yt_service.analyze_channels.assert_awaited_once_with(
+            user_id=user.id,
+            channel_urls=["https://www.youtube.com/@TheAnimeMan"],
+        )
+
+        calls = [c.args for c in conv_service.add_message.await_args_list]
+        assert calls[0][0] == conversation.id
+        assert calls[0][1] == "user"
+        assert "TheAnimeMan" in calls[0][2]
+        assert calls[1][0] == conversation.id
+        assert calls[1][1] == "assistant"
+        assert "Death Note" in calls[1][2]
+        assert "suggestions" in calls[1][3]
+
+    async def test_returns_404_for_unknown_conversation(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        conv_service = mock_conversation_service()
+        conv_service.get_for_user.return_value = None
+
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        app.dependency_overrides[get_youtube_discovery_service] = lambda: mock_youtube_service()
+        try:
+            response = await client.post(
+                "/api/v1/ai/youtube",
+                json={
+                    "channel_urls": ["https://www.youtube.com/@TheAnimeMan"],
+                    "conversation_id": str(uuid4()),
+                },
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Conversación no encontrada"
+
+    async def test_returns_422_for_empty_urls(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        try:
+            response = await client.post("/api/v1/ai/youtube", json={"channel_urls": []})
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 422
+
+    async def test_returns_400_for_invalid_urls(self, client: AsyncClient) -> None:
+        override_current_user(make_user())
+        yt_service = mock_youtube_service(raise_error=ValueError("Ninguna URL de canal válida"))
+        conv_service = mock_conversation_service()
+
+        app.dependency_overrides[get_youtube_discovery_service] = lambda: yt_service
+        app.dependency_overrides[get_conversation_service] = lambda: conv_service
+        try:
+            response = await client.post(
+                "/api/v1/ai/youtube",
+                json={"channel_urls": ["no-es-una-url"]},
+            )
+        finally:
+            clear_overrides()
+
+        assert response.status_code == 400
+        assert "URL" in response.json()["detail"]

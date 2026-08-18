@@ -20,7 +20,7 @@ export function useExternalSearch(
     queryFn: () => searchExternal(search.trim(), type),
     enabled: search.trim().length >= 3, // Se activa solo si tiene al menos 3 caracteres
     staleTime: 60_000, // Cacheamos las búsquedas por 1 minuto
-    retry: false, // No reintentar ante fallos (MAL/RAWG caídos) para no sobrecargar
+    retry: false, // No reintentar ante fallos (AniList/IGDB caídos) para no sobrecargar
   })
 
   return {

@@ -7,7 +7,7 @@ Verifica el análisis de canales de YouTube con mocks de:
 - BedrockClient
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -424,3 +424,40 @@ class TestYoutubeDiscoveryService:
         assert len(suggestions) == 2
         assert metadata.channels_analyzed == 2
         assert metadata.videos_analyzed == 2
+
+
+class TestFormatSuggestionsAsText:
+    """Tests del formateador de sugerencias a texto legible."""
+
+    def _suggestion(self, title="Death Note", in_collection=False) -> object:
+        from app.schemas.youtube_discovery import YoutubeSuggestion
+
+        return YoutubeSuggestion(
+            title=title,
+            type=EntryType.anime,
+            mentioned_by="The Anime Man",
+            video_title="Top 10",
+            video_url="https://www.youtube.com/watch?v=abc123",
+            opinion="positive",
+            rating=9,
+            timestamp=None,
+            in_collection=in_collection,
+            external_url=None,
+            cover_image_url=None,
+        )
+
+    def test_empty_suggestions(self) -> None:
+        text = YoutubeDiscoveryService.format_suggestions_as_text([])
+        assert "No encontré menciones" in text
+
+    def test_formats_suggestion(self) -> None:
+        text = YoutubeDiscoveryService.format_suggestions_as_text([self._suggestion()])
+        assert "Death Note" in text
+        assert "The Anime Man" in text
+        assert "nuevo" in text
+
+    def test_marks_in_collection(self) -> None:
+        text = YoutubeDiscoveryService.format_suggestions_as_text(
+            [self._suggestion(in_collection=True)]
+        )
+        assert "ya en tu lista" in text

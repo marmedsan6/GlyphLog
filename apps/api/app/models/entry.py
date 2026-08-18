@@ -75,7 +75,7 @@ class Entry(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_image: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Géneros de la obra (ej. ["Action", "Drama"]). Primer campo JSON del
-    # proyecto: se auto-popula desde el catálogo (AniList/RAWG) al crear/importar.
+    # proyecto: se auto-popula desde el catálogo (AniList/IGDB) al crear/importar.
     genres: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     # Configuración de seguimiento de progreso (ADR-008)

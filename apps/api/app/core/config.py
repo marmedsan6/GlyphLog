@@ -29,10 +29,12 @@ class Settings(BaseSettings):
     # app sin necesidad de configurar Google Cloud Console.
     google_client_id: str = ""
 
-    # ── RAWG API ───────────────────────────────────────────────────────────────
-    # API Key para realizar búsquedas externas en el catálogo de videojuegos.
-    # Si está vacía, se omitirá la búsqueda en RAWG degradándose graciosamente.
-    rawg_api_key: str = ""
+    # ── IGDB API (Twitch) ──────────────────────────────────────────────────────
+    # Credenciales OAuth2 (client credentials) para buscar videojuegos en IGDB.
+    # Si están vacías, se omitirá la búsqueda en IGDB degradándose graciosamente.
+    # Obtener gratis en https://dev.twitch.tv/console/apps (app "Confidential").
+    igdb_client_id: str = ""
+    igdb_client_secret: str = ""
 
     # ── AWS Bedrock (Claude) ───────────────────────────────────────────────────
     # Modelo de Claude en Bedrock para funciones de IA (importador, recomendaciones, analytics).

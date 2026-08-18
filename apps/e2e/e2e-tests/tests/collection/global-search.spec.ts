@@ -36,6 +36,7 @@ test.describe('Búsqueda global (header)', () => {
     await createEntryViaApi(page, token, { title: 'Monster', type: 'anime' });
 
     const layout = new AppLayout(page);
+    const collectionPage = new CollectionPage(page);
     await page.goto('/collection');
     await page.waitForLoadState('domcontentloaded');
 
@@ -44,9 +45,9 @@ test.describe('Búsqueda global (header)', () => {
     await expect(layout.viewAllResultsButton).toBeVisible();
     await layout.viewAllResultsButton.click();
 
-    // ASSERT — navega a la colección filtrada
+    // ASSERT — navega a la colección filtrada y muestra la card
     await expect(page).toHaveURL(/\/collection\?search=Monster/);
-    await expect(page.getByText('Monster')).toBeVisible();
+    await expect(collectionPage.entryCard('Monster').card).toBeVisible();
   });
 
   test('should clear search from the header', async ({ page }) => {
@@ -61,7 +62,7 @@ test.describe('Búsqueda global (header)', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // ASSERT — filtrado inicial
-    await expect(page.getByText('Akira')).toBeVisible();
+    await expect(collectionPage.entryCard('Akira').card).toBeVisible();
     await expect(page.getByText('Berserk')).toHaveCount(0);
 
     // ACT — limpiar búsqueda desde el header (botón ✕)

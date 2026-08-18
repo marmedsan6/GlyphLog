@@ -44,8 +44,10 @@ export function EntryFormFields({
         )}
       />
 
-      <EntryTypeSelect disabled={isAutocompleted} />
-      <EntryStatusSelect />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <EntryTypeSelect disabled={isAutocompleted} />
+        <EntryStatusSelect />
+      </div>
       <ProgressConfigSelector
         progressTotalSource={progressTotalSource}
         onProgressTotalSource={onProgressTotalSource}

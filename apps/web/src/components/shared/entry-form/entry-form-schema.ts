@@ -81,4 +81,4 @@ export type EntryFormValues = z.infer<typeof entryFormSchema>
 
 // Origen del valor de `progress_total` cuando se autocompleta desde un catálogo externo.
 // 'manual' indica que el usuario lo introdujo con el botón "＋ Total" o editó el input.
-export type ProgressTotalSource = 'AniList' | 'RAWG' | 'manual'
+export type ProgressTotalSource = 'AniList' | 'HLTB' | 'manual'

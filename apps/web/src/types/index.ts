@@ -27,7 +27,7 @@ export type SortField = components['schemas']['SortField']
 export type SortOrder = components['schemas']['SortOrder']
 export type ExternalSearchResult = components['schemas']['ExternalSearchResult']
 export type ExternalSearchResponse = components['schemas']['ExternalSearchResponse']
-export type GameDetailResponse = components['schemas']['GameDetailResponse']
+export type GamePlaytimeResponse = components['schemas']['GamePlaytimeResponse']
 
 export type User = components['schemas']['UserResponse']
 

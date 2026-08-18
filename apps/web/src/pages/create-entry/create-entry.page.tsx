@@ -79,13 +79,13 @@ export function CreateEntryPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background py-8">
-      <Card className="mx-4 w-full max-w-md">
+      <Card className="mx-4 w-full max-w-4xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Nueva entrada</CardTitle>
+          <CardTitle className="font-serif text-2xl">Nueva entrada</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {(apiError || mutationError) && (
                 <div className="bg-destructive/10 rounded-md p-3 text-sm text-destructive">
                   {apiError || mutationError?.message}
@@ -106,28 +106,33 @@ export function CreateEntryPage() {
                 onProgressTotalSource={setProgressTotalSource}
               />
 
-              <EntryFormFields
-                isAutocompleted={isAutocompleted}
-                progressTotalSource={progressTotalSource}
-                onProgressTotalSource={setProgressTotalSource}
-              />
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-[220px_1fr]">
+                <ImageUploader
+                  currentImageUrl={remoteCoverUrl}
+                  selectedImage={coverImage}
+                  onChange={handleImageChange}
+                  onRemove={() => setRemoteCoverUrl(null)}
+                  error={imageError}
+                  allowChange={!isAutocompleted}
+                  previewVariant="portrait"
+                />
 
-              <ImageUploader
-                currentImageUrl={remoteCoverUrl}
-                selectedImage={coverImage}
-                onChange={handleImageChange}
-                onRemove={() => setRemoteCoverUrl(null)}
-                error={imageError}
-                allowChange={!isAutocompleted}
-              />
+                <div className="space-y-4">
+                  <EntryFormFields
+                    isAutocompleted={isAutocompleted}
+                    progressTotalSource={progressTotalSource}
+                    onProgressTotalSource={setProgressTotalSource}
+                  />
 
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1" disabled={isPending}>
-                  {isPending ? 'Creando...' : 'Crear entrada'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/collection')}>
-                  Cancelar
-                </Button>
+                  <div className="flex gap-2 pt-2">
+                    <Button type="submit" variant="ink" className="flex-1" disabled={isPending}>
+                      {isPending ? 'Creando...' : 'Crear entrada'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => navigate('/collection')}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               </div>
             </form>
           </Form>

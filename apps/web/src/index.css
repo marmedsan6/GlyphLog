@@ -4,75 +4,75 @@
 
 @layer base {
   :root {
-    --background: 0.98 0.004 242;
-    --foreground: 0.25 0.042 242;
-    --card: 0.99 0.002 242;
-    --card-foreground: 0.25 0.042 242;
-    --popover: 0.99 0.002 242;
-    --popover-foreground: 0.25 0.042 242;
-    --primary: 0.588 0.139 242;
-    --primary-foreground: 1 0 0;
-    --secondary: 0.955 0.014 242;
-    --secondary-foreground: 0.25 0.069 242;
-    --muted: 0.97 0.003 242;
-    --muted-foreground: 0.52 0.028 242;
-    --accent: 0.965 0.004 242;
-    --accent-foreground: 0.25 0.042 242;
-    --destructive: 0.584 0.239 28.5;
-    --destructive-foreground: 1 0 0;
-    --border: 0.925 0.007 242;
-    --input: 0.925 0.007 242;
-    --ring: 0.588 0.139 242 / 0.9;
-    --radius: 0.75rem;
-    --chart-1: 0.25 0.139 242;
-    --chart-2: 0.35 0.139 242;
-    --chart-3: 0.55 0.139 242;
-    --chart-4: 0.75 0.139 242;
-    --chart-5: 0.85 0.13 242;
-    --sidebar-background: 0.97 0.005 242;
-    --sidebar-foreground: 0.25 0.042 242;
-    --sidebar-primary: 0.588 0.139 242;
-    --sidebar-primary-foreground: 1 0 0;
-    --sidebar-accent: 0.965 0.004 242;
-    --sidebar-accent-foreground: 0.25 0.042 242;
-    --sidebar-border: 0.925 0.007 242;
-    --sidebar-ring: 0.925 0.007 242;
+    --background: 0.94 0.012 85;
+    --foreground: 0.21 0.008 50;
+    --card: 0.97 0.01 85;
+    --card-foreground: 0.21 0.008 50;
+    --popover: 0.97 0.01 85;
+    --popover-foreground: 0.21 0.008 50;
+    --primary: 0.55 0.17 40;
+    --primary-foreground: 0.98 0.01 85;
+    --secondary: 0.9 0.015 85;
+    --secondary-foreground: 0.21 0.008 50;
+    --muted: 0.9 0.015 85;
+    --muted-foreground: 0.55 0.01 60;
+    --accent: 0.9 0.015 85;
+    --accent-foreground: 0.21 0.008 50;
+    --destructive: 0.48 0.17 25;
+    --destructive-foreground: 0.98 0.01 85;
+    --border: 0.82 0.015 85;
+    --input: 0.82 0.015 85;
+    --ring: 0.55 0.17 40 / 0.9;
+    --radius: 0.375rem;
+    --chart-1: 0.55 0.17 40;
+    --chart-2: 0.48 0.17 25;
+    --chart-3: 0.7 0.12 45;
+    --chart-4: 0.42 0.12 200;
+    --chart-5: 0.5 0.12 140;
+    --sidebar-background: 0.9 0.015 85;
+    --sidebar-foreground: 0.21 0.008 50;
+    --sidebar-primary: 0.55 0.17 40;
+    --sidebar-primary-foreground: 0.98 0.01 85;
+    --sidebar-accent: 0.9 0.015 85;
+    --sidebar-accent-foreground: 0.21 0.008 50;
+    --sidebar-border: 0.82 0.015 85;
+    --sidebar-ring: 0.82 0.015 85;
   }
 
   .dark {
-    --background: 0.15 0.02 270;
-    --foreground: 0.98 0 0;
-    --card: 0.17 0.02 270;
-    --card-foreground: 0.98 0 0;
-    --popover: 0.17 0.02 270;
-    --popover-foreground: 0.98 0 0;
-    --primary: 0.588 0.139 242;
-    --primary-foreground: 1 0 0;
-    --secondary: 0.25 0.03 270;
-    --secondary-foreground: 0.9 0.139 242;
-    --muted: 0.22 0.02 270;
-    --muted-foreground: 0.75 0.03 270;
-    --accent: 0.28 0.03 270;
-    --accent-foreground: 0.98 0 0;
-    --destructive: 0.69 0.2 23.9;
-    --destructive-foreground: 0 0 0;
-    --border: 0.25 0.02 270;
-    --input: 0.25 0.02 270;
-    --ring: 0.668 0.139 242;
-    --radius: 0.75rem;
-    --chart-1: 0.35 0.139 270;
-    --chart-2: 0.55 0.139 270;
-    --chart-3: 0.75 0.139 270;
-    --chart-4: 0.9 0.139 270;
-    --chart-5: 0.99 0.11 270;
-    --sidebar-background: 0.13 0.025 270;
-    --sidebar-foreground: 0.98 0 0;
-    --sidebar-primary: 0.588 0.139 242;
-    --sidebar-primary-foreground: 1 0 0;
-    --sidebar-accent: 0.25 0.03 270;
-    --sidebar-accent-foreground: 0.98 0 0;
-    --sidebar-border: 0.22 0.02 270;
-    --sidebar-ring: 0.22 0.02 270;
+    --background: 0.2 0.008 60;
+    --foreground: 0.94 0.012 85;
+    --card: 0.24 0.01 60;
+    --card-foreground: 0.94 0.012 85;
+    --popover: 0.27 0.012 60;
+    --popover-foreground: 0.94 0.012 85;
+    --primary: 0.7 0.12 45;
+    --primary-foreground: 0.21 0.008 50;
+    --secondary: 0.28 0.012 60;
+    --secondary-foreground: 0.94 0.012 85;
+    --muted: 0.28 0.012 60;
+    --muted-foreground: 0.72 0.008 60;
+    --accent: 0.28 0.012 60;
+    --accent-foreground: 0.94 0.012 85;
+    --destructive: 0.58 0.2 25;
+    --destructive-foreground: 0.94 0.012 85;
+    --border: 0.33 0.012 60;
+    --input: 0.33 0.012 60;
+    --ring: 0.7 0.12 45;
+    --radius: 0.375rem;
+    --chart-1: 0.7 0.12 45;
+    --chart-2: 0.58 0.2 25;
+    --chart-3: 0.62 0.14 200;
+    --chart-4: 0.55 0.12 140;
+    --chart-5: 0.5 0.12 300;
+    --sidebar-background: 0.24 0.01 60;
+    --sidebar-foreground: 0.94 0.012 85;
+    --sidebar-primary: 0.7 0.12 45;
+    --sidebar-primary-foreground: 0.21 0.008 50;
+    --sidebar-accent: 0.28 0.012 60;
+    --sidebar-accent-foreground: 0.94 0.012 85;
+    --sidebar-border: 0.33 0.012 60;
+    --sidebar-ring: 0.33 0.012 60;
   }
 }
 
@@ -82,6 +82,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter Variable', system-ui, sans-serif;
+    background-image: radial-gradient(rgba(28, 25, 23, 0.04) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .dark body {
+    background-image: radial-gradient(rgba(244, 239, 230, 0.03) 1px, transparent 1px);
+  }
+}
+
+@layer components {
+  /* Cinta adhesiva decorativa para las fichas de colección (look editorial). */
+  .card-tape {
+    position: absolute;
+    top: -6px;
+    left: 16px;
+    right: 16px;
+    height: 14px;
+    z-index: 10;
+    background: oklch(var(--muted) / 0.6);
+    border: 1px solid oklch(var(--border) / 0.4);
+    transform: rotate(-1.5deg);
+    pointer-events: none;
   }
 }
 

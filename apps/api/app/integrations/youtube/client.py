@@ -67,20 +67,68 @@ class YouTubeClient:
         if channel_match:
             return channel_match.group(1)
 
-        # Formato: /@username → necesita búsqueda
-        handle_match = re.search(r"/@([a-zA-Z0-9_-]+)", channel_url)
+        # Formato: /@username → buscar por handle directo
+        handle_match = re.search(r"/@([a-zA-Z0-9_.-]+)", channel_url)
         if handle_match:
             handle = handle_match.group(1)
-            return self._search_channel_by_handle(f"@{handle}")
+            return self._get_channel_id_by_handle(handle)
 
-        # Formato: /c/channelname o /user/username → búsqueda por nombre
-        legacy_match = re.search(r"/(c|user)/([a-zA-Z0-9_-]+)", channel_url)
+        # Formato: /c/channelname o /user/username → búsqueda por forUsername / query
+        legacy_match = re.search(r"/(c|user)/([a-zA-Z0-9_.-]+)", channel_url)
         if legacy_match:
             name = legacy_match.group(2)
-            return self._search_channel_by_handle(name)
+            return self._get_channel_id_by_username_or_search(name)
 
         logger.warning(f"No se pudo extraer channel ID de: {channel_url}")
         return None
+
+    def _get_channel_id_by_handle(self, handle: str) -> str | None:
+        """
+        Obtiene el ID del canal usando el endpoint oficial forHandle (exacto y 1 unidad de quota).
+        Si no se encuentra, hace fallback a search.
+        """
+        clean_handle = handle.lstrip("@")
+        try:
+            response = (
+                self.youtube.channels()
+                .list(
+                    part="id",
+                    forHandle=clean_handle,
+                )
+                .execute()
+            )
+            items = response.get("items", [])
+            if items:
+                channel_id = items[0]["id"]
+                logger.info(f"forHandle @{clean_handle} → Channel ID: {channel_id}")
+                return channel_id
+        except HttpError as e:
+            logger.debug(f"forHandle no encontró @{clean_handle}: {e}")
+
+        return self._search_channel_by_handle(f"@{clean_handle}")
+
+    def _get_channel_id_by_username_or_search(self, username: str) -> str | None:
+        """
+        Obtiene el ID del canal por forUsername (exacto). Fallback a search.
+        """
+        try:
+            response = (
+                self.youtube.channels()
+                .list(
+                    part="id",
+                    forUsername=username,
+                )
+                .execute()
+            )
+            items = response.get("items", [])
+            if items:
+                channel_id = items[0]["id"]
+                logger.info(f"forUsername {username} → Channel ID: {channel_id}")
+                return channel_id
+        except HttpError as e:
+            logger.debug(f"forUsername no encontró {username}: {e}")
+
+        return self._search_channel_by_handle(username)
 
     def _search_channel_by_handle(self, handle: str) -> str | None:
         """

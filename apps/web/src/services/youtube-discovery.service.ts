@@ -4,8 +4,10 @@
 
 import { apiClient } from '@/lib/api-client'
 import type {
+  AnalysisMetadata,
   YoutubeAnalysisRequest,
   YoutubeAnalysisResponse,
+  YoutubeSuggestion,
 } from '@/types/youtube-discovery'
 import type { EntryCreate } from '@/types'
 
@@ -27,6 +29,36 @@ export async function analyzeChannels(
     body
   )
 
+  return response.data
+}
+
+/**
+ * Respuesta del descubrimiento de YouTube desde el chat.
+ */
+export interface GenerateChatYoutubeResponse {
+  conversation_id: string
+  suggestions: YoutubeSuggestion[]
+  metadata: AnalysisMetadata
+}
+
+/**
+ * Lanza el descubrimiento de YouTube desde el chat y persiste las sugerencias
+ * en la conversación (POST /ai/youtube).
+ *
+ * @param channelUrls - URLs de canales pegadas (máximo 5)
+ * @param conversationId - Conversación a la que asociar (opcional)
+ */
+export async function generateChatYoutubeDiscovery(
+  channelUrls: string[],
+  conversationId?: string | null
+): Promise<GenerateChatYoutubeResponse> {
+  const response = await apiClient.post<GenerateChatYoutubeResponse>(
+    '/ai/youtube',
+    {
+      channel_urls: channelUrls,
+      conversation_id: conversationId ?? null,
+    }
+  )
   return response.data
 }
 

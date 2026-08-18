@@ -20,8 +20,9 @@ test.describe('GlyphAI Chat', () => {
     // ACT — enviar un mensaje
     await chatPage.sendMessage('Hola');
 
-    // ASSERT — el mensaje del usuario es visible
-    await expect(page.getByText('Hola')).toBeVisible();
+    // ASSERT — el mensaje del usuario es visible (exact match para no chocar
+    // con la respuesta del asistente que empieza por "Hola soy GlyphAI")
+    await expect(page.getByText('Hola', { exact: true })).toBeVisible();
 
     // ASSERT — la respuesta del asistente (stream mock) es visible
     await expect(page.getByText(/soy GlyphAI, tu asistente/)).toBeVisible();

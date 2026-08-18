@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useConversations'
 import { ChatInput } from '@/components/shared/chat/chat-input'
 import { ChatMessage } from '@/components/shared/chat/chat-message'
+import { ChatErrorBoundary } from '@/components/shared/chat-error-boundary'
 import { ConversationSidebar } from '@/pages/chat/conversation-sidebar'
 import { WelcomeScreen } from '@/pages/chat/welcome-screen'
 
@@ -36,12 +37,25 @@ export function ChatPage() {
         id: message.id,
         role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
         content: message.content,
+        metadata: message.metadata as AIChatMessage['metadata'],
       })) ?? [],
     [conversationDetail]
   )
 
   const chat = useAIChat(isNewConversation ? null : selectedId, initialMessages)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Cuando useAIChat crea una conversación nueva internamente (primer mensaje
+  // de chat, YouTube discovery, recomendaciones), sincronizamos el estado del
+  // padre para que `initialConversationId` coincida con `conversationIdRef`.
+  // Sin esto, el effect de useAIChat detecta un mismatch (null !== "new-id")
+  // y resetea todos los mensajes — causando que la página se "congele".
+  useEffect(() => {
+    if (chat.conversationId && isNewConversation) {
+      setSelectedId(chat.conversationId)
+      setIsNewConversation(false)
+    }
+  }, [chat.conversationId, isNewConversation])
 
   // Refresca el listado cuando la conversación activa cambia (nueva creada,
   // mensaje enviado, etc.) para reflejar título/fecha/orden.
@@ -94,42 +108,56 @@ export function ChatPage() {
         onDelete={handleDelete}
       />
 
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-border px-4 py-3">
-          <Bot className="h-4 w-4 text-primary" />
-          <h1 className="truncate text-sm font-semibold">{activeTitle}</h1>
-          <span className="ml-auto text-xs text-muted-foreground">
-            {chat.isStreaming ? 'escribiendo…' : 'online'}
-          </span>
-        </header>
+      <ChatErrorBoundary>
+        <section className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <Bot className="h-4 w-4 text-primary" />
+            <h1 className="truncate text-sm font-semibold">{activeTitle}</h1>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {chat.isStreaming
+                ? 'escribiendo…'
+                : chat.isGeneratingRecommendations
+                  ? 'generando recomendaciones…'
+                  : chat.isGeneratingYoutube
+                    ? 'analizando tus canales…'
+                    : 'online'}
+            </span>
+          </header>
 
-        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-          {showWelcome ? (
-            <WelcomeScreen onSuggestion={(text) => void chat.sendMessage(text)} />
-          ) : (
-            <>
-              {chat.messages.map((message) => (
-                <ChatMessage key={message.id} message={message} isStreaming={chat.isStreaming} />
-              ))}
-              {chat.error && (
-                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {chat.error}
-                </p>
-              )}
-            </>
-          )}
-        </div>
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+            {showWelcome ? (
+              <WelcomeScreen onSuggestion={(text) => void chat.sendMessage(text)} />
+            ) : (
+              <>
+                {chat.messages.map((message) => (
+                  <ChatMessage key={message.id} message={message} isStreaming={chat.isStreaming} />
+                ))}
+                {chat.error && (
+                  <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {chat.error}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
 
-        <div className="border-t border-border p-3">
-          <ChatInput
-            value={chat.input}
-            onChange={chat.setInput}
-            onSend={() => void chat.sendMessage()}
-            disabled={chat.isStreaming}
-            placeholder="Escribe a GlyphAI…"
-          />
-        </div>
-      </section>
+          <div className="border-t border-border p-3">
+            <ChatInput
+              value={chat.input}
+              onChange={chat.setInput}
+              onSend={() => void chat.sendMessage()}
+              onGenerateRecommendations={(type) => void chat.generateRecommendations(type)}
+              onGenerateYoutube={(urls) => void chat.generateYoutubeDiscovery(urls)}
+              disabled={
+                chat.isStreaming ||
+                chat.isGeneratingRecommendations ||
+                chat.isGeneratingYoutube
+              }
+              placeholder="Escribe a GlyphAI…"
+            />
+          </div>
+        </section>
+      </ChatErrorBoundary>
     </div>
   )
 }

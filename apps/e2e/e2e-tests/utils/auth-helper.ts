@@ -31,7 +31,10 @@ const TOKEN_KEY = 'glyphlog_access_token';
  * propio formulario persiste el token).
  */
 export async function registerTestUser(page: Page): Promise<TestUser> {
-  const email = `e2e-${Date.now()}@example.com`;
+  // Sufijo aleatorio además del timestamp: con 6 workers en paralelo,
+  // `Date.now()` puede colisionar en el mismo milisegundo y provocar 409.
+  const random = Math.random().toString(36).slice(2, 8);
+  const email = `e2e-${Date.now()}-${random}@example.com`;
   const password = 'TestPass123!';
 
   const response = await page.request.post(`${API_BASE_URL}/auth/register`, {

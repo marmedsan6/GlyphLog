@@ -1,5 +1,6 @@
 """Repositorio de conversaciones de GlyphAI (issue #45)."""
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select, update
@@ -40,6 +41,7 @@ class ConversationRepository:
         conversation_id: UUID,
         role: str,
         content: str,
+        metadata: dict[str, Any] | None = None,
     ) -> ChatMessage:
         """Añade un mensaje y actualiza `updated_at` de la conversación.
 
@@ -47,7 +49,12 @@ class ConversationRepository:
         dispara al hacer UPDATE — por eso se toca explícitamente aquí, para
         que el listado por `updated_at DESC` refleje la actividad real.
         """
-        message = ChatMessage(conversation_id=conversation_id, role=role, content=content)
+        message = ChatMessage(
+            conversation_id=conversation_id,
+            role=role,
+            content=content,
+            message_metadata=metadata,
+        )
         self.db.add(message)
         await self.db.execute(
             update(Conversation)

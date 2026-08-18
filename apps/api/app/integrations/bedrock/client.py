@@ -52,7 +52,7 @@ class BedrockClient:
                 "region_name": region,
                 "config": BotoConfig(
                     connect_timeout=10,
-                    read_timeout=120,
+                    read_timeout=25,
                     retries={"max_attempts": 2, "mode": "standard"},
                 ),
             }
