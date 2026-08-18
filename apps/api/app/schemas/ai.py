@@ -1,7 +1,7 @@
 """Schemas para GlyphAI (chat con IA y conversaciones persistentes)."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -43,6 +43,9 @@ class ChatMessageResponse(BaseModel):
     id: UUID
     role: ChatRole
     content: str
+    # El atributo ORM se llama `message_metadata` (por reserva de `metadata` en
+    # SQLAlchemy Declarative); el JSON expone `metadata`.
+    metadata: dict[str, Any] | None = Field(default=None, validation_alias="message_metadata")
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

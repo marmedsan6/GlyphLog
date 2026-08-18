@@ -85,7 +85,7 @@ export function RecommendationsPage() {
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Este sistema usa Claude Sonnet 4.5 en AWS Bedrock y consume aproximadamente 30-50k tokens por generación.
+          Este sistema usa Claude Haiku 4.5 en AWS Bedrock y consume aproximadamente 30-50k tokens por generación.
           El análisis puede tardar entre 30-60 segundos.
         </AlertDescription>
       </Alert>

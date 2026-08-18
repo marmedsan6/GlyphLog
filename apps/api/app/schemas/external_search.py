@@ -13,20 +13,20 @@ class ExternalSearchResult(BaseModel):
     source: str
     progress_total: Decimal | None = None
     slug: str | None = None
+    genres: list[str] = []
 
 
 class ExternalSearchResponse(BaseModel):
     results: list[ExternalSearchResult]
 
 
-class GameDetailResponse(BaseModel):
-    """Respuesta del endpoint de detalle de un juego externo (RAWG).
+class GamePlaytimeResponse(BaseModel):
+    """Respuesta del endpoint de tiempo de juego (HowLongToBeat).
 
-    `playtime_raw` es el campo original de RAWG en minutos.
-    `playtime_hours` es la conversión a Decimal con 2 decimales para usar
-    directamente como `progress_total` en horas (unidad fija de games).
+    `playtime_hours` es la duración de la historia principal en horas (Decimal
+    con 2 decimales) para usar directamente como `progress_total` en horas
+    (unidad fija de games). None si no se encontró el juego o falló la consulta.
     """
 
-    slug: str
-    playtime_raw: int | None = None
+    title: str
     playtime_hours: Decimal | None = None

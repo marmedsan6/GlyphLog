@@ -13,6 +13,9 @@ import { env } from '@/lib/env'
 import { getAccessToken } from '@/lib/auth-token'
 import { clearSession } from '@/lib/session'
 import type { components } from '@/types/api'
+import type { EntryType } from '@/types'
+import type { Recommendation, RecommendationMetadata } from '@/services/recommendation.service'
+import type { YoutubeSuggestion } from '@/types/youtube-discovery'
 
 export type ChatRole = 'user' | 'assistant' | 'system'
 
@@ -26,6 +29,20 @@ export type ConversationResponse = components['schemas']['ConversationResponse']
 export type ChatMessageResponse = components['schemas']['ChatMessageResponse']
 export type PaginatedConversationsResponse =
   components['schemas']['PaginatedConversationsResponse']
+
+/** Payload estructurado persistido en un mensaje del asistente. */
+export interface ChatMessageMetadata {
+  recommendations?: Recommendation[]
+  suggestions?: YoutubeSuggestion[]
+  loading?: 'youtube' | 'recommendations' | boolean
+}
+
+/** Respuesta de POST /ai/recommendations. */
+export interface GenerateChatRecommendationsResponse {
+  conversation_id: string
+  recommendations: Recommendation[]
+  metadata: RecommendationMetadata
+}
 
 /** Eventos parseados del stream SSE de /ai/chat. */
 export type AIStreamEvent =
@@ -127,6 +144,25 @@ async function extractApiError(response: Response): Promise<string> {
     // body no JSON — se usa el fallback
   }
   return `Error del servidor (${response.status})`
+}
+
+/**
+ * Genera recomendaciones desde el chat de GlyphAI y las persiste en la
+ * conversación (POST /ai/recommendations). Devuelve el id de la conversación
+ * (creada o reanudada) junto con la lista y metadata.
+ */
+export async function generateChatRecommendations(
+  type: EntryType,
+  conversationId?: string | null
+): Promise<GenerateChatRecommendationsResponse> {
+  const response = await apiClient.post<GenerateChatRecommendationsResponse>(
+    '/ai/recommendations',
+    {
+      type,
+      conversation_id: conversationId ?? null,
+    }
+  )
+  return response.data
 }
 
 // ── Conversaciones persistentes (issue #45/#47) ─────────────────────────────

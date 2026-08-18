@@ -131,3 +131,6 @@ temp/
 *.crt
 start-brave-extension.sh
 .hermes/
+
+# ─── Config local de Command Code (no es código del proyecto) ──────────────────
+.commandcode/

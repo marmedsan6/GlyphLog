@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { Pencil } from 'lucide-react'
 import { useQuickProgress } from '@/hooks/useQuickProgress'
 import { formatProgressValue } from '@/utils/progress-labels'
@@ -45,9 +45,14 @@ function validateValue(
 
 interface InlineProgressEditorProps {
   entry: EntryListItem
+  // Render opcional para el estado de solo-lectura (p. ej. cassette).
+  // Permite reutilizar la lógica de edición sin duplicar el componente.
+  // Recibe `displayText` para que el caller pueda exponer el valor actual en
+  // el aria-label (accesibilidad y selectores E2E).
+  renderDisplay?: (openEditor: (e: React.MouseEvent) => void, displayText: string) => ReactNode
 }
 
-export function InlineProgressEditor({ entry }: InlineProgressEditorProps) {
+export function InlineProgressEditor({ entry, renderDisplay }: InlineProgressEditorProps) {
   const { mutateAsync: quickProgress, isPending } = useQuickProgress()
   const { toast } = useToast()
 
@@ -210,16 +215,20 @@ export function InlineProgressEditor({ entry }: InlineProgressEditorProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpenEditor}
-        disabled={isPending}
-        className="group flex items-center gap-1 rounded px-1.5 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-        aria-label={`Editar progreso de ${entry.title}: ${displayText}`}
-      >
-        <span>{displayText}</span>
-        <Pencil className="h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-      </button>
+      {renderDisplay ? (
+        renderDisplay(handleOpenEditor, displayText)
+      ) : (
+        <button
+          type="button"
+          onClick={handleOpenEditor}
+          disabled={isPending}
+          className="group flex items-center gap-1 rounded px-1.5 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+          aria-label={`Editar progreso de ${entry.title}: ${displayText}`}
+        >
+          <span>{displayText}</span>
+          <Pencil className="h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        </button>
+      )}
 
       <ConfirmCompletionDialog
         open={showConfirmDialog}

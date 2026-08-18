@@ -17,19 +17,19 @@ export class AppLayout extends BasePage {
   }
 
   get searchBar() {
-    return this.page.getByPlaceholder(/buscar/i);
+    return this.page.getByLabel('Buscar en la colección');
+  }
+
+  get viewAllResultsButton() {
+    return this.page.getByRole('button', { name: /Ver todos los resultados para/i });
+  }
+
+  get clearSearchButton() {
+    return this.page.getByLabel('Limpiar búsqueda');
   }
 
   get navCollection() {
     return this.page.getByRole('link', { name: 'Colección' });
-  }
-
-  get navImport() {
-    return this.page.getByRole('link', { name: 'Importar' });
-  }
-
-  get navRecommendations() {
-    return this.page.getByRole('link', { name: 'Recomendaciones' });
   }
 
   get navChat() {
@@ -70,9 +70,5 @@ export class AppLayout extends BasePage {
 
   async navigateToCollection() {
     await this.navCollection.click();
-  }
-
-  async navigateToImport() {
-    await this.navImport.click();
   }
 }

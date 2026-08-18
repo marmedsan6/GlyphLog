@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import random
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 import httpx
 
@@ -20,6 +22,7 @@ query ($search: String) {
       title { english romaji }
       seasonYear
       episodes
+      genres
       coverImage { large }
     }
   }
@@ -28,6 +31,26 @@ query ($search: String) {
       title { english romaji }
       startDate { year }
       chapters
+      genres
+      coverImage { large }
+    }
+  }
+}
+"""
+
+# Consulta GraphQL para buscar un único tipo (anime o manga).
+# El tipo se inyecta vía variable para poder acotar la búsqueda desde el
+# endpoint `/external/search?type=...`.
+SEARCH_BY_TYPE_QUERY = """
+query ($search: String, $type: MediaType) {
+  Page(perPage: 5) {
+    media(search: $search, type: $type, sort: SEARCH_MATCH) {
+      title { english romaji }
+      seasonYear
+      episodes
+      chapters
+      startDate { year }
+      genres
       coverImage { large }
     }
   }
@@ -55,14 +78,13 @@ class AniListClient:
 
     BASE_URL = "https://graphql.anilist.co"
 
-    async def search_anime_manga(
-        self, client: httpx.AsyncClient, query: str
-    ) -> list[ExternalSearchResult] | None:
-        """Busca anime y manga en AniList con una sola petición GraphQL.
+    async def _post_query(
+        self, client: httpx.AsyncClient, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Ejecuta una query GraphQL con reintentos y devuelve el bloque `data`.
 
-        Retorna una lista combinada de resultados de anime y manga,
-        o None si ocurre un error de red/API (para que la capa de servicio
-        pueda diferenciar un resultado vacío real de un fallo temporal).
+        Retorna None si ocurre un error de red/API para que la capa de servicio
+        pueda diferenciar un resultado vacío real de un fallo temporal.
         """
         max_retries = 2
         delay = 0.5
@@ -71,7 +93,7 @@ class AniListClient:
             try:
                 response = await client.post(
                     self.BASE_URL,
-                    json={"query": SEARCH_QUERY, "variables": {"search": query}},
+                    json={"query": query, "variables": variables},
                     timeout=5.0,
                 )
 
@@ -83,15 +105,28 @@ class AniListClient:
                         logger.warning(f"AniList returned GraphQL errors: {body['errors']}")
                         return None
 
-                    return self._parse_response(body.get("data", {}))
+                    data = body.get("data", {})
+                    return data if isinstance(data, dict) else {}
 
                 # Reintentar para rate limit (429) o errores de servidor (5xx)
                 if response.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                    # Respetar Retry-After del servidor (429) con fallback al
+                    # backoff exponencial propio. Jitter para evitar thundering herd.
+                    effective_delay = delay
+                    try:
+                        retry_after = getattr(response, "headers", {}).get("Retry-After")
+                        if retry_after:
+                            server_delay = min(float(retry_after), 120.0)
+                            effective_delay = max(server_delay, delay)
+                    except (ValueError, TypeError, AttributeError):
+                        pass  # header malformado → usar backoff exponencial
+
+                    jittered = effective_delay + random.uniform(0, 0.5)
                     logger.warning(
                         f"AniList search returned status {response.status_code}. "
-                        f"Retrying in {delay}s (attempt {attempt + 1}/{max_retries})..."
+                        f"Retrying in {jittered:.1f}s (attempt {attempt + 1}/{max_retries})..."
                     )
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(jittered)
                     delay *= 2
                     continue
 
@@ -116,51 +151,97 @@ class AniListClient:
                 logger.error(f"Unexpected error querying AniList: {e}")
                 return None
 
-    def _parse_response(self, data: dict) -> list[ExternalSearchResult]:
-        """Convierte la respuesta GraphQL de AniList en ExternalSearchResult."""
+        return None
+
+    async def search_anime_manga(
+        self, client: httpx.AsyncClient, query: str
+    ) -> list[ExternalSearchResult] | None:
+        """Busca anime y manga en AniList con una sola petición GraphQL.
+
+        Retorna una lista combinada de resultados de anime y manga,
+        o None si ocurre un error de red/API.
+        """
+        data = await self._post_query(client, SEARCH_QUERY, {"search": query})
+        if data is None:
+            return None
+        return self._parse_combined_response(data)
+
+    async def search_by_type(
+        self, client: httpx.AsyncClient, query: str, media_type: EntryType
+    ) -> list[ExternalSearchResult] | None:
+        """Busca un único tipo (anime o manga) en AniList.
+
+        Solo admite `EntryType.anime` o `EntryType.manga` (los videojuegos
+        vienen de IGDB). Retorna None si ocurre un error de red/API.
+        """
+        anilist_type = "ANIME" if media_type == EntryType.anime else "MANGA"
+        data = await self._post_query(
+            client, SEARCH_BY_TYPE_QUERY, {"search": query, "type": anilist_type}
+        )
+        if data is None:
+            return None
+        return self._parse_typed_response(data, media_type)
+
+    def _parse_combined_response(self, data: dict[str, Any]) -> list[ExternalSearchResult]:
+        """Convierte la respuesta GraphQL combinada (anime + manga) de AniList."""
         results: list[ExternalSearchResult] = []
 
-        # Parsear anime
         anime_page = data.get("anime", {})
         for item in anime_page.get("media", []):
-            title = (
-                item.get("title", {}).get("english")
-                or item.get("title", {}).get("romaji")
-                or "Sin título"
-            )
-            results.append(
-                ExternalSearchResult(
-                    title=title,
-                    year=item.get("seasonYear"),
-                    cover_image=item.get("coverImage", {}).get("large"),
-                    type=EntryType.anime,
-                    source="AniList",
-                    progress_total=_to_decimal_or_none(item.get("episodes")),
-                )
-            )
+            results.append(self._build_anime_result(item))
 
-        # Parsear manga
         manga_page = data.get("manga", {})
         for item in manga_page.get("media", []):
-            title = (
-                item.get("title", {}).get("english")
-                or item.get("title", {}).get("romaji")
-                or "Sin título"
-            )
-            year = None
-            start_date = item.get("startDate")
-            if start_date:
-                year = start_date.get("year")
-
-            results.append(
-                ExternalSearchResult(
-                    title=title,
-                    year=year,
-                    cover_image=item.get("coverImage", {}).get("large"),
-                    type=EntryType.manga,
-                    source="AniList",
-                    progress_total=_to_decimal_or_none(item.get("chapters")),
-                )
-            )
+            results.append(self._build_manga_result(item))
 
         return results
+
+    def _parse_typed_response(
+        self, data: dict[str, Any], media_type: EntryType
+    ) -> list[ExternalSearchResult]:
+        """Convierte la respuesta GraphQL de un único tipo de AniList."""
+        results: list[ExternalSearchResult] = []
+        page = data.get("Page", {})
+        for item in page.get("media", []):
+            if media_type == EntryType.anime:
+                results.append(self._build_anime_result(item))
+            else:
+                results.append(self._build_manga_result(item))
+        return results
+
+    def _build_anime_result(self, item: dict[str, Any]) -> ExternalSearchResult:
+        title = (
+            item.get("title", {}).get("english")
+            or item.get("title", {}).get("romaji")
+            or "Sin título"
+        )
+        return ExternalSearchResult(
+            title=title,
+            year=item.get("seasonYear"),
+            cover_image=item.get("coverImage", {}).get("large"),
+            type=EntryType.anime,
+            source="AniList",
+            progress_total=_to_decimal_or_none(item.get("episodes")),
+            genres=item.get("genres") or [],
+        )
+
+    def _build_manga_result(self, item: dict[str, Any]) -> ExternalSearchResult:
+        title = (
+            item.get("title", {}).get("english")
+            or item.get("title", {}).get("romaji")
+            or "Sin título"
+        )
+        year = None
+        start_date = item.get("startDate")
+        if start_date:
+            year = start_date.get("year")
+
+        return ExternalSearchResult(
+            title=title,
+            year=year,
+            cover_image=item.get("coverImage", {}).get("large"),
+            type=EntryType.manga,
+            source="AniList",
+            progress_total=_to_decimal_or_none(item.get("chapters")),
+            genres=item.get("genres") or [],
+        )

@@ -3,13 +3,13 @@ import { useFormContext } from 'react-hook-form'
 import { Search, X, Loader2, Sparkles, AlertCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useExternalSearch } from '@/hooks/useExternalSearch'
-import { useGetGameDetail } from '@/hooks/useGetGameDetail'
+import { useGetGamePlaytime } from '@/hooks/useGetGamePlaytime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { bgOpacity, hoverBgOpacity } from '@/lib/tailwind-opacity'
 import type { EntryFormValues, ProgressTotalSource } from './entry-form-schema'
-import type { ExternalSearchResult } from '@/types'
+import type { EntryType, ExternalSearchResult } from '@/types'
 
 interface ExternalSearchAutocompleteProps {
   onSelectCover: (url: string | null) => void
@@ -28,15 +28,17 @@ export function ExternalSearchAutocomplete({
 }: ExternalSearchAutocompleteProps) {
   const { setValue } = useFormContext<EntryFormValues>()
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState<EntryType>('anime')
   const [isOpen, setIsOpen] = useState(false)
   const debouncedQuery = useDebounce(searchQuery, 600)
-  const { results, isLoading, isError } = useExternalSearch(debouncedQuery)
+  const { results, isLoading, isError } = useExternalSearch(debouncedQuery, searchType)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [selectedItem, setSelectedItem] = useState<ExternalSearchResult | null>(null)
 
-  // Lazy fetch del playtime de RAWG: solo cuando el usuario selecciona un juego.
-  const [pendingGameSlug, setPendingGameSlug] = useState<string | null>(null)
-  const { data: gameDetail, isLoading: isGameDetailLoading } = useGetGameDetail(pendingGameSlug)
+  // Lazy fetch del playtime de HLTB: solo cuando el usuario selecciona un juego.
+  const [pendingGameTitle, setPendingGameTitle] = useState<string | null>(null)
+  const { data: gamePlaytime, isLoading: isGamePlaytimeLoading } =
+    useGetGamePlaytime(pendingGameTitle)
 
   // Cerrar dropdown click outside
   useEffect(() => {
@@ -49,17 +51,17 @@ export function ExternalSearchAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Aplicar playtime de RAWG cuando llegue el detalle del juego seleccionado.
+  // Aplicar playtime de HLTB cuando llegue el detalle del juego seleccionado.
   useEffect(() => {
-    if (!pendingGameSlug || !gameDetail) return
+    if (!pendingGameTitle || !gamePlaytime) return
 
-    if (gameDetail.playtime_hours != null) {
-      setValue('progress_total', String(gameDetail.playtime_hours), { shouldValidate: true })
-      onProgressTotalSource?.('RAWG')
+    if (gamePlaytime.playtime_hours != null) {
+      setValue('progress_total', String(gamePlaytime.playtime_hours), { shouldValidate: true })
+      onProgressTotalSource?.('HLTB')
     }
 
-    setPendingGameSlug(null)
-  }, [gameDetail, pendingGameSlug, setValue, onProgressTotalSource])
+    setPendingGameTitle(null)
+  }, [gamePlaytime, pendingGameTitle, setValue, onProgressTotalSource])
 
   function applyCommonFields(item: ExternalSearchResult) {
     setSelectedItem(item)
@@ -78,11 +80,11 @@ export function ExternalSearchAutocomplete({
 
   function applyProgressTotal(item: ExternalSearchResult) {
     if (item.type === 'game') {
-      // Los juegos no traen playtime en el listado; lo pedimos lazy al detalle.
-      if (item.slug) {
-        setPendingGameSlug(item.slug)
+      // Los juegos no traen playtime en el listado de IGDB; lo pedimos lazy a HLTB.
+      if (item.title) {
+        setPendingGameTitle(item.title)
       }
-      // Dejamos el input vacío mientras llega (o si no hay slug).
+      // Dejamos el input vacío mientras llega (o si no hay título).
       setValue('progress_total', '', { shouldValidate: true })
       onProgressTotalSource?.(null)
       return
@@ -107,7 +109,7 @@ export function ExternalSearchAutocomplete({
     // Mantener los valores pero desbloquear los campos para edición manual
     setIsAutocompleted(false)
     setSelectedItem(null)
-    setPendingGameSlug(null)
+    setPendingGameTitle(null)
     onProgressTotalSource?.('manual')
   }
 
@@ -115,7 +117,7 @@ export function ExternalSearchAutocomplete({
     setSearchQuery('')
     setSelectedItem(null)
     setIsAutocompleted(false)
-    setPendingGameSlug(null)
+    setPendingGameTitle(null)
     setValue('title', '')
     setValue('year', '')
     setValue('progress_total', '')
@@ -135,6 +137,22 @@ export function ExternalSearchAutocomplete({
               Buscador inteligente de catálogo
             </span>
           </div>
+          <div className="mb-2">
+            <select
+              id="external-search-type"
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value as EntryType)}
+              aria-label="Categoría de búsqueda"
+              className={cn(
+                'focus:border-primary/50 h-9 w-full rounded-md border border-border px-3 text-sm transition-all duration-200 focus:bg-background focus:outline-none',
+                bgOpacity.muted[0.3]
+              )}
+            >
+              <option value="anime">Animes</option>
+              <option value="manga">Mangas</option>
+              <option value="game">Videojuegos</option>
+            </select>
+          </div>
           <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
             <input
@@ -145,7 +163,7 @@ export function ExternalSearchAutocomplete({
                 setIsOpen(true)
               }}
               onFocus={() => setIsOpen(true)}
-              placeholder="Buscar título en MAL / RAWG para autocompletar..."
+              placeholder="Buscar título en AniList / IGDB para autocompletar..."
               className={cn(
                 'focus:border-primary/50 h-9 w-full rounded-md border border-border pl-9 pr-8 text-sm transition-all duration-200 focus:bg-background focus:outline-none',
                 bgOpacity.muted[0.3]
@@ -173,7 +191,7 @@ export function ExternalSearchAutocomplete({
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span>Buscando en MAL / RAWG...</span>
+                  <span>Buscando en AniList / IGDB...</span>
                 </div>
               ) : isError ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-destructive">
@@ -245,11 +263,11 @@ export function ExternalSearchAutocomplete({
           <div className="flex min-w-0 items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 text-primary" />
             <p className="min-w-0 truncate font-medium text-foreground">
-              Autocompletado desde catálogo ({selectedItem?.source || 'MAL/RAWG'})
+              Autocompletado desde catálogo ({selectedItem?.source || 'AniList/IGDB'})
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
-            {isGameDetailLoading && (
+            {isGamePlaytimeLoading && (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             )}
             <Button

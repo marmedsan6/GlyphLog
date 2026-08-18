@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -50,6 +50,11 @@ class ChatMessage(Base):
     # Solo "user" y "assistant" se persisten; "system" se reconstruye en cada request.
     role: Mapped[str] = mapped_column(String(10), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    # Payload estructurado opcional (ej. {"recommendations": [...]} para render
+    # de tarjetas en el chat). El texto legible sigue en `content`.
+    # Nota: el atributo Python se llama `message_metadata` porque `metadata`
+    # está reservado por SQLAlchemy Declarative; la columna en BD es `metadata`.
+    message_metadata: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

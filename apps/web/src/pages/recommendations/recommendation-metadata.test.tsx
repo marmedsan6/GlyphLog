@@ -10,7 +10,7 @@ function makeMetadata(overrides: Partial<RecommendationMetadata> = {}): Recommen
     avg_rating: 8.5,
     completion_rate: 75.0,
     tokens_used: 45000,
-    model: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
+    model: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     ...overrides,
   }
 }
@@ -57,12 +57,12 @@ describe('RecommendationMetadataPanel', () => {
   it('muestra modelo y tokens si tokens_used no es null', () => {
     const metadata = makeMetadata({
       tokens_used: 45000,
-      model: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
+      model: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     })
     render(<RecommendationMetadataPanel metadata={metadata} />)
 
     expect(screen.getByText(/Modelo:/)).toBeInTheDocument()
-    expect(screen.getByText(/anthropic.claude-sonnet-4-5-20250929-v1:0/)).toBeInTheDocument()
+    expect(screen.getByText(/anthropic.claude-haiku-4-5-20251001-v1:0/)).toBeInTheDocument()
     expect(screen.getByText(/Tokens:/)).toBeInTheDocument()
     // toLocaleString() puede usar diferentes separadores dependiendo del locale
     expect(screen.getByText(/45[,.]000/)).toBeInTheDocument()

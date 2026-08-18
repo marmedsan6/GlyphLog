@@ -4,6 +4,7 @@ El servicio delega en ConversationRepository; el router decide los errores
 HTTP (404 si la conversación no existe o no es del usuario).
 """
 
+from typing import Any
 from uuid import UUID
 
 from app.models.conversation import Conversation
@@ -35,9 +36,15 @@ class ConversationService:
         """Conversación con mensajes si pertenece al usuario; None si no."""
         return await self.repository.get_by_id(conversation_id, user_id)
 
-    async def add_message(self, conversation_id: UUID, role: str, content: str) -> None:
+    async def add_message(
+        self,
+        conversation_id: UUID,
+        role: str,
+        content: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
         """Persiste un mensaje y actualiza `updated_at` de la conversación."""
-        await self.repository.add_message(conversation_id, role, content)
+        await self.repository.add_message(conversation_id, role, content, metadata)
 
     async def list_by_user(
         self,

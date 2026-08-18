@@ -1,11 +1,11 @@
+from decimal import Decimal
 from unittest.mock import AsyncMock
 
-import httpx
 import pytest
 from httpx import AsyncClient
 
 from app.models.entry import EntryType
-from app.schemas.external_search import ExternalSearchResult
+from app.schemas.external_search import ExternalSearchResult, GamePlaytimeResponse
 from app.services.external_search_service import ExternalSearchService
 from tests.factories import clear_overrides, make_user, override_current_user
 
@@ -20,20 +20,33 @@ def mock_anilist_client() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_rawg_client() -> AsyncMock:
-    from app.integrations.rawg_client import RawgClient
+def mock_igdb_client() -> AsyncMock:
+    from app.integrations.igdb_client import IgdbClient
 
-    mock = AsyncMock(spec=RawgClient)
+    mock = AsyncMock(spec=IgdbClient)
     mock.search_games.return_value = []
-    mock.get_game_detail.return_value = None
+    return mock
+
+
+@pytest.fixture
+def mock_hltb_client() -> AsyncMock:
+    from app.integrations.hltb_client import HltbClient
+
+    mock = AsyncMock(spec=HltbClient)
     return mock
 
 
 @pytest.fixture
 def test_external_service(
-    mock_anilist_client: AsyncMock, mock_rawg_client: AsyncMock
+    mock_anilist_client: AsyncMock,
+    mock_igdb_client: AsyncMock,
+    mock_hltb_client: AsyncMock,
 ) -> ExternalSearchService:
-    return ExternalSearchService(anilist_client=mock_anilist_client, rawg_client=mock_rawg_client)
+    return ExternalSearchService(
+        anilist_client=mock_anilist_client,
+        igdb_client=mock_igdb_client,
+        hltb_client=mock_hltb_client,
+    )
 
 
 @pytest.fixture
@@ -70,7 +83,6 @@ class TestExternalSearchEndpoint:
         self,
         client: AsyncClient,
         override_service: None,
-        test_external_service: ExternalSearchService,
         mock_anilist_client: AsyncMock,
     ) -> None:
         """Búsqueda válida con usuario autenticado retorna resultados unificados."""
@@ -98,34 +110,74 @@ class TestExternalSearchEndpoint:
         finally:
             clear_overrides()
 
+    async def test_search_accepts_type_param(
+        self,
+        client: AsyncClient,
+        override_service: None,
+        mock_anilist_client: AsyncMock,
+    ) -> None:
+        """El endpoint propaga el parámetro type y valida contra EntryType."""
+        user = make_user()
+        override_current_user(user)
+        mock_anilist_client.search_by_type.return_value = [
+            ExternalSearchResult(
+                title="Berserk", type=EntryType.manga, source="AniList"
+            )
+        ]
 
-class TestExternalGameDetailEndpoint:
-    """Tests de integración HTTP para el endpoint /external/games/{slug}."""
+        try:
+            response = await client.get("/api/v1/external/search?q=berserk&type=manga")
+            assert response.status_code == 200
+            body = response.json()
+            assert len(body["results"]) == 1
+            assert body["results"][0]["type"] == "manga"
+            mock_anilist_client.search_by_type.assert_called_once()
+        finally:
+            clear_overrides()
+
+    async def test_search_rejects_invalid_type(
+        self, client: AsyncClient
+    ) -> None:
+        """Un type que no es anime|manga|game debe rechazarse con 422."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.get("/api/v1/external/search?q=berserk&type=foo")
+            assert response.status_code == 422
+        finally:
+            clear_overrides()
+
+
+class TestExternalGamePlaytimeEndpoint:
+    """Tests de integración HTTP para el endpoint /external/games/playtime."""
 
     async def test_requires_authentication(self, client: AsyncClient) -> None:
         """Sin token → 401."""
-        response = await client.get("/api/v1/external/games/witcher-3")
+        response = await client.get("/api/v1/external/games/playtime?title=witcher")
         assert response.status_code == 401
 
     async def test_returns_playtime_on_success(
         self,
         client: AsyncClient,
         override_service: None,
-        test_external_service: ExternalSearchService,
-        mock_rawg_client: AsyncMock,
+        mock_hltb_client: AsyncMock,
     ) -> None:
-        """Con usuario autenticado y resultado de RAWG → 200 con playtime_hours."""
+        """Con usuario autenticado y resultado de HLTB → 200 con playtime_hours."""
         user = make_user()
         override_current_user(user)
-        mock_rawg_client.get_game_detail.return_value = {"playtime": 8}
+        mock_hltb_client.get_main_story_hours.return_value = GamePlaytimeResponse(
+            title="Witcher 3", playtime_hours=Decimal("51.69")
+        )
 
         try:
-            response = await client.get("/api/v1/external/games/witcher-3")
+            response = await client.get(
+                "/api/v1/external/games/playtime?title=Witcher%203"
+            )
             assert response.status_code == 200
             body = response.json()
-            assert body["slug"] == "witcher-3"
-            assert body["playtime_raw"] == 8
-            assert body["playtime_hours"] == "8.00"
+            assert body["title"] == "Witcher 3"
+            assert body["playtime_hours"] == "51.69"
         finally:
             clear_overrides()
 
@@ -133,20 +185,33 @@ class TestExternalGameDetailEndpoint:
         self,
         client: AsyncClient,
         override_service: None,
-        test_external_service: ExternalSearchService,
-        mock_rawg_client: AsyncMock,
+        mock_hltb_client: AsyncMock,
     ) -> None:
-        """RAWG no encuentra el juego → 200 con playtime None (degradación elegante)."""
+        """HLTB no encuentra el juego → 200 con playtime None (degradación elegante)."""
         user = make_user()
         override_current_user(user)
-        mock_rawg_client.get_game_detail.return_value = None
+        mock_hltb_client.get_main_story_hours.return_value = GamePlaytimeResponse(
+            title="Unknown Game", playtime_hours=None
+        )
 
         try:
-            response = await client.get("/api/v1/external/games/unknown-slug")
+            response = await client.get(
+                "/api/v1/external/games/playtime?title=Unknown%20Game"
+            )
             assert response.status_code == 200
             body = response.json()
-            assert body["slug"] == "unknown-slug"
-            assert body["playtime_raw"] is None
+            assert body["title"] == "Unknown Game"
             assert body["playtime_hours"] is None
+        finally:
+            clear_overrides()
+
+    async def test_rejects_empty_title(self, client: AsyncClient) -> None:
+        """Título vacío → 400."""
+        user = make_user()
+        override_current_user(user)
+
+        try:
+            response = await client.get("/api/v1/external/games/playtime?title=")
+            assert response.status_code == 400
         finally:
             clear_overrides()

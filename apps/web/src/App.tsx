@@ -162,7 +162,13 @@ export function App() {
         {/* DevTools de TanStack Query SOLO en desarrollo. La condición con
             import.meta.env.DEV es explícita: en el build de producción este
             panel (el círculo flotante + pop-up "TANSTACK") nunca se monta. */}
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        {import.meta.env.DEV && (
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            position="left"
+            buttonPosition="bottom-left"
+          />
+        )}
       </ThemeProvider>
     </QueryClientProvider>
   )

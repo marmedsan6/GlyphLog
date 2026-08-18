@@ -1,14 +1,22 @@
+import asyncio
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from app.core.dependencies import get_entry_service
+from app.core.database import AsyncSessionLocal
+from app.core.dependencies import (
+    get_catalog_enrichment_service,
+    get_entry_service,
+)
 from app.core.security import AuthenticatedUser, get_current_user, get_current_user_flexible
 from app.core.uploads import save_cover_image
 from app.models.entry import EntryType
 from app.models.user import User
+from app.repositories.entry_repository import EntryRepository
+from app.repositories.progress_event_repository import ProgressEventRepository
 from app.schemas.entry import (
     EntryCreateForm,
     EntryResponse,
@@ -22,9 +30,40 @@ from app.schemas.progress import (
     ProgressResetRequest,
     ProgressUpdateRequest,
 )
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.entry_service import EntryService, InvalidPaginationError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+async def _enrich_genres_in_background(
+    entry_id: UUID,
+    user_id: UUID,
+    title: str,
+    entry_type: EntryType,
+    enrichment: CatalogEnrichmentService,
+) -> None:
+    """Auto-popula géneros desde el catálogo en background, con sesión propia.
+
+    Fire-and-forget: no bloquea `POST /entries/` y no retiene la conexión del
+    pool mientras AniList/IGDB responden (pueden tardar segundos o fallar con
+    rate limit). Cualquier error degrada silenciosamente a géneros vacíos.
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            repo = EntryRepository(session)
+            service = EntryService(repo, ProgressEventRepository(session))
+            genres = await enrichment.find_genres(title, entry_type)
+            if genres:
+                await service.update(
+                    entry_id=entry_id,
+                    user_id=user_id,
+                    data=EntryUpdate(genres=genres),
+                )
+    except Exception:
+        logger.warning(f"No se pudieron auto-poblar géneros para '{title}'")
 
 
 @router.get("/", response_model=PaginatedEntryResponse)
@@ -61,6 +100,7 @@ async def create_entry(
     cover_image: UploadFile | None = File(None),
     auth: AuthenticatedUser = Depends(get_current_user_flexible),
     service: EntryService = Depends(get_entry_service),
+    enrichment: CatalogEnrichmentService = Depends(get_catalog_enrichment_service),
 ) -> EntryResponse | JSONResponse:
     # Validar datos del formulario PRIMERO (antes de guardar archivos)
     # para evitar archivos huérfanos en disco si la validación falla.
@@ -79,7 +119,22 @@ async def create_entry(
         cover_image_path = await save_cover_image(cover_image)
         data.cover_image = cover_image_path
 
-    return await service.create(user_id=auth.id, data=data)
+    created = await service.create(user_id=auth.id, data=data)
+
+    # Auto-populado de géneros (best-effort) en background: no bloquea la
+    # creación ni retiene la conexión del pool durante la búsqueda externa.
+    if not created.genres:
+        asyncio.create_task(
+            _enrich_genres_in_background(
+                entry_id=created.id,
+                user_id=auth.id,
+                title=created.title,
+                entry_type=created.type,
+                enrichment=enrichment,
+            )
+        )
+
+    return created
 
 
 @router.get("/{entry_id}", response_model=EntryResponse)

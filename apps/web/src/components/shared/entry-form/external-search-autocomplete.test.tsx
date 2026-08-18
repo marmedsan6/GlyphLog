@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form'
 import { ExternalSearchAutocomplete } from './external-search-autocomplete'
 import { useExternalSearch } from '@/hooks/useExternalSearch'
-import { useGetGameDetail } from '@/hooks/useGetGameDetail'
+import { useGetGamePlaytime } from '@/hooks/useGetGamePlaytime'
 import type { EntryFormValues } from './entry-form-schema'
 import type { ExternalSearchResult } from '@/types'
 
@@ -15,13 +15,13 @@ function WatchProgressTotal() {
 }
 
 vi.mock('@/hooks/useExternalSearch')
-vi.mock('@/hooks/useGetGameDetail')
+vi.mock('@/hooks/useGetGamePlaytime')
 vi.mock('@/hooks/useDebounce', () => ({
   useDebounce: (value: string) => value,
 }))
 
 const mockUseExternalSearch = vi.mocked(useExternalSearch)
-const mockUseGetGameDetail = vi.mocked(useGetGameDetail)
+const mockUseGetGamePlaytime = vi.mocked(useGetGamePlaytime)
 
 function renderWithForm(
   element: React.ReactElement,
@@ -60,6 +60,7 @@ function makeSearchResult(overrides: Partial<ExternalSearchResult> = {}): Extern
     source: 'AniList',
     progress_total: null,
     slug: null,
+    genres: [],
     ...overrides,
   }
 }
@@ -73,12 +74,34 @@ describe('ExternalSearchAutocomplete', () => {
       isError: false,
       error: null,
     })
-    mockUseGetGameDetail.mockReturnValue({
+    mockUseGetGamePlaytime.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: false,
       error: null,
     })
+  })
+
+  it('renders category selector defaulting to Animes and propagates selection', async () => {
+    const user = userEvent.setup()
+
+    renderWithForm(
+      <ExternalSearchAutocomplete
+        onSelectCover={vi.fn()}
+        onClearCover={vi.fn()}
+        isAutocompleted={false}
+        setIsAutocompleted={vi.fn()}
+      />
+    )
+
+    const selector = screen.getByLabelText('Categoría de búsqueda')
+    expect(selector).toHaveValue('anime')
+
+    await user.selectOptions(selector, 'game')
+    expect(selector).toHaveValue('game')
+
+    // El hook recibe el type elegido (game) en la última invocación.
+    expect(mockUseExternalSearch).toHaveBeenLastCalledWith('', 'game')
   })
 
   it('fills progress_total when selecting an anime with episodes', async () => {
@@ -144,7 +167,7 @@ describe('ExternalSearchAutocomplete', () => {
     })
   })
 
-  it('triggers game detail fetch when selecting a game with slug', async () => {
+  it('triggers game playtime fetch when selecting a game with title', async () => {
     const user = userEvent.setup()
     mockUseExternalSearch.mockReturnValue({
       results: [makeSearchResult({ type: 'game', title: 'Elden Ring', slug: 'elden-ring' })],
@@ -170,11 +193,11 @@ describe('ExternalSearchAutocomplete', () => {
     await user.click(result)
 
     await waitFor(() => {
-      expect(mockUseGetGameDetail).toHaveBeenCalledWith('elden-ring')
+      expect(mockUseGetGamePlaytime).toHaveBeenCalledWith('Elden Ring')
     })
   })
 
-  it('fills game playtime when detail response arrives', async () => {
+  it('fills game playtime when playtime response arrives', async () => {
     const user = userEvent.setup()
     const handleSourceChange = vi.fn()
     mockUseExternalSearch.mockReturnValue({
@@ -184,8 +207,8 @@ describe('ExternalSearchAutocomplete', () => {
       error: null,
     })
 
-    mockUseGetGameDetail.mockReturnValue({
-      data: { slug: 'witcher-3', playtime_raw: 51, playtime_hours: '51.00' },
+    mockUseGetGamePlaytime.mockReturnValue({
+      data: { title: 'Witcher 3', playtime_hours: '51.69' },
       isLoading: false,
       isError: false,
       error: null,
@@ -209,9 +232,9 @@ describe('ExternalSearchAutocomplete', () => {
     await user.click(result)
 
     await waitFor(() => {
-      expect(screen.getByTestId('progress-total-value')).toHaveTextContent('51.00')
+      expect(screen.getByTestId('progress-total-value')).toHaveTextContent('51.69')
     })
-    expect(handleSourceChange).toHaveBeenCalledWith('RAWG')
+    expect(handleSourceChange).toHaveBeenCalledWith('HLTB')
   })
 
   it('clears fields when clicking clear', async () => {

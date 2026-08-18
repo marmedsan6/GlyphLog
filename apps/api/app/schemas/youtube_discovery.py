@@ -6,6 +6,7 @@ y metadata del proceso de análisis con Claude/Bedrock.
 """
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -114,3 +115,31 @@ class YoutubeAnalysisResponse(BaseModel):
         ...,
         description="Metadata del análisis",
     )
+
+
+class GenerateChatYoutubeRequest(BaseModel):
+    """Request para lanzar el descubrimiento de YouTube desde el chat.
+
+    Los canales se pegan en cada request (no se persisten en BD en esta
+    iteración). `conversation_id` es opcional; si se omite se crea una
+    conversación nueva.
+    """
+
+    channel_urls: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=5,
+        description="URLs de canales de YouTube (máximo 5)",
+    )
+    conversation_id: UUID | None = Field(
+        None,
+        description="Conversación a la que asociar el resultado; se crea si se omite",
+    )
+
+
+class GenerateChatYoutubeResponse(BaseModel):
+    """Response del descubrimiento de YouTube en el chat."""
+
+    conversation_id: UUID = Field(..., description="Conversación asociada")
+    suggestions: list[YoutubeSuggestion] = Field(..., description="Sugerencias extraídas")
+    metadata: AnalysisMetadata = Field(..., description="Metadata del análisis")

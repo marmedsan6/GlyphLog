@@ -22,54 +22,56 @@ export function OptionalFields({ disabledYear = false }: OptionalFieldsProps) {
     <div className="mt-2 border-t border-border pt-4">
       <p className="mb-3 text-sm text-muted-foreground">Campos opcionales</p>
       <div className="space-y-4">
-        <FormField
-          control={control}
-          name="rating"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Puntuación ({MIN_RATING} - {MAX_RATING})
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.1"
-                  min={MIN_RATING}
-                  max={MAX_RATING}
-                  placeholder="Ej: 8.5"
-                  {...field}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={control}
+            name="rating"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Puntuación ({MIN_RATING} - {MAX_RATING})
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min={MIN_RATING}
+                    max={MAX_RATING}
+                    placeholder="Ej: 8.5"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={control}
-          name="year"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Año</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={MIN_YEAR}
-                  max={MAX_YEAR}
-                  placeholder="Ej: 2024"
-                  readOnly={disabledYear}
-                  className={
-                    disabledYear ? `${bgOpacity.muted[0.5]} cursor-not-allowed opacity-80` : ''
-                  }
-                  {...field}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={control}
+            name="year"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Año</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={MIN_YEAR}
+                    max={MAX_YEAR}
+                    placeholder="Ej: 2024"
+                    readOnly={disabledYear}
+                    className={
+                      disabledYear ? `${bgOpacity.muted[0.5]} cursor-not-allowed opacity-80` : ''
+                    }
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={control}

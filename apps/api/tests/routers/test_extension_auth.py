@@ -7,7 +7,9 @@ pero NO puedan editar, borrar ni uploadear imágenes.
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from unittest.mock import AsyncMock
 
+from app.main import app
 from app.models.entry import EntryStatus, EntryType
 from app.models.user import User
 
@@ -206,22 +208,35 @@ class TestDeviceTokenExtensionAuth:
         # El resultado depende de AniList, pero debe haber una respuesta válida
         assert "results" in data or "anime" in data or "manga" in data
 
-    async def test_device_token_can_get_game_detail(
+    async def test_device_token_can_get_game_playtime(
         self,
         client: AsyncClient,
         user_with_device: tuple[User, str],
     ) -> None:
-        """Device token puede obtener detalle de juego (RAWG)."""
+        """Device token puede obtener el playtime de un juego (HLTB)."""
+        from decimal import Decimal
+
+        from app.core.dependencies import get_external_search_service
+        from app.schemas.external_search import GamePlaytimeResponse
+
         user, device_token = user_with_device
 
-        # Usamos un slug ficticio; el endpoint debe devolver algo
-        response = await client.get(
-            "/api/v1/external/games/elden-ring",
-            headers={"Authorization": f"Bearer {device_token}"},
+        mock_service = AsyncMock()
+        mock_service.get_game_playtime.return_value = GamePlaytimeResponse(
+            title="Elden Ring", playtime_hours=Decimal("55.00")
         )
+        app.dependency_overrides[get_external_search_service] = lambda: mock_service
 
-        # Esperamos 200 o 404, pero no 401
-        assert response.status_code in (status.HTTP_200_OK, status.HTTP_404_NOT_FOUND)
+        try:
+            response = await client.get(
+                "/api/v1/external/games/playtime?title=Elden%20Ring",
+                headers={"Authorization": f"Bearer {device_token}"},
+            )
+
+            # Esperamos 200, pero no 401
+            assert response.status_code == status.HTTP_200_OK
+        finally:
+            app.dependency_overrides.pop(get_external_search_service, None)
 
     async def test_jwt_still_works_for_all_endpoints(
         self,

@@ -166,3 +166,44 @@ En producción, Nginx actúa como proxy reverso y servidor de estáticos:
 > 1.  **Tests unitarios y de integración en backend:** Con `pytest`. Usamos una base de datos de pruebas limpia (SQLite o PostgreSQL aislada) y mockeamos las peticiones HTTP externas (usando librerías de simulación como `pytest-mock` o `respx`) para garantizar que los tests sean deterministas, rápidos y no dependan de APIs externas reales.
 > 2.  **Tests de componentes y hooks en frontend:** Con `Vitest` y `React Testing Library`, simulando el comportamiento de las APIs REST para verificar que el UI responde correctamente a estados de carga, éxito, vacío y error.
 > 3.  **Tests E2E selectivos:** Usando `Playwright` para probar flujos críticos de usuario (como el login con redirecciones y la creación de una entrada) contra un entorno controlado, validando la interacción real del navegador."
+
+---
+
+## 7. Elevator Pitch de Arquitectura (System Design)
+
+En una entrevista, sé capaz de describir GlyphLog en 1 minuto:
+
+> "GlyphLog es un **monorepo gestionado por Turborepo con pnpm workspaces**. El backend es una API REST construida con **FastAPI (Python)**, que sigue un flujo desacoplado **Router (HTTP) → Service (lógica de negocio) → Repository (acceso a BD con SQLAlchemy)**. El frontend es una **SPA con React 18, Vite y TypeScript**, usando **Zustand** para estado global, **React Hook Form + Zod** para formularios, y **TanStack Query** para server state. La infraestructura local (PostgreSQL, SonarQube, API y Web) se orquesta con **Docker Compose**; producción corre en una VM de Oracle Cloud con Nginx + Cloudflare."
+
+---
+
+## 8. Frontend — Preguntas Frecuentes
+
+### 8.1 ¿Por qué Zustand en lugar de Context API?
+> **Respuesta Estrella (Senior):** "React Context es una herramienta de inyección de dependencias, no un gestor de estado optimizado. Cada cambio en un Provider re-renderiza **todos** los consumidores. Zustand aporta tres cosas:
+> 1. **Selectores reactivos** — el componente se suscribe a rebanadas específicas y solo re-renderiza si cambia lo que seleccionó.
+> 2. **Desacoplamiento** — el estado vive fuera del árbol de React, lo que facilita tests unitarios sin montar Providers.
+> 3. **Simplicidad** — cero boilerplate comparado con Redux (sin actions/reducers), bundle liviano."
+
+### 8.2 ¿Por qué React Hook Form + Zod en lugar de `useState`?
+> **Respuesta Estrella (Senior):** "Gestionar un formulario con `useState` por input re-renderiza todo el componente en cada tecla. **React Hook Form** usa **componentes no controlados** basados en refs: el estado del formulario queda aislado de los renders hasta el submit/validación. **Zod** añade validación declarativa con inferencia de tipos TypeScript, de modo que los errores se detectan en compilación y la validación del cliente coincide con los contratos del backend."
+
+### 8.3 ¿Cómo evitas que la app se rompa si la API cambia? (API Contract)
+> **Respuesta Estrella (Senior):** "Uso **API-First**: FastAPI expone el esquema en `/openapi.json`, y en el frontend un script de `openapi-typescript` regenera los tipos (`api.d.ts`). Si el backend cambia un campo en Pydantic, `tsc` detecta el desajuste en compilación, antes de que llegue a producción."
+
+---
+
+## 9. Backend — Preguntas Frecuentes
+
+### 9.1 ¿Por qué `Decimal`/`Numeric` en lugar de `Float`?
+> **Respuesta Estrella (Senior):** "Los `Float` sufren imprecisiones binarias IEEE 754 (`0.1 + 0.2 = 0.30000000000000004`). Para datos de negocio (ratings, progreso) uso `Numeric(precision, scale)` en PostgreSQL mapeado a `Decimal` en Python, garantizando aritmética exacta en base decimal — por ejemplo, guardar `8.5` de forma determinista."
+
+### 9.2 ¿Cómo validas subidas de archivos sin dejar basura en disco?
+> **Respuesta Estrella (Senior):** "En endpoints `multipart/form-data`, el error común es guardar el archivo y luego validar. En GlyphLog el router valida **primero** el schema Pydantic del texto; solo si es 100% válido persiste la imagen. Además validamos los **magic bytes** (encabezado binario) en memoria antes de escribir, evitando scripts maliciosos con extensión falsa (spoofing)."
+
+---
+
+## 10. Calidad y DevOps
+
+### 10.1 ¿Qué rol tiene SonarQube?
+> **Respuesta Estrella (Senior):** "SonarQube es el guardián de calidad estática, local y en CI, que impone un **Quality Gate**. Detecta tres categorías: **code smells** (duplicación, complejidad ciclomática), **bugs potenciales** (promesas sin manejar, imports circulares) y **vulnerabilidades/hotspots** (hashes débiles, secretos en duro, riesgo de SQL injection). Garantiza que la calidad sea un estándar de ingeniería no negociable."

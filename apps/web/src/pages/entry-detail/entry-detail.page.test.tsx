@@ -32,6 +32,7 @@ function makeEntry(overrides: Partial<EntryResponse> = {}): EntryResponse {
     year: 1999,
     notes: 'Notas de prueba',
     cover_image: null,
+    genres: null,
     progress_unit: null,
     progress_total: null,
     current_progress: null,

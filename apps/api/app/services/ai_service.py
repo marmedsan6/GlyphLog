@@ -13,8 +13,9 @@ Arquitectura:
   stream los maneja el consumidor (router) como evento de error SSE.
 """
 
+import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 from uuid import UUID
 
@@ -23,9 +24,14 @@ from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.entry import Entry, EntryStatus
+from app.integrations.bedrock.client import BedrockClient
+from app.models.entry import Entry
 from app.repositories.ai_repository import AIRepository
 from app.schemas.ai import ChatMessage
+from app.services.ai_context import (
+    build_collection_context,
+    format_entry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +39,9 @@ logger = logging.getLogger(__name__)
 # truncan para dejar margen al system prompt y al contexto RAG de la colección.
 MAX_HISTORY_MESSAGES = 20
 
-# Tokens máximos de respuesta para Anthropic (OpenAI lo controla por modelo).
+# Tokens máximos de respuesta para Anthropic y Bedrock (OpenAI lo controla por modelo).
 ANTHROPIC_MAX_TOKENS = 2048
-
-# ── Límites del contexto RAG (colección del usuario) ─────────────────────────
-# El contexto nunca debe superar ~3000 tokens (aprox. 4 chars/token) para
-# dejar margen al historial de conversación.
-MAX_CONTEXT_TOKENS = 3000
-MAX_CONTEXT_CHARS = MAX_CONTEXT_TOKENS * 4
-# Colecciones mayores se recortan a las entradas más relevantes.
-MAX_COLLECTION_ENTRIES = 200
+BEDROCK_MAX_TOKENS = 2048
 
 
 class AIServiceNotConfiguredError(Exception):
@@ -68,6 +67,7 @@ class AIService:
         openai_model: str | None = None,
         anthropic_model: str | None = None,
         ai_repository: AIRepository | None = None,
+        bedrock_client: BedrockClient | None = None,
     ) -> None:
         self.provider = (provider or settings.ai_provider).lower()
         self.openai_api_key = (
@@ -80,20 +80,41 @@ class AIService:
         )
         self.openai_model = openai_model or settings.openai_model
         self.anthropic_model = anthropic_model or settings.anthropic_model
+        # Cliente Bedrock inyectado por dependencias; si no llega, se construye
+        # uno nuevo con las credenciales de settings (mismo modelo que usan
+        # recomendaciones e importación).
+        self.bedrock_client = bedrock_client
         # Repositorio inyectado por dependencias; si no llega, se construye
         # sobre la sesión que reciba build_collection_context().
         self.ai_repository = ai_repository
 
-        if self.provider not in {"openai", "anthropic"}:
+        if self.provider not in {"openai", "anthropic", "bedrock"}:
             raise ValueError(
-                f"AI_PROVIDER inválido: {self.provider!r}. Usa 'openai' o 'anthropic'."
+                f"AI_PROVIDER inválido: {self.provider!r}. "
+                "Usa 'openai', 'anthropic' o 'bedrock'."
             )
 
+    def _get_bedrock_client(self) -> BedrockClient:
+        """Devuelve el cliente Bedrock (inyectado o construido desde settings)."""
+        if self.bedrock_client is not None:
+            return self.bedrock_client
+        return BedrockClient(
+            model_id=settings.bedrock_model_id,
+            region=settings.bedrock_region,
+            max_tokens=BEDROCK_MAX_TOKENS,
+            aws_access_key_id=settings.aws_access_key_id or None,
+            aws_secret_access_key=settings.aws_secret_access_key or None,
+        )
+
     def is_configured(self) -> bool:
-        """True si el proveedor activo tiene API key configurada."""
+        """True si el proveedor activo tiene credenciales configuradas."""
         if self.provider == "openai":
             return bool(self.openai_api_key)
-        return bool(self.anthropic_api_key)
+        if self.provider == "anthropic":
+            return bool(self.anthropic_api_key)
+        # Bedrock se considera configurado si hay credenciales AWS explícitas
+        # en settings o un perfil/entorno resolvable por boto3.
+        return bool(settings.aws_access_key_id and settings.aws_secret_access_key)
 
     async def create_stream(
         self,
@@ -115,9 +136,11 @@ class AIService:
 
         if self.provider == "openai":
             stream = await self._connect_openai(messages, system)
-        else:
+            return self._iterate(stream, self.provider)
+        if self.provider == "anthropic":
             stream = await self._connect_anthropic(messages, system)
-        return self._iterate(stream, self.provider)
+            return self._iterate(stream, self.provider)
+        return await self._stream_bedrock(messages, system)
 
     def _check_configured(self) -> None:
         if not self.is_configured():
@@ -151,40 +174,11 @@ class AIService:
                 )
             repository = AIRepository(db)
         entries = await repository.get_user_collection_summary(user_id)
-        if not entries:
-            return ""
-
-        # 1. Priorizar: completed con rating → rating desc → más recientes.
-        entries.sort(
-            key=lambda e: (
-                e.status == EntryStatus.completed and e.rating is not None,
-                e.rating or 0,
-                e.created_at,
-            ),
-            reverse=True,
-        )
-        # 2. Recorte por tamaño máximo de colección.
-        entries = entries[:MAX_COLLECTION_ENTRIES]
-
-        # 3. Recorte por presupuesto de tokens (~4 chars/token).
-        lines = [self._format_entry(entry) for entry in entries]
-        header = f"TU COLECCIÓN ({len(lines)} entradas):"
-        context = f"{header}\n" + "\n".join(lines)
-        while len(context) > MAX_CONTEXT_CHARS and len(lines) > 1:
-            lines.pop()  # se descartan las menos prioritarias (final de la lista)
-            context = f"{header}\n" + "\n".join(lines)
-        return context
+        return build_collection_context(entries)
 
     def _format_entry(self, entry: Entry) -> str:
-        """Serializa una entrada a una línea del contexto, omitiendo nulls."""
-        parts = [f"{entry.title} [{entry.type.value}] — {entry.status.value}"]
-        if entry.rating is not None:
-            parts.append(f"rating {entry.rating}/10")
-        if entry.current_progress is not None or entry.progress_total is not None:
-            current = entry.current_progress or 0
-            total = entry.progress_total if entry.progress_total is not None else "?"
-            parts.append(f"progreso {current}/{total}")
-        return ", ".join(parts)
+        """Serializa una entrada a una línea del contexto (delega en ai_context)."""
+        return format_entry(entry)
 
     async def _connect_openai(
         self,
@@ -236,6 +230,57 @@ class AIService:
         except Exception as e:
             logger.error(f"Error al iniciar streaming con Anthropic: {e}")
             raise AIProviderError(f"Error al conectar con Anthropic: {e}") from e
+
+    def _bedrock_messages(self, messages: list[ChatMessage]) -> list[dict[str, str]]:
+        """Convierte mensajes de chat al formato Anthropic Messages API.
+
+        El rol `system` se descarta: el system prompt viaja por separado en el
+        parámetro `system` de la llamada, no como mensaje del array.
+        """
+        return [
+            {"role": message.role, "content": message.content}
+            for message in messages
+            if message.role != "system"
+        ]
+
+    async def _stream_bedrock(
+        self,
+        messages: list[ChatMessage],
+        system: str | None,
+    ) -> AsyncIterator[str]:
+        """Streaming con Bedrock (Claude). Envuelve el iterador síncrono de boto3
+        en un AsyncIterator para no bloquear el event loop del SSE."""
+        client = self._get_bedrock_client()
+        api_messages = self._bedrock_messages(messages)
+
+        try:
+            # Bedrock usa boto3 síncrono; se abre el stream en un hilo para no
+            # bloquear el event loop.
+            iterator: Iterator[str] = await asyncio.to_thread(
+                client.open_chat_stream,
+                api_messages,
+                0.7,
+                system,
+            )
+        except Exception as e:
+            logger.error(f"Error al iniciar streaming con Bedrock: {e}")
+            raise AIProviderError(f"Error al conectar con Bedrock: {e}") from e
+
+        async def _async_iterate() -> AsyncIterator[str]:
+            # Cada `next()` del generador síncrono espera el siguiente chunk de
+            # red, por lo que se ejecuta en un thread para no bloquear el loop.
+            # Se usa un sentinel porque `StopIteration` no puede propagarse a
+            # través de asyncio.to_thread (interactúa mal con los Futures).
+            sentinel: object = object()
+            while True:
+                text = await asyncio.to_thread(
+                    lambda: next(iterator, sentinel)
+                )
+                if text is sentinel:
+                    break
+                yield text  # type: ignore[misc]
+
+        return _async_iterate()
 
     async def _iterate(
         self,

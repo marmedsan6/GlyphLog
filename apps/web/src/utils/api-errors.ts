@@ -19,7 +19,7 @@ interface ApiErrorResponse {
  *
  * Fallback a un mensaje genérico si no se puede determinar la causa.
  */
-export function getApiErrorMessage(err: unknown): string {
+export function getApiErrorMessage(err: unknown, fallback?: string): string {
   if (isAxiosError(err) && err.response) {
     const data = err.response.data as ApiErrorResponse
 
@@ -38,7 +38,11 @@ export function getApiErrorMessage(err: unknown): string {
     }
   }
 
-  return 'Error inesperado. Inténtalo de nuevo.'
+  if (err instanceof Error) {
+    return err.message
+  }
+
+  return fallback ?? 'Error inesperado. Inténtalo de nuevo.'
 }
 
 /**

@@ -5,7 +5,17 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -64,6 +74,9 @@ class Entry(Base, TimestampMixin):
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_image: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Géneros de la obra (ej. ["Action", "Drama"]). Primer campo JSON del
+    # proyecto: se auto-popula desde el catálogo (AniList/IGDB) al crear/importar.
+    genres: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     # Configuración de seguimiento de progreso (ADR-008)
     progress_unit: Mapped[ProgressUnit | None] = mapped_column(

@@ -29,18 +29,23 @@ class Settings(BaseSettings):
     # app sin necesidad de configurar Google Cloud Console.
     google_client_id: str = ""
 
-    # ── RAWG API ───────────────────────────────────────────────────────────────
-    # API Key para realizar búsquedas externas en el catálogo de videojuegos.
-    # Si está vacía, se omitirá la búsqueda en RAWG degradándose graciosamente.
-    rawg_api_key: str = ""
+    # ── IGDB API (Twitch) ──────────────────────────────────────────────────────
+    # Credenciales OAuth2 (client credentials) para buscar videojuegos en IGDB.
+    # Si están vacías, se omitirá la búsqueda en IGDB degradándose graciosamente.
+    # Obtener gratis en https://dev.twitch.tv/console/apps (app "Confidential").
+    igdb_client_id: str = ""
+    igdb_client_secret: str = ""
 
     # ── AWS Bedrock (Claude) ───────────────────────────────────────────────────
     # Modelo de Claude en Bedrock para funciones de IA (importador, recomendaciones, analytics).
-    # Por defecto: Sonnet 4.5 en us-east-1.
+    # Por defecto: Haiku 4.5 en us-east-1 (más rápido y barato que Sonnet).
     # Credenciales se leen del AWS profile (default) o variables de entorno
     # (AWS_ACCESS_KEY_ID, etc.)
-    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    bedrock_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     bedrock_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
 
     # ── Generación estructurada (JSON) ─────────────────────────────────────────
     # Proveedor para recomendaciones e importación (los endpoints que piden JSON

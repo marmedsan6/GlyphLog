@@ -65,7 +65,18 @@ class TestDelegation:
         conversation_service, repo = service
         conversation_id = uuid4()
         await conversation_service.add_message(conversation_id, "assistant", "respuesta")
-        repo.add_message.assert_awaited_once_with(conversation_id, "assistant", "respuesta")
+        repo.add_message.assert_awaited_once_with(conversation_id, "assistant", "respuesta", None)
+
+    async def test_add_message_passes_metadata(self, service) -> None:
+        conversation_service, repo = service
+        conversation_id = uuid4()
+        metadata = {"recommendations": [{"title": "Steins;Gate"}]}
+        await conversation_service.add_message(
+            conversation_id, "assistant", "respuesta", metadata
+        )
+        repo.add_message.assert_awaited_once_with(
+            conversation_id, "assistant", "respuesta", metadata
+        )
 
     async def test_list_by_user_delegates(self, service) -> None:
         conversation_service, repo = service

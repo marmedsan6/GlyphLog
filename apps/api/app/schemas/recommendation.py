@@ -1,6 +1,8 @@
 """Schemas para el sistema de recomendaciones."""
 
 
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from app.models.entry import EntryType
@@ -15,7 +17,7 @@ class Recommendation(BaseModel):
     reason: str = Field(..., description="Razón de la recomendación")
     genres: list[str] = Field(default_factory=list, description="Géneros")
     year: int | None = Field(None, ge=1900, le=2100, description="Año")
-    external_url: str | None = Field(None, description="URL externa (AniList/RAWG)")
+    external_url: str | None = Field(None, description="URL externa (AniList/IGDB)")
     cover_image_url: str | None = Field(None, description="URL de la imagen de portada")
     similar_to: list[str] = Field(
         default_factory=list, description="Títulos similares de la colección"
@@ -43,5 +45,30 @@ class GenerateRecommendationsRequest(BaseModel):
 class GenerateRecommendationsResponse(BaseModel):
     """Response de generación de recomendaciones."""
 
+    recommendations: list[Recommendation] = Field(..., description="Recomendaciones")
+    metadata: RecommendationMetadata = Field(..., description="Metadata")
+
+
+class GenerateChatRecommendationsRequest(BaseModel):
+    """Request para generar recomendaciones dentro del chat de GlyphAI.
+
+    `type` es obligatorio (a diferencia del endpoint de /recommendations):
+    la función del chat siempre pide elegir entre anime/manga/game.
+    """
+
+    type: EntryType = Field(..., description="Tipo de entrada (anime | manga | game)")
+    conversation_id: UUID | None = Field(
+        None, description="Conversación a la que asociar la lista; se crea si se omite"
+    )
+
+
+class GenerateChatRecommendationsResponse(BaseModel):
+    """Response de generación de recomendaciones en el chat.
+
+    Incluye el id de la conversación (creada o reanudada) para que el frontend
+    pueda enlazar la lista al hilo y seguir refinando por chat.
+    """
+
+    conversation_id: UUID = Field(..., description="Conversación asociada")
     recommendations: list[Recommendation] = Field(..., description="Recomendaciones")
     metadata: RecommendationMetadata = Field(..., description="Metadata")

@@ -6,12 +6,14 @@ from typing import Any
 import httpx
 from cachetools import TTLCache
 
+from app.integrations.anilist_client import AniListClient
+from app.integrations.hltb_client import HltbClient
+from app.integrations.igdb_client import IgdbClient
+from app.models.entry import EntryType
 from app.schemas.external_search import (
     ExternalSearchResponse,
-    GameDetailResponse,
+    GamePlaytimeResponse,
 )
-from app.integrations.anilist_client import AniListClient
-from app.integrations.rawg_client import RawgClient, _playtime_to_hours
 
 logger = logging.getLogger(__name__)
 
@@ -43,31 +45,59 @@ class ThreadSafeCache:
 
 
 class ExternalSearchService:
-    def __init__(self, anilist_client: AniListClient, rawg_client: RawgClient) -> None:
+    def __init__(
+        self,
+        anilist_client: AniListClient,
+        igdb_client: IgdbClient,
+        hltb_client: HltbClient,
+    ) -> None:
         self.anilist_client = anilist_client
-        self.rawg_client = rawg_client
+        self.igdb_client = igdb_client
+        self.hltb_client = hltb_client
         # Caché de búsquedas: TTL de 1 hora (3600s) para reducir hits a APIs externas
         self.cache = ThreadSafeCache(maxsize=1000, ttl=3600)
-        # Caché de detalles de juegos: TTL de 1 hora también
-        self.game_detail_cache = ThreadSafeCache(maxsize=500, ttl=3600)
+        # Caché negativa: TTL corto (60s) para absorber thundering herd tras 429.
+        # Evita que muchas requests concurrentes re-attempt contra una API caída.
+        self.negative_cache = ThreadSafeCache(maxsize=1000, ttl=60)
+        # Caché de playtime de juegos: TTL de 1 hora también.
+        self.game_playtime_cache = ThreadSafeCache(maxsize=500, ttl=3600)
 
-    async def search(self, query: str) -> ExternalSearchResponse:
+    async def search(
+        self, query: str, entry_type: EntryType | None = None
+    ) -> ExternalSearchResponse:
         # Sanitizar y normalizar query
         normalized_query = query.strip().lower()
 
+        # La clave de caché incorpora el tipo para no devolver resultados de
+        # otra categoría ante la misma query.
+        cache_key = f"{normalized_query}::{entry_type.value if entry_type else 'all'}"
+
         # Buscar en caché
-        cached_results = self.cache.get(normalized_query)
+        cached_results = self.cache.get(cache_key)
         if cached_results is not None:
             return ExternalSearchResponse(results=cached_results)
 
-        # Si no está en caché, consultar APIs externas en paralelo.
-        # AniList combina anime + manga en 1 sola petición GraphQL,
-        # por lo que solo necesitamos 2 tareas (antes eran 3 con Jikan).
+        # Caché negativa: evita thundering herd tras 429 sostenido.
+        # Si una búsqueda reciente falló, devolvemos vacío sin re-attemptar.
+        if self.negative_cache.get(cache_key) is not None:
+            logger.info(f"Negative cache hit: '{cache_key}'")
+            return ExternalSearchResponse(results=[])
+
+        # Según el tipo solicitado, consultamos solo la fuente correspondiente
+        # (eficiencia: elegir anime no consulta IGDB ni el bloque de manga).
         async with httpx.AsyncClient() as client:
-            tasks = [
-                self.anilist_client.search_anime_manga(client, query),
-                self.rawg_client.search_games(client, query),
-            ]
+            if entry_type == EntryType.anime:
+                tasks = [self.anilist_client.search_by_type(client, query, EntryType.anime)]
+            elif entry_type == EntryType.manga:
+                tasks = [self.anilist_client.search_by_type(client, query, EntryType.manga)]
+            elif entry_type == EntryType.game:
+                tasks = [self.igdb_client.search_games(client, query)]
+            else:
+                # Sin tipo: consulta combinada de AniList (anime + manga) e IGDB.
+                tasks = [
+                    self.anilist_client.search_anime_manga(client, query),
+                    self.igdb_client.search_games(client, query),
+                ]
 
             # return_exceptions=True para que si una llamada falla, no cancele las demás.
             # Cumple: "Si una API falla (timeout, error, rate limit), las demás siguen funcionando"
@@ -91,35 +121,28 @@ class ExternalSearchService:
             # Guardar en caché únicamente si todas las llamadas a
             # APIs externas activas tuvieron éxito
             if not has_failures:
-                self.cache.set(normalized_query, results)
+                self.cache.set(cache_key, results)
+            else:
+                # Caché negativa: absorbe thundering herd tras 429/error
+                # sostenido. TTL corto (60s) para re-intentar pronto.
+                self.negative_cache.set(cache_key, True)
 
             return ExternalSearchResponse(results=results)
 
-    async def get_game_detail(self, slug: str) -> GameDetailResponse:
-        """Obtiene el detalle de un juego desde RAWG (con caché).
+    async def get_game_playtime(self, title: str) -> GamePlaytimeResponse:
+        """Obtiene el playtime (horas) de un juego desde HowLongToBeat (con caché).
 
-        Si RAWG no está configurado (sin API key) o el juego no existe,
-        devuelve un GameDetailResponse con playtime None — evitando excepciones
-        para que el frontend pueda degradar con elegancia.
+        Si HLTB falla o no encuentra el juego, devuelve un GamePlaytimeResponse
+        con playtime_hours=None — evitando excepciones para que el frontend
+        pueda degradar con elegancia.
         """
-        cached = self.game_detail_cache.get(slug)
+        normalized_title = title.strip().lower()
+        cached = self.game_playtime_cache.get(normalized_title)
         if cached is not None:
             return cached
 
-        async with httpx.AsyncClient() as client:
-            detail = await self.rawg_client.get_game_detail(client, slug)
+        response = await self.hltb_client.get_main_story_hours(title)
 
-        if detail is None:
-            # Guardamos respuesta vacía en caché para no repetir peticiones
-            # sabiendo que el juego no existe o la API falló.
-            response = GameDetailResponse(slug=slug, playtime_raw=None, playtime_hours=None)
-        else:
-            playtime_raw = detail.get("playtime")
-            response = GameDetailResponse(
-                slug=slug,
-                playtime_raw=playtime_raw,
-                playtime_hours=_playtime_to_hours(playtime_raw),
-            )
-
-        self.game_detail_cache.set(slug, response)
+        # Cacheamos también el resultado vacío para no repetir peticiones a HLTB.
+        self.game_playtime_cache.set(normalized_title, response)
         return response

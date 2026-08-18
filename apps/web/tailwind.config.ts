@@ -12,6 +12,15 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        serif: ['"Fraunces Variable"', 'Georgia', 'serif'],
+        sans: ['"Inter Variable"', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+      },
+      boxShadow: {
+        offset: '4px 4px 0 oklch(var(--foreground) / 0.06)',
+        'offset-lg': '8px 8px 0 oklch(var(--foreground) / 0.08)',
+      },
       colors: {
         border: 'oklch(var(--border))',
         input: 'oklch(var(--input))',

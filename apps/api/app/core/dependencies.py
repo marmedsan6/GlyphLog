@@ -1,9 +1,14 @@
 from fastapi import Depends
+from langchain_aws import ChatBedrock
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.tools import build_agent_tools
 from app.core.config import settings
 from app.core.database import get_db
+from app.integrations.anilist_client import AniListClient
 from app.integrations.bedrock.client import BedrockClient
+from app.integrations.hltb_client import HltbClient
+from app.integrations.igdb_client import IgdbClient
 from app.integrations.llm import JsonLlm, OpenAIJsonlClient
 from app.repositories.ai_repository import AIRepository
 from app.repositories.conversation_repository import ConversationRepository
@@ -12,12 +17,12 @@ from app.repositories.entry_repository import EntryRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.progress_event_repository import ProgressEventRepository
 from app.repositories.user_repository import UserRepository
+from app.services.agent_service import AgentService
 from app.services.auth_service import AuthService
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.conversation_service import ConversationService
 from app.services.device_token_service import DeviceTokenService
 from app.services.entry_service import EntryService
-from app.integrations.anilist_client import AniListClient
-from app.integrations.rawg_client import RawgClient
 from app.services.external_search_service import ExternalSearchService
 from app.services.profile_service import ProfileService
 
@@ -83,19 +88,42 @@ def get_device_token_service(
 
 # Instancias singleton para persistencia de la caché en memoria
 _anilist_client = AniListClient()
-_rawg_client = RawgClient(api_key=settings.rawg_api_key)
-_external_search_service = ExternalSearchService(_anilist_client, _rawg_client)
+_igdb_client = IgdbClient(
+    client_id=settings.igdb_client_id,
+    client_secret=settings.igdb_client_secret,
+)
+_hltb_client = HltbClient()
+_external_search_service = ExternalSearchService(_anilist_client, _igdb_client, _hltb_client)
 
 
 def get_external_search_service() -> ExternalSearchService:
     return _external_search_service
 
 
-# Cliente de Bedrock singleton para reutilizar conexión
+# Servicio de enriquecimiento de géneros (reutiliza la caché del catálogo).
+_catalog_enrichment_service = CatalogEnrichmentService(_external_search_service)
+
+
+def get_catalog_enrichment_service() -> CatalogEnrichmentService:
+    """Devuelve el servicio de auto-populado de géneros desde el catálogo."""
+    return _catalog_enrichment_service
+
+
+# Cliente de Bedrock singleton para reutilizar conexión.
+# Inyecta credenciales explícitas de settings cuando están presentes (el
+# contenedor Docker no tiene ~/.aws/credentials). Si no hay credenciales,
+# boto3 cae en su cadena por defecto (env vars / perfil local).
 _bedrock_client = BedrockClient(
     model_id=settings.bedrock_model_id,
     region=settings.bedrock_region,
+    aws_access_key_id=settings.aws_access_key_id or None,
+    aws_secret_access_key=settings.aws_secret_access_key or None,
 )
+
+
+def get_bedrock_client() -> BedrockClient:
+    """Devuelve el cliente Bedrock singleton (recomendaciones, import, GlyphAI)."""
+    return _bedrock_client
 
 
 def get_llm_client() -> JsonLlm:
@@ -117,4 +145,35 @@ def get_llm_client() -> JsonLlm:
             "Usa 'openai' o 'bedrock'."
         )
     return _bedrock_client
+
+
+# Modelo de chat para el agente de GlyphAI (LangChain). Usa el mismo Claude vía
+# Bedrock que recomendaciones/importación. `disable_streaming=False` para que
+# LangGraph pueda emitir tokens incrementalmente.
+_chat_bedrock = ChatBedrock(
+    model_id=settings.bedrock_model_id,
+    region_name=settings.bedrock_region,
+    aws_access_key_id=settings.aws_access_key_id or None,
+    aws_secret_access_key=settings.aws_secret_access_key or None,
+)
+
+
+def get_chat_model() -> ChatBedrock:
+    """Devuelve el modelo de chat LangChain para el agente de GlyphAI."""
+    return _chat_bedrock
+
+
+def get_agent_service(
+    ai_repository: AIRepository = Depends(get_ai_repository),
+    entry_repo: EntryRepository = Depends(get_entry_repository),
+    progress_event_repo: ProgressEventRepository = Depends(get_progress_event_repository),
+) -> AgentService:
+    """Construye el agente de GlyphAI con sus tools y el modelo de chat."""
+    entry_service = EntryService(entry_repo, progress_event_repo)
+    tools = build_agent_tools(entry_service)
+    return AgentService(
+        llm=_chat_bedrock,
+        tools=tools,
+        ai_repository=ai_repository,
+    )
 

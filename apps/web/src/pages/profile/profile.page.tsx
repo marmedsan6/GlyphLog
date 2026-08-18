@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Loader2, Pencil, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Camera, Loader2, Pencil, Trash2, Upload } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ImageCropper } from '@/components/shared/entry-form/image-cropper'
 import { ProfileAvatar } from '@/components/shared/profile-avatar'
 import { DeviceManager } from '@/components/shared/device-manager'
@@ -299,6 +299,21 @@ export function ProfilePage() {
           onCancel={handleCropperCancel}
         />
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Importaciones</CardTitle>
+          <CardDescription>Importa tu lista desde MyAnimeList, AniList u otras fuentes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link to="/import">
+              <Upload className="mr-2 h-4 w-4" />
+              Importar entradas
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <DeviceManager />
     </div>

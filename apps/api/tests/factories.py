@@ -41,6 +41,7 @@ def make_entry(
     year: int | None = None,
     notes: str | None = None,
     cover_image: str | None = None,
+    genres: list[str] | None = None,
     progress_unit: str | None = None,
     progress_total: float | None = None,
     current_progress: float | None = None,
@@ -59,6 +60,7 @@ def make_entry(
         year=year,
         notes=notes,
         cover_image=cover_image,
+        genres=genres,
         progress_unit=progress_unit,
         progress_total=progress_total,
         current_progress=current_progress,
@@ -113,6 +115,7 @@ def make_chat_message(
     content: str = "Hola",
     message_id: UUID | None = None,
     created_at: datetime | None = None,
+    metadata: dict | None = None,
 ) -> ChatMessage:
     """Crea una instancia de ChatMessage en memoria (sin sesión de BD)."""
     return ChatMessage(
@@ -120,6 +123,7 @@ def make_chat_message(
         conversation_id=conversation_id,
         role=role,
         content=content,
+        metadata=metadata,
         created_at=created_at or datetime.now(timezone.utc),
     )
 
