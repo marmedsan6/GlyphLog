@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { EntryType, ExternalSearchResponse, GameDetailResponse } from '@/types'
+import type { EntryType, ExternalSearchResponse, GamePlaytimeResponse } from '@/types'
 
 export async function searchExternal(
   query: string,
@@ -11,7 +11,9 @@ export async function searchExternal(
   return response.data
 }
 
-export async function getGameDetail(slug: string): Promise<GameDetailResponse> {
-  const response = await apiClient.get<GameDetailResponse>(`/external/games/${encodeURIComponent(slug)}`)
+export async function getGamePlaytime(title: string): Promise<GamePlaytimeResponse> {
+  const response = await apiClient.get<GamePlaytimeResponse>(`/external/games/playtime`, {
+    params: { title },
+  })
   return response.data
 }

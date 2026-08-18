@@ -107,7 +107,7 @@ export function QuickProgressButton({ entry }: QuickProgressButtonProps) {
             type="button"
             disabled={isPending}
             onClick={handlePlusClick}
-            className="flex h-7 items-center gap-1 rounded-full bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground shadow-sm transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+            className="flex h-7 items-center gap-1 rounded-[2px] bg-foreground px-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-background transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
             aria-label={`Incrementar progreso de ${entry.title}`}
           >
             {isPending ? (

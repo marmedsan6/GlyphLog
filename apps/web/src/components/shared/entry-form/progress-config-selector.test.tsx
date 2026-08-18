@@ -89,13 +89,13 @@ describe('ProgressConfigSelector', () => {
     expect(screen.getByText('Sugerido: 12 (AniList)')).toBeInTheDocument()
   })
 
-  it('displays RAWG badge when source is RAWG', () => {
+  it('displays HLTB badge when source is HLTB', () => {
     renderWithForm(
-      <ProgressConfigSelector progressTotalSource="RAWG" />,
+      <ProgressConfigSelector progressTotalSource="HLTB" />,
       { type: 'game', progress_total: '8.50' }
     )
 
-    expect(screen.getByText('Sugerido: 8.50 h (RAWG)')).toBeInTheDocument()
+    expect(screen.getByText('Sugerido: 8.50 h (HLTB)')).toBeInTheDocument()
   })
 
   it('displays Manual badge when source is manual', () => {

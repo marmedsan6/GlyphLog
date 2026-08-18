@@ -1,7 +1,7 @@
 """Servicio de enriquecimiento de entradas con datos del catálogo externo.
 
 Auto-popula `genres` y `cover_image` de una entrada buscando la obra en el
-catálogo (AniList para anime/manga, RAWG para videojuegos). Es un
+catálogo (AniList para anime/manga, IGDB para videojuegos). Es un
 enriquecimiento best-effort: si el catálogo falla o no encuentra match,
 devuelve valores vacíos sin lanzar excepciones para no romper el flujo de
 creación/importación.
@@ -39,9 +39,9 @@ class CatalogEnrichmentService:
         """
         try:
             # Pasamos el tipo para consultar solo la fuente relevante (AniList
-            # para anime/manga, RAWG para juegos). Sin el tipo, `search` consulta
-            # AniList + RAWG en paralelo, y si RAWG cuelga (ReadTimeout de 5s),
-            # cada entrada de anime/manga se bloquea innecesariamente.
+            # para anime/manga, IGDB para juegos). Sin el tipo, `search` consulta
+            # AniList + IGDB en paralelo, y si IGDB cuelga, cada entrada de
+            # anime/manga se bloquea innecesariamente.
             response = await self.external_search_service.search(title, entry_type=entry_type)
             for result in response.results:
                 if result.title.lower() == title.lower() and result.type == entry_type:

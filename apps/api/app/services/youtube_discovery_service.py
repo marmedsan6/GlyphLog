@@ -305,3 +305,22 @@ Example format:
         except Exception as e:
             logger.error(f"Error al analizar con Claude: {e}")
             return []
+
+    @staticmethod
+    def format_suggestions_as_text(suggestions: list[YoutubeSuggestion]) -> str:
+        """Serializa la lista de sugerencias a texto legible para el agente.
+
+        Este texto se persiste como `content` del mensaje `assistant`, de modo
+        que en turnos posteriores entra al historial y GlyphAI puede refinar la
+        lista (filtrar, descartar, pedir más).
+        """
+        if not suggestions:
+            return "No encontré menciones de anime/manga/videojuegos en esos canales."
+        lines = [f"Estas son las {len(suggestions)} menciones que he encontrado:"]
+        for suggestion in suggestions:
+            status = "ya en tu lista" if suggestion.in_collection else "nuevo"
+            lines.append(
+                f"- {suggestion.title} ({suggestion.type.value}, {status}) "
+                f"mencionado por {suggestion.mentioned_by} en \"{suggestion.video_title}\""
+            )
+        return "\n".join(lines)

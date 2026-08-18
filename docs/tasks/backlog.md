@@ -19,9 +19,13 @@
 | [TEST-e2e-acceptance-tests](./TEST-e2e-acceptance-tests.md)           | Suite de acceptance tests E2E (RF-0..RF-7)              | TEST  | completada  | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | 47 tests Chromium; LLM mockeado; fix auth + rate limit dev |
 | [TEST-e2e-acceptance-progress-search](./TEST-e2e-acceptance-progress-search.md) | Ampliación acceptance tests E2E (RF-8..RF-11) | TEST  | completada  | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | 11 tests nuevos; quick progress, historial/reset, búsqueda global, paginación |
 | —                                                                     | Flujo SDD (specs, template, backlog)                    | SETUP | en-progreso | —    | ADR-015; este plan                                   |
+| [FEAT-glyphai-recommendations](./FEAT-glyphai-recommendations.md)     | Recomendaciones en el chat de GlyphAI                   | FEAT  | backlog     | [SPEC-glyphai-recommendations](../specs/SPEC-glyphai-recommendations.md) | Botón "+", 5 recs por lista+géneros, persistir en conversación |
+| [FEAT-glyphai-youtube-discovery](./FEAT-glyphai-youtube-discovery.md) | Descubrimiento de YouTube en el chat de GlyphAI         | FEAT  | backlog     | [SPEC-glyphai-youtube-discovery](../specs/SPEC-glyphai-youtube-discovery.md) | Herramienta del "+": pegar URLs, tarjetas, persistir en conversación |
 
 ## Especificaciones
 
 | ID  | Estado | Plan/Task derivado |
 | --- | ------ | ------------------ |
 | [SPEC-e2e-acceptance-tests](../specs/SPEC-e2e-acceptance-tests.md) | implementada | [TEST-e2e-acceptance-tests](./TEST-e2e-acceptance-tests.md) |
+| [SPEC-glyphai-recommendations](../specs/SPEC-glyphai-recommendations.md) | aprobada | [FEAT-glyphai-recommendations](./FEAT-glyphai-recommendations.md) |
+| [SPEC-glyphai-youtube-discovery](../specs/SPEC-glyphai-youtube-discovery.md) | aprobada | [FEAT-glyphai-youtube-discovery](./FEAT-glyphai-youtube-discovery.md) |

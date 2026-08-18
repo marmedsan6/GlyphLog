@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut, User } from 'lucide-react'
 import { ChatWidget } from '@/components/shared/chat/chat-widget'
 import { ProfileAvatar } from '@/components/shared/profile-avatar'
@@ -17,9 +17,15 @@ import { useProfile } from '@/hooks/useProfile'
 
 // Layout principal para las páginas protegidas.
 // Incluye header con navegación, búsqueda, menú de perfil y área de contenido.
+const NAV_ITEMS = [
+  { to: '/collection', label: 'Colección' },
+  { to: '/chat', label: 'GlyphAI' },
+]
+
 export function AppLayout() {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: profile } = useProfile()
 
   function handleLogout(): void {
@@ -32,11 +38,11 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+      <header className="border-b-2 border-border">
         <div className="container mx-auto flex items-center justify-between gap-2 px-4 py-3">
           <Link
             to="/collection"
-            className="shrink-0 text-xl font-bold text-foreground transition-opacity hover:opacity-80"
+            className="shrink-0 font-serif text-2xl leading-none text-foreground transition-opacity hover:opacity-80"
           >
             GlyphLog
           </Link>
@@ -44,24 +50,22 @@ export function AppLayout() {
             <SearchBar />
           </div>
           <nav className="flex shrink-0 items-center gap-4 sm:gap-6">
-            <Link
-              to="/collection"
-              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
-            >
-              Colección
-            </Link>
-            <Link
-              to="/recommendations"
-              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
-            >
-              Recomendaciones
-            </Link>
-            <Link
-              to="/chat"
-              className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
-            >
-              GlyphAI
-            </Link>
+            {NAV_ITEMS.map((item) => {
+              const isActive = location.pathname.startsWith(item.to)
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={
+                    isActive
+                      ? 'hidden font-mono text-xs uppercase tracking-wider text-foreground underline underline-offset-4 sm:inline'
+                      : 'hidden font-mono text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground sm:inline'
+                  }
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

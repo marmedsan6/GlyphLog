@@ -164,8 +164,8 @@ export function ProgressConfigSelector({
               >
                 {progressTotalSource === 'manual'
                   ? 'Manual'
-                  : progressTotalSource === 'RAWG'
-                    ? `Sugerido: ${progressTotal} h (RAWG)`
+                  : progressTotalSource === 'HLTB'
+                    ? `Sugerido: ${progressTotal} h (HLTB)`
                     : `Sugerido: ${progressTotal} (AniList)`}
               </Badge>
             )}

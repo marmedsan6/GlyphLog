@@ -25,6 +25,10 @@ import { getEntryTitlesViaApi } from '../../utils/helpers';
 
 test.describe('Importación real (sin mock)', () => {
   test('should parse and persist a real anime list via Claude', async ({ page }) => {
+    test.skip(
+      !process.env.RUN_REAL_E2E,
+      'Test real opcional (wiring Claude/Bedrock). Ejecutar con RUN_REAL_E2E=1'
+    );
     test.setTimeout(120000);
 
     // ARRANGE — autenticar y definir el título a verificar (fijo, canónico)

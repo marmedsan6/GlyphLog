@@ -24,8 +24,11 @@ google-auth==2.41.1
 # Dependencia transitiva de google-auth para hacer peticiones HTTP
 # (necesaria para descargar los certificados de Google y verificar la firma).
 requests==2.32.5
-# Cliente HTTP asíncrono para consumir APIs externas como AniList y RAWG.
+# Cliente HTTP asíncrono para consumir APIs externas como AniList e IGDB.
 httpx==0.27.0
+# Scraping de HowLongToBeat para el tiempo de juego (playtime) en horas.
+# No tiene API oficial; la librería se envuelve en asyncio.to_thread().
+howlongtobeatpy==1.0.22
 # Procesamiento de imágenes para conversión de avatares a WebP.
 Pillow==11.2.1
 # AWS SDK para invocar modelos de Claude en Bedrock.

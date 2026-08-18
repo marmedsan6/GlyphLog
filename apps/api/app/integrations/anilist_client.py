@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -109,11 +110,23 @@ class AniListClient:
 
                 # Reintentar para rate limit (429) o errores de servidor (5xx)
                 if response.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                    # Respetar Retry-After del servidor (429) con fallback al
+                    # backoff exponencial propio. Jitter para evitar thundering herd.
+                    effective_delay = delay
+                    try:
+                        retry_after = getattr(response, "headers", {}).get("Retry-After")
+                        if retry_after:
+                            server_delay = min(float(retry_after), 120.0)
+                            effective_delay = max(server_delay, delay)
+                    except (ValueError, TypeError, AttributeError):
+                        pass  # header malformado → usar backoff exponencial
+
+                    jittered = effective_delay + random.uniform(0, 0.5)
                     logger.warning(
                         f"AniList search returned status {response.status_code}. "
-                        f"Retrying in {delay}s (attempt {attempt + 1}/{max_retries})..."
+                        f"Retrying in {jittered:.1f}s (attempt {attempt + 1}/{max_retries})..."
                     )
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(jittered)
                     delay *= 2
                     continue
 
@@ -159,7 +172,7 @@ class AniListClient:
         """Busca un único tipo (anime o manga) en AniList.
 
         Solo admite `EntryType.anime` o `EntryType.manga` (los videojuegos
-        vienen de RAWG). Retorna None si ocurre un error de red/API.
+        vienen de IGDB). Retorna None si ocurre un error de red/API.
         """
         anilist_type = "ANIME" if media_type == EntryType.anime else "MANGA"
         data = await self._post_query(

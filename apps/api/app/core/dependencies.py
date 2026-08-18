@@ -7,8 +7,9 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.integrations.anilist_client import AniListClient
 from app.integrations.bedrock.client import BedrockClient
+from app.integrations.hltb_client import HltbClient
+from app.integrations.igdb_client import IgdbClient
 from app.integrations.llm import JsonLlm, OpenAIJsonlClient
-from app.integrations.rawg_client import RawgClient
 from app.repositories.ai_repository import AIRepository
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.device_token_repository import DeviceTokenRepository
@@ -87,8 +88,12 @@ def get_device_token_service(
 
 # Instancias singleton para persistencia de la caché en memoria
 _anilist_client = AniListClient()
-_rawg_client = RawgClient(api_key=settings.rawg_api_key)
-_external_search_service = ExternalSearchService(_anilist_client, _rawg_client)
+_igdb_client = IgdbClient(
+    client_id=settings.igdb_client_id,
+    client_secret=settings.igdb_client_secret,
+)
+_hltb_client = HltbClient()
+_external_search_service = ExternalSearchService(_anilist_client, _igdb_client, _hltb_client)
 
 
 def get_external_search_service() -> ExternalSearchService:

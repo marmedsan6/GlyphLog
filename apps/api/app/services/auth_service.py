@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
@@ -46,7 +48,7 @@ class AuthService:
                 detail="Ya existe una cuenta con este email",
             )
 
-        hashed_password = hash_password(data.password)
+        hashed_password = await asyncio.to_thread(hash_password, data.password)
         try:
             user = await self.user_repo.create(data, hashed_password)
         except IntegrityError as e:
@@ -88,10 +90,12 @@ class AuthService:
             # SEGURIDAD: ejecutar verify_password siempre para prevenir timing
             # attacks. Si el usuario no existe o es OAuth (sin password),
             # verificamos contra un hash dummy con coste equivalente.
-            verify_password(data.password, _DUMMY_HASH)
+            await asyncio.to_thread(verify_password, data.password, _DUMMY_HASH)
             raise unauthorized
 
-        password_valid = verify_password(data.password, user.hashed_password)
+        password_valid = await asyncio.to_thread(
+            verify_password, data.password, user.hashed_password
+        )
         if not password_valid:
             raise unauthorized
 

@@ -28,17 +28,39 @@ from fastapi.responses import StreamingResponse
 from app.core.dependencies import (
     get_agent_service,
     get_conversation_service,
+    get_entry_repository,
+    get_external_search_service,
+    get_llm_client,
 )
+from app.core.llm_errors import map_llm_error
 from app.core.security import get_current_user
+from app.integrations.llm import JsonLlm
 from app.models.user import User
+from app.repositories.entry_repository import EntryRepository
+from app.routers.youtube_discovery import get_youtube_discovery_service
 from app.schemas.ai import (
+    ChatMessage,
     ChatRequest,
     ConversationListItem,
     ConversationResponse,
     PaginatedConversationsResponse,
 )
+from app.schemas.recommendation import (
+    GenerateChatRecommendationsRequest,
+    GenerateChatRecommendationsResponse,
+)
+from app.schemas.youtube_discovery import (
+    GenerateChatYoutubeRequest,
+    GenerateChatYoutubeResponse,
+)
 from app.services.agent_service import AgentService
 from app.services.conversation_service import ConversationService
+from app.services.external_search_service import ExternalSearchService
+from app.services.recommendation_service import (
+    InsufficientCollectionError,
+    RecommendationService,
+)
+from app.services.youtube_discovery_service import YoutubeDiscoveryService
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +68,18 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 # Paginación por defecto del listado de conversaciones (mismo límite que entries).
 DEFAULT_PAGE_SIZE = 15
+
+# Número fijo de recomendaciones en el chat (RF-3).
+CHAT_RECOMMENDATIONS_LIMIT = 5
+
+
+def get_chat_recommendation_service(
+    llm_client: JsonLlm = Depends(get_llm_client),
+    entry_repo: EntryRepository = Depends(get_entry_repository),
+    external_search: ExternalSearchService = Depends(get_external_search_service),
+) -> RecommendationService:
+    """Dependency para el servicio de recomendaciones (reutiliza el wiring)."""
+    return RecommendationService(llm_client, entry_repo, external_search)
 
 
 @router.post("/chat")
@@ -192,3 +226,177 @@ async def delete_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversación no encontrada",
         )
+
+
+@router.post(
+    "/recommendations",
+    response_model=GenerateChatRecommendationsResponse,
+)
+async def generate_chat_recommendations(
+    request: GenerateChatRecommendationsRequest,
+    auth: User = Depends(get_current_user),
+    recommendation_service: RecommendationService = Depends(
+        get_chat_recommendation_service
+    ),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+) -> GenerateChatRecommendationsResponse:
+    """Genera recomendaciones y las persiste en la conversación del chat.
+
+    Delega en el servicio de recomendaciones (misma lógica que
+    `/recommendations/generate`) y persiste un único mensaje `assistant` con:
+    - `content`: resumen textual legible (para que el agente pueda refinar).
+    - `metadata`: `{ "recommendations": [...] }` (para render de tarjetas).
+
+    `conversation_id` se omite → se crea una conversación nueva.
+    """
+    # 1. Resolver/crear la conversación (misma semántica que POST /chat).
+    if request.conversation_id is not None:
+        conversation = await conversation_service.get_for_user(
+            request.conversation_id, auth.id
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversación no encontrada",
+            )
+    else:
+        trigger_message = f"Recomiéndame {request.type.value}"
+        conversation = await conversation_service.create_for_chat(
+            auth.id,
+            [ChatMessage(role="user", content=trigger_message)],
+        )
+        # Persiste el turno del usuario que dispara la generación.
+        await conversation_service.add_message(
+            conversation.id, "user", trigger_message
+        )
+
+    # 2. Genera la lista (modo strict: 422 si no hay suficientes entradas).
+    try:
+        result = await recommendation_service.generate_recommendations(
+            user_id=auth.id,
+            entry_type=request.type,
+            limit=CHAT_RECOMMENDATIONS_LIMIT,
+            strict=True,
+        )
+    except InsufficientCollectionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise _map_recommendation_error(e)
+
+    # 3. Persiste el mensaje del asistente con texto + payload estructurado.
+    content = RecommendationService.format_recommendations_as_text(
+        result.recommendations, request.type
+    )
+    metadata = {
+        "recommendations": [rec.model_dump(mode="json") for rec in result.recommendations]
+    }
+    await conversation_service.add_message(
+        conversation.id, "assistant", content, metadata
+    )
+
+    return GenerateChatRecommendationsResponse(
+        conversation_id=conversation.id,
+        recommendations=result.recommendations,
+        metadata=result.metadata,
+    )
+
+
+def _map_recommendation_error(error: Exception) -> HTTPException:
+    """Traduce errores del proveedor LLM a HTTPException accionable."""
+    mapped = map_llm_error(error)
+    if mapped is not None:
+        return mapped
+    if isinstance(error, ValueError):
+        logger.error(f"El proveedor LLM devolvió formato inesperado: {error}")
+        return HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "El proveedor de IA devolvió una respuesta inesperada. "
+                "Inténtalo de nuevo."
+            ),
+        )
+    logger.error(f"Error interno al generar recomendaciones en el chat: {error}")
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Error interno al generar recomendaciones",
+    )
+
+
+@router.post(
+    "/youtube",
+    response_model=GenerateChatYoutubeResponse,
+)
+async def generate_chat_youtube(
+    request: GenerateChatYoutubeRequest,
+    auth: User = Depends(get_current_user),
+    youtube_service: YoutubeDiscoveryService = Depends(get_youtube_discovery_service),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+) -> GenerateChatYoutubeResponse:
+    """Analiza canales de YouTube y persiste las sugerencias en el chat.
+
+    Delega en el servicio de descubrimiento de YouTube (misma lógica que
+    `/discover/youtube/analyze`) y persiste un único mensaje `assistant` con:
+    - `content`: resumen textual legible (para que el agente pueda refinar).
+    - `metadata`: `{ "suggestions": [...] }` (para render de tarjetas).
+
+    `conversation_id` se omite → se crea una conversación nueva.
+    """
+    # 1. Resolver/crear la conversación (misma semántica que POST /chat).
+    trigger_message = "Descubre contenido de estos canales:\n" + "\n".join(
+        request.channel_urls
+    )
+    if request.conversation_id is not None:
+        conversation = await conversation_service.get_for_user(
+            request.conversation_id, auth.id
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversación no encontrada",
+            )
+    else:
+        conversation = await conversation_service.create_for_chat(
+            auth.id,
+            [ChatMessage(role="user", content=trigger_message)],
+        )
+
+    # Persiste el turno del usuario que dispara el análisis.
+    await conversation_service.add_message(
+        conversation.id, "user", trigger_message
+    )
+
+    # 2. Analiza los canales (puede tardar 60–90s).
+    try:
+        suggestions, metadata = await youtube_service.analyze_channels(
+            user_id=auth.id,
+            channel_urls=request.channel_urls,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error al analizar canales de YouTube en el chat: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al analizar canales de YouTube. Verifica que las URLs sean válidas.",
+        )
+
+    # 3. Persiste el mensaje del asistente con texto + payload estructurado.
+    content = YoutubeDiscoveryService.format_suggestions_as_text(suggestions)
+    message_metadata = {
+        "suggestions": [suggestion.model_dump(mode="json") for suggestion in suggestions]
+    }
+    await conversation_service.add_message(
+        conversation.id, "assistant", content, message_metadata
+    )
+
+    return GenerateChatYoutubeResponse(
+        conversation_id=conversation.id,
+        suggestions=suggestions,
+        metadata=metadata,
+    )

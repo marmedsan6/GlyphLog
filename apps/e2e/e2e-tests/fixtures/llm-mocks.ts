@@ -150,3 +150,56 @@ export async function mockChat(page: Page) {
     })
   );
 }
+
+export const mockYoutubeDiscovery = {
+  conversation_id: 'mock-conv-yt',
+  suggestions: [
+    {
+      title: 'Neon Genesis Evangelion',
+      type: 'anime',
+      mentioned_by: 'iLuTV',
+      video_title: 'POR QUÉ EVANGELION ES UNA OBRA MAESTRA',
+      video_url: 'https://www.youtube.com/watch?v=abc123',
+      opinion: 'positive',
+      rating: 10,
+      timestamp: '5:20',
+      in_collection: false,
+      external_url: null,
+      cover_image_url: null,
+    },
+    {
+      title: 'Chainsaw Man',
+      type: 'anime',
+      mentioned_by: 'iLuTV',
+      video_title: 'Análisis Chainsaw Man',
+      video_url: 'https://www.youtube.com/watch?v=def456',
+      opinion: 'positive',
+      rating: 9,
+      timestamp: '2:15',
+      in_collection: false,
+      external_url: null,
+      cover_image_url: null,
+    },
+  ],
+  metadata: {
+    channels_analyzed: 1,
+    videos_analyzed: 20,
+    titles_found: 2,
+    new_suggestions: 2,
+    tokens_used: 0,
+    analyzed_at: '2026-08-18T12:00:00Z',
+  },
+};
+
+/**
+ * Mockea el endpoint de descubrimiento YouTube en el chat.
+ */
+export async function mockYoutubeDiscoveryEndpoint(page: Page) {
+  await page.route('**/api/v1/ai/youtube', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockYoutubeDiscovery),
+    })
+  );
+}

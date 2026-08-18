@@ -31,7 +31,7 @@ export class CreateEntryPage extends AppLayout {
   }
 
   get externalSearchInput() {
-    return this.page.getByPlaceholder(/Buscar título en MAL \/ RAWG/);
+    return this.page.getByPlaceholder(/Buscar título en AniList \/ IGDB/);
   }
 
   get statusSelector() {
