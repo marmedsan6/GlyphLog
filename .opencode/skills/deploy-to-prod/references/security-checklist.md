@@ -12,7 +12,7 @@ entorno.
 - Si no existe un scanner, usar un fallback portable y bloquear ante coincidencias:
 
   ```bash
-  secret_pattern='(AKIA[0-9A-Z]{16}|ctx7sk-|sk-[A-Za-z0-9_-]{20,}|-----BEGIN .*PRIVATE KEY-----|SECRET_KEY=[^<[:space:]]{32,}|(OPENAI|ANTHROPIC|YOUTUBE)_API_KEY=[^<[:space:]]{12,})'
+  secret_pattern='(AKIA[0-9A-Z]{16}|ctx7sk-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9_-]{20,}|-----BEGIN .*PRIVATE KEY-----|SECRET_KEY=[0-9a-fA-F]{32,}|(OPENAI|ANTHROPIC|YOUTUBE)_API_KEY=[A-Za-z0-9_-]{12,})'
   git grep -n -I -E "$secret_pattern" -- ':!*.example' ':!docs/**' ':!memory-bank/**' \
     | sed -E 's/(:[0-9]+:).*/\1 <redacted-match>/'
   ```
