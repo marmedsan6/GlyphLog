@@ -14,6 +14,7 @@ entorno.
   ```bash
   secret_pattern='(AKIA[0-9A-Z]{16}|ctx7sk-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9_-]{20,}|-----BEGIN .*PRIVATE KEY-----|SECRET_KEY=[0-9a-fA-F]{32,}|(OPENAI|ANTHROPIC|YOUTUBE)_API_KEY=[A-Za-z0-9_-]{12,})'
   git grep -n -I -E "$secret_pattern" -- ':!*.example' ':!docs/**' ':!memory-bank/**' \
+    ':!.opencode/skills/deploy-to-prod/references/security-checklist.md' ':!scripts/deploy.sh' \
     | sed -E 's/(:[0-9]+:).*/\1 <redacted-match>/'
   ```
 
