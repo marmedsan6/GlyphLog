@@ -65,8 +65,12 @@ Si se encuentra un secreto publicado:
 2. Identificar el proveedor y solicitar/ejecutar su revocación con autorización.
 3. Crear un backup/bundle local antes de reescribir historia.
 4. Reemplazar el secreto por una referencia de entorno o placeholder.
-5. Reescribir historia con \`git filter-repo\` y coordinar el force-push.
-6. Comunicar que los clones existentes deben reclonarse o rebasearse.
+5. Crear una historia limpia con \`git filter-repo\` (preferido). Si no está
+   disponible, usar \`git filter-branch\` solo como fallback explícito, eliminar
+   las referencias \`refs/original/*\` generadas y verificar de nuevo todos los
+   refs antes del force-push.
+6. Coordinar el force-push con \`--force-with-lease\` y comunicar que los clones
+   existentes deben reclonarse o rebasearse.
 
 ## Phase 3: entorno y configuración
 
