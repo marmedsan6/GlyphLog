@@ -1,0 +1,211 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Escribe DEPLOY para confirmar el despliegue"
+        required: true
+        type: string
+
+permissions:
+  contents: none
+
+concurrency:
+  group: glyphlog-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    env:
+      CONFIRMATION: ${{ inputs.confirmation }}
+      PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+      PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+      PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+      PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+      PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
+      PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      PROD_POSTGRES_USER: ${{ secrets.PROD_POSTGRES_USER }}
+      PROD_POSTGRES_PASSWORD: ${{ secrets.PROD_POSTGRES_PASSWORD }}
+      PROD_POSTGRES_DB: ${{ secrets.PROD_POSTGRES_DB }}
+      PROD_SECRET_KEY: ${{ secrets.PROD_SECRET_KEY }}
+      PROD_ALLOWED_ORIGINS: ${{ secrets.PROD_ALLOWED_ORIGINS }}
+      PROD_GOOGLE_CLIENT_ID: ${{ secrets.PROD_GOOGLE_CLIENT_ID }}
+      PROD_VITE_GOOGLE_CLIENT_ID: ${{ secrets.PROD_VITE_GOOGLE_CLIENT_ID }}
+      PROD_IGDB_CLIENT_ID: ${{ secrets.PROD_IGDB_CLIENT_ID }}
+      PROD_IGDB_CLIENT_SECRET: ${{ secrets.PROD_IGDB_CLIENT_SECRET }}
+      PROD_AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+      PROD_AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+      PROD_AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+      PROD_BEDROCK_REGION: ${{ secrets.PROD_BEDROCK_REGION }}
+      PROD_BEDROCK_MODEL_ID: ${{ secrets.PROD_BEDROCK_MODEL_ID }}
+      PROD_YOUTUBE_API_KEY: ${{ secrets.PROD_YOUTUBE_API_KEY }}
+      PROD_AI_PROVIDER: ${{ secrets.PROD_AI_PROVIDER }}
+      PROD_AI_COMPLETION_PROVIDER: ${{ secrets.PROD_AI_COMPLETION_PROVIDER }}
+      PROD_OPENAI_API_KEY: ${{ secrets.PROD_OPENAI_API_KEY }}
+      PROD_OPENAI_BASE_URL: ${{ secrets.PROD_OPENAI_BASE_URL }}
+      PROD_OPENAI_MODEL: ${{ secrets.PROD_OPENAI_MODEL }}
+      PROD_ANTHROPIC_API_KEY: ${{ secrets.PROD_ANTHROPIC_API_KEY }}
+      PROD_ANTHROPIC_MODEL: ${{ secrets.PROD_ANTHROPIC_MODEL }}
+
+    steps:
+      - name: Validate confirmation and required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$CONFIRMATION" == "DEPLOY" ]] || {
+            echo "::error::Debes escribir DEPLOY para confirmar el despliegue"
+            exit 1
+          }
+
+          required=(
+            PROD_SSH_HOST PROD_SSH_USER PROD_SSH_PRIVATE_KEY
+            PROD_SSH_KNOWN_HOSTS PROD_APP_DIR PROD_DATABASE_URL
+            PROD_POSTGRES_USER PROD_POSTGRES_PASSWORD PROD_POSTGRES_DB
+            PROD_SECRET_KEY PROD_ALLOWED_ORIGINS PROD_AI_PROVIDER
+            PROD_AI_COMPLETION_PROVIDER
+          )
+          for name in "${required[@]}"; do
+            [[ -n "${!name:-}" ]] || {
+              echo "::error::Falta el secret de entorno $name"
+              exit 1
+            }
+          done
+
+          [[ "$PROD_ALLOWED_ORIGINS" != *"*"* ]] || {
+            echo "::error::ALLOWED_ORIGINS no puede contener *"
+            exit 1
+          }
+          [[ "$PROD_SECRET_KEY" != *REPLACE* && "$PROD_SECRET_KEY" != *CHANGE_ME* ]] || {
+            echo "::error::PROD_SECRET_KEY contiene un placeholder"
+            exit 1
+          }
+          [[ "${#PROD_SECRET_KEY}" -ge 32 ]] || {
+            echo "::error::PROD_SECRET_KEY debe tener al menos 32 caracteres"
+            exit 1
+          }
+          [[ "$PROD_APP_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]] || {
+            echo "::error::PROD_APP_DIR debe ser una ruta absoluta simple"
+            exit 1
+          }
+          [[ "$PROD_SSH_KNOWN_HOSTS" != *REPLACE* ]] || {
+            echo "::error::PROD_SSH_KNOWN_HOSTS contiene un placeholder"
+            exit 1
+          }
+
+          case "$PROD_AI_PROVIDER" in
+            openai) [[ -n "$PROD_OPENAI_API_KEY" ]] || { echo "::error::Falta PROD_OPENAI_API_KEY"; exit 1; } ;;
+            anthropic) [[ -n "$PROD_ANTHROPIC_API_KEY" ]] || { echo "::error::Falta PROD_ANTHROPIC_API_KEY"; exit 1; } ;;
+            *) echo "::error::PROD_AI_PROVIDER no soportado"; exit 1 ;;
+          esac
+
+          case "$PROD_AI_COMPLETION_PROVIDER" in
+            openai) [[ -n "$PROD_OPENAI_API_KEY" ]] || { echo "::error::Falta PROD_OPENAI_API_KEY"; exit 1; } ;;
+            bedrock)
+              [[ -n "$PROD_AWS_ACCESS_KEY_ID" && -n "$PROD_AWS_SECRET_ACCESS_KEY" ]] || {
+                echo "::error::Faltan credenciales AWS para Bedrock"
+                exit 1
+              }
+              ;;
+            *) echo "::error::PROD_AI_COMPLETION_PROVIDER no soportado"; exit 1 ;;
+          esac
+
+          echo "Preflight de secrets: OK (valores no mostrados)"
+
+      - name: Configure pinned SSH trust
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Transfer production environment atomically
+        shell: bash
+        env:
+          PROD_ALGORITHM: HS256
+          PROD_ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+          PROD_DEBUG: "false"
+          PROD_RATE_LIMIT_LOGIN: 5/minute
+          PROD_RATE_LIMIT_REGISTER: 3/minute
+        run: |
+          set -euo pipefail
+
+          env_payload="$(python3 - <<'PY'
+          import base64
+          import os
+
+          mapping = {
+              "DATABASE_URL": "PROD_DATABASE_URL",
+              "POSTGRES_USER": "PROD_POSTGRES_USER",
+              "POSTGRES_PASSWORD": "PROD_POSTGRES_PASSWORD",
+              "POSTGRES_DB": "PROD_POSTGRES_DB",
+              "SECRET_KEY": "PROD_SECRET_KEY",
+              "ALGORITHM": "PROD_ALGORITHM",
+              "ACCESS_TOKEN_EXPIRE_MINUTES": "PROD_ACCESS_TOKEN_EXPIRE_MINUTES",
+              "DEBUG": "PROD_DEBUG",
+              "ALLOWED_ORIGINS": "PROD_ALLOWED_ORIGINS",
+              "GOOGLE_CLIENT_ID": "PROD_GOOGLE_CLIENT_ID",
+              "VITE_GOOGLE_CLIENT_ID": "PROD_VITE_GOOGLE_CLIENT_ID",
+              "IGDB_CLIENT_ID": "PROD_IGDB_CLIENT_ID",
+              "IGDB_CLIENT_SECRET": "PROD_IGDB_CLIENT_SECRET",
+              "AWS_ACCESS_KEY_ID": "PROD_AWS_ACCESS_KEY_ID",
+              "AWS_SECRET_ACCESS_KEY": "PROD_AWS_SECRET_ACCESS_KEY",
+              "AWS_REGION": "PROD_AWS_REGION",
+              "BEDROCK_REGION": "PROD_BEDROCK_REGION",
+              "BEDROCK_MODEL_ID": "PROD_BEDROCK_MODEL_ID",
+              "YOUTUBE_API_KEY": "PROD_YOUTUBE_API_KEY",
+              "AI_PROVIDER": "PROD_AI_PROVIDER",
+              "AI_COMPLETION_PROVIDER": "PROD_AI_COMPLETION_PROVIDER",
+              "OPENAI_API_KEY": "PROD_OPENAI_API_KEY",
+              "OPENAI_BASE_URL": "PROD_OPENAI_BASE_URL",
+              "OPENAI_MODEL": "PROD_OPENAI_MODEL",
+              "ANTHROPIC_API_KEY": "PROD_ANTHROPIC_API_KEY",
+              "ANTHROPIC_MODEL": "PROD_ANTHROPIC_MODEL",
+              "RATE_LIMIT_LOGIN": "PROD_RATE_LIMIT_LOGIN",
+              "RATE_LIMIT_REGISTER": "PROD_RATE_LIMIT_REGISTER",
+          }
+          lines = []
+          for target, source in mapping.items():
+              value = os.environ.get(source, "")
+              if "\n" in value or "\r" in value:
+                  raise SystemExit(f"{source} contiene saltos de línea")
+              lines.append(f"{target}={value}")
+          print(base64.b64encode(("\n".join(lines) + "\n").encode()).decode(), end="")
+          PY
+          )"
+
+          printf '%s' "$env_payload" | ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/id_ed25519" \
+            "$PROD_SSH_USER@$PROD_SSH_HOST" \
+            "cd -- '$PROD_APP_DIR' && base64 -d > .env.production.tmp && chmod 600 .env.production.tmp && mv -f .env.production.tmp .env.production"
+          unset env_payload
+
+      - name: Pull, deploy and run migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/id_ed25519" \
+            "$PROD_SSH_USER@$PROD_SSH_HOST" \
+            "cd -- '$PROD_APP_DIR' && git checkout main && git pull --ff-only origin main && bash scripts/deploy.sh"
+
+      - name: Remove runner SSH material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
