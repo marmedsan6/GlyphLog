@@ -1,216 +1,178 @@
 ---
 name: deploy-to-prod
-description: Use when deploying changes from a feature branch to production. Triggers on: deploy to prod, promote to production, subir a PRO, deploy cambios, hacer deploy, merge and deploy, ship to prod. Covers env config, branch merge, build args, smoke tests, and post-deploy verification. Specific to GlyphLog (Oracle Cloud + Cloudflare + Docker + nginx + qzz.io domain).
+description: Use when deploying GlyphLog changes to production, promoting a branch, merging and deploying, or running a production release. Enforces secret scanning, environment validation, Docker/Nginx hardening, safe Git coordination, smoke tests, and fail-closed post-deploy verification for Oracle Cloud + Cloudflare + Docker + nginx + qzz.io domain.
 ---
 
 # Deploy to Production — GlyphLog
 
-Skill para desplegar cambios en el servidor de producción de GlyphLog. Asume que ya validaste la feature en local (tests, build, lint) y que la rama está commiteada.
+Ejecutar el despliegue como una operación fail-closed. No declarar éxito si
+faltan rotaciones, checks de seguridad, conectividad pública o evidencias de
+salud. Leer también [references/security-checklist.md](references/security-checklist.md).
 
-## When to use
+## Contexto de producción
 
-- El usuario dice "subir a PRO", "deploy", "promote to production", "merge and deploy", "ship to prod"
-- Hay una rama `feature/*` lista para mergear a `main` y desplegar
-- El usuario tiene acceso SSH al servidor de producción o ejecuta el deploy desde local con `scripts/deploy.sh`
+- Dominio: \`https://glyphlog.qzz.io\` detrás de Cloudflare Tunnel y una VM Oracle Cloud.
+- Stack: Docker Compose, FastAPI, PostgreSQL 15, nginx y build estático de Vite.
+- Compose: \`docker-compose.prod.yml\`.
+- Script: \`scripts/deploy.sh\`.
+- Entorno: \`.env.production\` en el servidor, nunca versionado.
+- Certificados: \`./certs\` montado en nginx, nunca versionado.
 
-## Context — GlyphLog production stack
+## Phase 0: regla de seguridad
 
-- **Dominio:** `https://glyphlog.qzz.io` (Cloudflare Tunnel → Oracle Cloud VM)
-- **Servidor:** Oracle Cloud VM (Ubuntu, Docker + Docker Compose)
-- **SSL:** nginx con certificados montados como volumen (`./certs`)
-- **Frontend:** nginx sirve el build de Vite como estáticos
-- **Backend:** FastAPI en contenedor `api`, detrás de nginx con proxy_pass
-- **DB:** PostgreSQL 15 en contenedor, volumen named `postgres_data`
-- **Deploy script:** `scripts/deploy.sh` (hace git pull + build + alembic upgrade + health check)
-- **Env file:** `.env.production` (NO commiteado, en el servidor)
+Antes de desplegar:
 
-## Workflow
+1. No pegar secretos, \`.env.production\`, certificados, cookies ni logs completos en el chat.
+2. No ejecutar \`source .env.production\`; usar \`docker compose --env-file\`.
+3. No considerar secreta ninguna variable \`VITE_*\`: termina en el bundle del navegador.
+4. Bloquear si se detecta una credencial literal en el working tree o en cualquier commit.
+5. Rotar/revocar la credencial comprometida antes de limpiar Git; limpiar historial no revoca claves.
+6. No ejecutar \`git push --force\`, rollback, borrado de volumen o migración inversa sin confirmación explícita del operador.
 
-### Phase 1: Pre-deploy verification
+## Phase 1: preflight local
 
-Antes de tocar nada, verifica que la rama está lista:
+Verificar el estado antes de mergear:
 
-```bash
-# 1. ¿Estamos en la rama correcta?
-git branch --show-current  # debe ser feature/* lista para mergear
+\`\`\`bash
+git branch --show-current
+git status --short
+git fetch origin
+git diff --check
+\`\`\`
 
-# 2. ¿Hay cambios sin commitear?
-git status --short  # debe estar limpio
+Exigir working tree limpio, rama identificada, ausencia de cambios remotos no
+coordinados y una revisión de la rama base. Usar siempre \`bash scripts/gh.sh\`
+para operaciones GitHub; no ejecutar \`gh\` directamente.
 
-# 3. ¿Los tests pasan?
-cd apps/api && uv run --with pytest --with pytest-asyncio --with httpx \
-  --with "sqlalchemy[asyncio]" --with asyncpg --with bcrypt \
-  --with "pydantic-settings" --with "fastapi[standard]" --with "google-auth" \
-  --with "pydantic[email]" --with slowapi --with pyjwt --with python-multipart \
-  --with email-validator --with alembic --with faker --with requests pytest -q
-cd apps/web && pnpm test
-cd apps/web && pnpm build
+Ejecutar lint, typecheck, tests y build según las dependencias reales del
+monorepo. Si los tests de API requieren PostgreSQL, levantar una base de test
+aislada o detenerse y reportar la dependencia faltante. No sustituir la base
+de test por la base productiva.
 
-# 4. ¿El lint está limpio?
-cd apps/api && uv run --with ruff ruff check app/
-cd apps/web && pnpm lint
-cd apps/web && pnpm exec tsc --noEmit
+## Phase 2: preflight de secretos
 
-# 5. ¿El Dockerfile compila?
-docker build -t glyphlog-api-test ./apps/api  # solo si no se ha hecho antes
-```
+Ejecutar el checklist completo de [security-checklist.md](references/security-checklist.md).
 
-Si algo falla, **NO** procedas. Reporta al usuario qué falló y espera instrucción.
+- Usar \`gitleaks\`/scanner equivalente si está instalado y \`--redact\`.
+- Si no existe scanner especializado, usar \`git grep\` y recorrer \`git rev-list --all\`.
+- Bloquear ante cualquier patrón de API key, token, clave privada, password real o \`SECRET_KEY\` no placeholder en archivos de ejemplo.
+- Redactar la salida antes de mostrarla; imprimir solo ruta, línea y \`<redacted-match>\`.
+- Auditar especialmente \`.mcp.json\`, \`opencode.json\`, \`.env*\`, \`*.pem\`, \`*.key\`, \`certs/\` y logs.
 
-### Phase 2: Env vars y secrets
+Si se encuentra un secreto publicado:
 
-Pregunta al usuario qué secrets/variables nuevas necesita este deploy. Las vars comunes:
+1. Detener el deploy.
+2. Identificar el proveedor y solicitar/ejecutar su revocación con autorización.
+3. Crear un backup/bundle local antes de reescribir historia.
+4. Reemplazar el secreto por una referencia de entorno o placeholder.
+5. Reescribir historia con \`git filter-repo\` y coordinar el force-push.
+6. Comunicar que los clones existentes deben reclonarse o rebasearse.
 
-| Var | Backend (Docker) | Frontend (build arg) |
-|-----|------------------|----------------------|
-| `GOOGLE_CLIENT_ID` | ✅ (.env.production) | ✅ (build arg) |
-| `VITE_API_URL` | — | ✅ (build arg) |
-| `VITE_API_BASE_URL` | — | ✅ (build arg) |
-| `ALLOWED_ORIGINS` | ✅ (.env.production) | — |
-| `SECRET_KEY` | ✅ (.env.production) | — |
-| `DATABASE_URL` | ✅ (.env.production) | — |
-| `DEBUG` | ✅ (.env.production) | — |
+## Phase 3: entorno y configuración
 
-**Regla:** NUNCA hardcodear secrets en el código. El `VITE_GOOGLE_CLIENT_ID` se pasa como build arg en `docker-compose.prod.yml`, NO en el Dockerfile.
+En el servidor, validar sin imprimir valores:
 
-**Si la feature requiere nuevas vars en build args** (ej: `VITE_*`):
-- Actualizar `docker-compose.prod.yml` sección `nginx.build.args`
-- Documentar en `.env.example`
-- Mencionarlo al usuario en este paso
+\`\`\`bash
+test -f .env.production
+test "$(stat -c '%a' .env.production)" = 600
+git ls-files --error-unmatch .env.production >/dev/null 2>&1 && exit 1 || true
+grep -Eq '^DEBUG=false[[:space:]]*$' .env.production
+grep -Eq '^ALLOWED_ORIGINS=.+$' .env.production
+grep -Eq '^ALLOWED_ORIGINS=.*\*' .env.production && exit 1 || true
+\`\`\`
 
-### Phase 3: Push y merge
+Comprobar que \`SECRET_KEY\` tiene al menos 32 caracteres y que ningún secreto
+contiene \`REPLACE\`, \`CHANGE_ME\`, \`EXAMPLE\`, \`DUMMY\`, \`your-\` o valores de desarrollo. No mostrar el valor ni su longitud junto con otros datos identificables.
 
-```bash
-# 1. Push de la rama feature
+Usar exclusivamente:
+
+\`\`\`bash
+docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+\`\`\`
+
+Confirmar que PostgreSQL recibe solo sus tres variables de base de datos, que
+nginx no recibe secretos como build args y que el API no publica un puerto
+directamente a Internet. Rechazar \`--forwarded-allow-ips='*'\`; usar el subnet o
+IP fija del proxy confiable.
+
+## Phase 4: merge seguro
+
+Para una rama feature:
+
+\`\`\`bash
 git push -u origin feature/<nombre>
-
-# 2. Verificar que está en GitHub
-gh pr list --head feature/<nombre>  # o git ls-remote origin feature/<nombre>
-
-# 3. ¿El usuario quiere abrir PR o mergear directo?
-#   - Si hay equipo: abrir PR, esperar review
-#   - Si es proyecto personal: mergear directo con --no-ff
-
-# 4. Merge a main
 git checkout main
-git pull origin main
+git pull --ff-only origin main
 git merge --no-ff feature/<nombre> -m "Merge: <descripción corta>"
 git push origin main
-```
+\`\`\`
 
-### Phase 4: Configurar .env.production en el servidor
+Pedir confirmación antes de mergear directamente a \`main\` cuando el usuario
+no lo haya solicitado expresamente. Si el historial debe limpiarse, usar un
+backup y \`git push --force-with-lease\` solo después de confirmar el nuevo SHA y
+la coordinación con los colaboradores.
 
-**El usuario debe hacer esto manualmente** (SSH o panel), porque requiere acceso al servidor:
+## Phase 5: deploy
 
-```bash
-# SSH al servidor
-ssh usuario@<ip-servidor>
+Usar el script versionado desde el servidor:
 
-# Navegar al directorio del proyecto
-cd ~/GlyphLog  # o donde esté
+\`\`\`bash
+ssh usuario@servidor "cd ~/GlyphLog && bash scripts/deploy.sh"
+\`\`\`
 
-# Editar .env.production con las nuevas vars
-nano .env.production  # o vim
+El script debe:
 
-# Verificar que las vars están (sin imprimir valores sensibles)
-grep -E "^(GOOGLE_CLIENT_ID|ALLOWED_ORIGINS|SECRET_KEY|DEBUG)=" .env.production | cut -d= -f1
-```
+1. Validar permisos, placeholders, \`DEBUG\`, CORS y que \`.env.production\` no está trackeado.
+2. Ejecutar \`git pull --ff-only origin main\`.
+3. Ejecutar \`docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet\`.
+4. Construir imágenes sin imprimir argumentos ni variables.
+5. Ejecutar migraciones forward (\`alembic upgrade head\`) sin rollback automático.
+6. Verificar nginx, API y health checks.
 
-**NUNCA** pegar el contenido de `.env.production` en el chat. **NUNCA** commitearlo.
+Si cambian variables públicas \`VITE_*\`, reconstruir la imagen web. Nunca pasar
+claves privadas como \`VITE_*\` ni build args.
 
-### Phase 5: Deploy
+## Phase 6: hardening y verificación pública
 
-```bash
-# Si el usuario ejecuta el deploy desde su local (y tiene acceso SSH al servidor):
-ssh usuario@<ip-servidor> "cd ~/GlyphLog && bash scripts/deploy.sh"
+Verificar desde el dominio público y desde el servidor:
 
-# Si el usuario tiene el repo clonado en el servidor y ejecuta desde ahí:
-ssh usuario@<ip-servidor>
-cd ~/GlyphLog
-bash scripts/deploy.sh
-```
+\`\`\`bash
+curl -sS -I http://glyphlog.qzz.io/
+curl -sS -I https://glyphlog.qzz.io/health
+curl -sS -I https://glyphlog.qzz.io/
+curl -sS -I https://glyphlog.qzz.io/api/v1/entries
+curl -sS -I https://glyphlog.qzz.io/docs
+curl -sS -I https://glyphlog.qzz.io/redoc
+curl -sS -I https://glyphlog.qzz.io/openapi.json
+\`\`\`
 
-El script `scripts/deploy.sh`:
-1. `git pull origin main` (trae los últimos commits)
-2. `docker compose -f docker-compose.prod.yml up -d --build` (rebuild de imágenes)
-3. `docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head` (migraciones)
-4. Health check: `curl http://localhost:80/health` y `curl http://localhost:80/api/v1/entries`
+Aceptar solo:
 
-**Si las vars de build (`VITE_*`) cambiaron**, el rebuild es necesario (Vite las compila en el bundle en build-time, no en runtime).
+- HTTP redirige a HTTPS.
+- \`/health\` devuelve \`200\`.
+- \`/\` devuelve la SPA con \`200\`.
+- \`/api/v1/entries\` sin autenticación devuelve \`401\`.
+- \`/docs\`, \`/redoc\` y \`/openapi.json\` no están expuestos en producción.
+- HTTPS incluye HSTS, CSP, \`X-Content-Type-Options\`, \`X-Frame-Options\`, \`Referrer-Policy\` y \`Permissions-Policy\`.
 
-### Phase 6: Post-deploy verification
+Ejecutar \`nginx -t\` y revisar los últimos logs de API/nginx buscando errores
+5xx, tracebacks, tokens, DSN, cabeceras sensibles o valores de entorno. Si el
+dominio no responde, las cabeceras faltan o los logs no son limpios, marcar el
+deploy como fallido.
 
-```bash
-# 1. Health check público
-curl -I https://glyphlog.qzz.io/health  # debe ser 200
-curl -I https://glyphlog.qzz.io/        # debe ser 200 (SPA)
+## Phase 7: rollback y cierre
 
-# 2. API viva
-curl -I https://glyphlog.qzz.io/api/v1/entries  # debe ser 401 (sin auth)
+Ante un fallo, conservar evidencias redactadas y detenerse. No borrar volúmenes
+ni hacer rollback automático. Preguntar antes de elegir entre:
 
-# 3. Verificar que Google OAuth está disponible
-curl -I https://glyphlog.qzz.io/api/v1/auth/google  # OPTIONS debe funcionar (CORS)
+- volver al commit anterior y reconstruir imágenes;
+- corregir configuración y repetir el deploy;
+- revertir una migración con un procedimiento específico.
 
-# 4. Probar login con Google manualmente
-# El usuario abre https://glyphlog.qzz.io/login
-# Click en "Continuar con Google" → debe aparecer el popup
+Después de un deploy exitoso:
 
-# 5. Logs por si hay errores
-ssh usuario@servidor "cd ~/GlyphLog && docker compose -f docker-compose.prod.yml logs --tail=100 api"
-ssh usuario@servidor "cd ~/GlyphLog && docker compose -f docker-compose.prod.yml logs --tail=100 nginx"
-```
-
-### Phase 7: Limpieza y cierre
-
-```bash
-# Cerrar issues de GitHub (en el repo)
-gh issue close <numero> --comment "Cerrado por merge en <commit-sha>"
-
-# Borrar rama local
-git branch -d feature/<nombre>
-git push origin --delete feature/<nombre>
-
-# Actualizar memory bank
-# (esto lo hace el agente, no el usuario)
-```
-
-## Failure modes y recovery
-
-| Error | Causa probable | Fix |
-|-------|----------------|-----|
-| Build falla: `Cannot find module 'X'` | Falta `pnpm install` antes de `pnpm build` | `pnpm install` en `apps/web/` |
-| Build falla: `pip: command not found` | Dockerfile del API no tiene pip | Verificar `apps/api/Dockerfile` |
-| CORS error en navegador: `Access-Control-Allow-Origin` | `ALLOWED_ORIGINS` no incluye el dominio | Editar `.env.production` y rebuildear API |
-| 503 en `/auth/google` | `GOOGLE_CLIENT_ID` vacío o incorrecto | Verificar var en `.env.production` y reiniciar API |
-| "Popup blocked" en navegador | El sitio no es HTTPS | El dominio `qzz.io` es HTTPS, no debería pasar |
-| Login con Google falla con 401 | `aud` del id_token no coincide | Verificar que `GOOGLE_CLIENT_ID` es el MISMO en backend y Google Cloud |
-| Login con Google falla con 403 (blocked) | Origen no autorizado en Google Cloud | Añadir `https://glyphlog.qzz.io` a Authorized JavaScript origins |
-| "Google hasn't been fully configured" | OAuth consent screen en "Testing" sin test users | Añadir el email del usuario como test user, o publicar la app |
-
-## Important constraints
-
-- **NUNCA** pegar secrets en chat
-- **NUNCA** commitear `.env.production` ni `.env*` (debe estar en `.gitignore`)
-- **SIEMPRE** verificar tests y build antes de mergear
-- **SIEMPRE** hacer health check post-deploy
-- **SIEMPRE** pedir al usuario que confirme antes de mergear a main
-- **SIEMPRE** documentar en `memory-bank/sessions/` después de un deploy exitoso
-- Si el deploy falla, **NO** hacer rollback sin preguntar — preguntar primero qué quiere hacer
-
-## Outputs esperados
-
-Después de un deploy exitoso, el agente debe:
-1. Reportar al usuario el SHA del commit desplegado
-2. Confirmar health checks (200 en / y /health, 401 en /api/v1/entries)
-3. Listar issues cerrados
-4. Mencionar si hubo alguna desviación del plan
-5. Preguntar si quiere abrir la skill `qa-senior` para validar el deploy con Playwright
-
-## References
-
-- `scripts/deploy.sh` — script de deploy
-- `docker-compose.prod.yml` — config de producción
-- `apps/web/Dockerfile` — multi-stage build
-- `apps/web/nginx.conf` — SSL + SPA + proxy
-- `docs/tasks/google-oauth-cloud-setup.md` — guía específica para Google OAuth
-- `docs/tasks/hu-001/002/003` — tareas originales de setup de producción
+1. Reportar SHA desplegado y resultado de cada smoke test.
+2. Indicar cualquier check omitido o degradado.
+3. Cerrar issues únicamente con \`bash scripts/gh.sh\` y autorización del usuario.
+4. Documentar el resultado en \`memory-bank/sessions/\` solo si el usuario solicita mantener ese registro.
+5. No eliminar ramas ni secretos antiguos sin confirmar que la rotación fue efectiva.

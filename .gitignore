@@ -73,6 +73,12 @@ dmypy.json
 !.env.example
 !.env.*.example
 
+# Configuraciones locales de agentes/MCP con credenciales
+.mcp.local.json
+opencode.local.json
+.mcp.json.local
+opencode.json.local
+
 # ─── Docker ────────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 

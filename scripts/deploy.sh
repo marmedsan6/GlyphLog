@@ -12,25 +12,55 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-# ── Cargar variables de entorno de producción ─────────────────────────────────
-# docker-compose.prod.yml usa build args como ${VITE_GOOGLE_CLIENT_ID:-} para
-# compilar valores en el bundle del frontend en build-time (Vite). Estas vars
-# deben estar en el environment del shell cuando se ejecuta `docker compose`,
-# no solo en el env_file del contenedor (que solo aplica en runtime).
+# ── Preflight de seguridad y configuración ────────────────────────────────────
+# No hacer `source` del fichero: además de exponer todos los secretos a los
+# procesos hijos, eso evalúa contenido controlado por el fichero como shell.
 if [ -f .env.production ]; then
-    echo "🔧 Cargando variables de entorno de producción..."
-    set -a
-    # shellcheck source=/dev/null
-    source .env.production
-    set +a
+    echo "🔐 Validando configuración de producción..."
+    if git ls-files --error-unmatch .env.production >/dev/null 2>&1; then
+        echo "❌ .env.production está versionado"
+        exit 1
+    fi
+
+    ENV_MODE=$(stat -c '%a' .env.production)
+    if [ "$ENV_MODE" != "600" ]; then
+        echo "❌ .env.production debe tener permisos 600 (actual: $ENV_MODE)"
+        exit 1
+    fi
+
+    if ! grep -Eq '^DEBUG=false[[:space:]]*$' .env.production; then
+        echo "❌ DEBUG debe ser false en producción"
+        exit 1
+    fi
+
+    if ! grep -Eq '^ALLOWED_ORIGINS=.+$' .env.production || grep -Eq '^ALLOWED_ORIGINS=.*\*' .env.production; then
+        echo "❌ ALLOWED_ORIGINS debe existir y no puede contener *"
+        exit 1
+    fi
+
+    SECRET_KEY_LENGTH=$(awk -F= '$1 == "SECRET_KEY" { print length($2) }' .env.production)
+    if [ "${SECRET_KEY_LENGTH:-0}" -lt 32 ] || grep -Eqi '^SECRET_KEY=.*(replace|change|example|dummy|your-|super-secret)' .env.production; then
+        echo "❌ SECRET_KEY ausente, débil o de ejemplo"
+        exit 1
+    fi
+
+    if grep -Eqi '^(POSTGRES_PASSWORD|DATABASE_URL)=.*(replace|change|example|dummy|password)' .env.production; then
+        echo "❌ Credenciales de base de datos de ejemplo detectadas"
+        exit 1
+    fi
 else
     echo "❌ No se encontró .env.production"
     echo "Copia .env.production.example a .env.production y rellena los valores."
     exit 1
 fi
 
+COMPOSE=(docker compose --env-file .env.production -f docker-compose.prod.yml)
+
 echo "🔄 Actualizando código..."
-git pull origin main
+git pull --ff-only origin main
+
+echo "🧪 Validando configuración Docker..."
+"${COMPOSE[@]}" config --quiet
 
 echo "📦 Actualizando extensión Chrome..."
 # Requiere Node.js y pnpm instalados en el servidor. Si no están disponibles,
@@ -54,10 +84,10 @@ else
 fi
 
 echo "🐳 Reconstruyendo y levantando contenedores de producción..."
-docker compose -f docker-compose.prod.yml up -d --build
+"${COMPOSE[@]}" up -d --build
 
 echo "🗄️ Ejecutando migraciones..."
-docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
+"${COMPOSE[@]}" exec -T api alembic upgrade head
 
 echo "✅ Despliegue completado. Verificando salud..."
 sleep 3
