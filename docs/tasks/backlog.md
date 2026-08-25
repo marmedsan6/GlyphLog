@@ -21,6 +21,7 @@
 | —                                                                     | Flujo SDD (specs, template, backlog)                    | SETUP | en-progreso | —    | ADR-015; este plan                                   |
 | [FEAT-glyphai-recommendations](./FEAT-glyphai-recommendations.md)     | Recomendaciones en el chat de GlyphAI                   | FEAT  | backlog     | [SPEC-glyphai-recommendations](../specs/SPEC-glyphai-recommendations.md) | Botón "+", 5 recs por lista+géneros, persistir en conversación |
 | [FEAT-glyphai-youtube-discovery](./FEAT-glyphai-youtube-discovery.md) | Descubrimiento de YouTube en el chat de GlyphAI         | FEAT  | backlog     | [SPEC-glyphai-youtube-discovery](../specs/SPEC-glyphai-youtube-discovery.md) | Herramienta del "+": pegar URLs, tarjetas, persistir en conversación |
+| [FEAT-glyphai-markdown](./FEAT-glyphai-markdown.md)                 | Respuestas Markdown seguro en el chat de GlyphAI        | FEAT  | completada  | —    | Issue #65; CommonMark/GFM, URLs seguras, sin HTML crudo |
 
 ## Especificaciones
 

@@ -24,6 +24,8 @@
 | [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock         | Aceptada | agosto 2026 |
 | [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado                         | Aceptada | agosto 2026 |
 | [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod)         | Aceptada | agosto 2026 |
+| [ADR-015](#adr-015) | Flujo de trabajo SDD con fase de especificación formal                   | Aceptada | agosto 2026 |
+| [ADR-016](#adr-016) | Render seguro de Markdown en respuestas de GlyphAI                       | Aceptada | agosto 2026 |
 
 ---
 
@@ -854,3 +856,69 @@ Adoptar SDD (Specification-Driven Development) con tres niveles de especificaci�
 **Opción 2: script de validación de specs**
 
 - **Veredicto**: Rechazado — añade un script a mantener; la checklist de "Criterios de salida" en `TEMPLATE-SPEC.md` cubre la auto-revisión sin herramientas extra (decisión del usuario).
+
+---
+
+## ADR-016
+
+### Render seguro de Markdown en respuestas de GlyphAI
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+`ChatMessage` mostraba las respuestas del asistente como texto plano. GlyphAI
+necesita presentar CommonMark y GFM útil sin convertir contenido generado por el
+modelo en HTML ejecutable ni romper mensajes de usuario, streaming o tarjetas
+estructuradas.
+
+#### Decisión
+
+Usar `react-markdown@10.1.0` junto con `remark-gfm@4.0.1`, configurado con:
+
+- `skipHtml` y sin `rehypeRaw`.
+- `defaultUrlTransform` para filtrar protocolos peligrosos.
+- Componentes React propios para estilos, enlaces externos, imágenes y tablas.
+- Enlaces absolutos/protocol-relative con `target="_blank"` y
+  `rel="noopener noreferrer"`.
+- Imágenes permitidas solo cuando pasan el transformador seguro, con carga
+  diferida y `referrerPolicy="no-referrer"`.
+
+#### Razones
+
+- `react-markdown` renderiza a elementos React y es seguro por defecto, sin
+  `dangerouslySetInnerHTML`.
+- `remark-gfm` añade tablas, autolinks, strikethrough y task lists sin habilitar
+  HTML crudo.
+- Frente a `markdown-to-jsx`, requiere menos configuración defensiva para esta
+  política de seguridad y encaja directamente con el pipeline CommonMark/GFM de
+  `react-markdown`.
+
+#### Consecuencias
+
+- El chunk principal aumenta de 495,957 a 656,184 bytes: **+160,227 bytes**.
+- Con zlib nivel 9, gzip aumenta de 159,763 a 208,368 bytes:
+  **+48,605 bytes**.
+- Con Brotli calidad 11, aumenta de 136,346 a 177,704 bytes:
+  **+41,358 bytes**.
+- La feature no incluye syntax highlighting, copiar código ni cambios de API.
+- Las imágenes remotas siguen teniendo un coste residual de privacidad/red; la
+  política `no-referrer` limita la información del encabezado, pero no evita la
+  petición al host externo.
+
+#### Alternativas consideradas
+
+**`markdown-to-jsx`**
+
+- Soporta CommonMark/GFM y ofrece opciones de streaming.
+- Rechazado para esta feature por su configuración de HTML más amplia y porque
+  `react-markdown` ofrece una postura segura por defecto más directa.
+
+**HTML generado + `dangerouslySetInnerHTML`**
+
+- Rechazado por ampliar innecesariamente la superficie XSS.
+
+**`rehypeRaw` o syntax highlighting**
+
+- Rechazados por no ser requisitos y aumentar superficie/tamaño del bundle.
