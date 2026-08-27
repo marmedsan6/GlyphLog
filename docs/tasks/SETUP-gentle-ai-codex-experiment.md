@@ -1,6 +1,6 @@
 # [SETUP] Integración experimental de Codex con Gentle AI
 
-> **Estado:** en-progreso
+> **Estado:** completada
 > **Prioridad:** media
 > **Dependencias:** ninguna
 
@@ -47,7 +47,7 @@ N/A. Se valida mediante checks de configuración, carga de skills, versión/chec
 - [x] Añadir un runner reproducible fijado a v2.5.0-rc.1.
 - [x] Adaptar el review nativo de Gentle a las políticas de GlyphLog.
 - [x] Ejecutar TC-01..TC-05 y documentar evidencia.
-- [ ] Publicar la rama experimental.
+- [x] Publicar la rama experimental.
 
 ## Criterios de aceptación
 

@@ -24,7 +24,7 @@
 | [FEAT-glyphai-markdown](./FEAT-glyphai-markdown.md)                             | Respuestas Markdown seguro en el chat de GlyphAI        | FEAT  | completada | —                                                                            | Issue #65; CommonMark/GFM, URLs seguras, sin HTML crudo                       |
 | [DOCS-companion-compatibility](./DOCS-companion-compatibility.md)               | Compatibilidad verificable de GlyphLog Companion (#66)  | DOCS  | completada | [SPEC-companion-compatibility](../specs/SPEC-companion-compatibility.md)     | Benchmark MAL-Sync, matriz y contratos QA                                     |
 | [FEAT-companion-install](./FEAT-companion-install.md)                           | Instalación guiada y distribución de Companion (#67)    | FEAT  | en-progreso | [SPEC-companion-install](../specs/SPEC-companion-install.md)                 | CWS unlisted preparado; zip fallback; guía in-app                             |
-| [SETUP-gentle-ai-codex-experiment](./SETUP-gentle-ai-codex-experiment.md)       | Integración experimental de Codex con Gentle AI         | SETUP | en-progreso | —                                                                            | RC fijada; integración selectiva y reversible                                 |
+| [SETUP-gentle-ai-codex-experiment](./SETUP-gentle-ai-codex-experiment.md)       | Integración experimental de Codex con Gentle AI         | SETUP | completada | —                                                                            | RC fijada; integración selectiva y reversible                                 |
 
 ## Especificaciones
 
