@@ -1,9 +1,10 @@
 # [SPEC] Descubrimiento de YouTube en el chat de GlyphAI
 
-> **Estado:** aprobada
+> **Estado:** implementada
 > **Prioridad:** media
 > **Dependencias:** [SPEC-glyphai-recommendations](../specs/SPEC-glyphai-recommendations.md) (patrón de integración en el chat)
-> **Plan/Task derivado:** `docs/tasks/FEAT-glyphai-youtube-discovery.md`
+> **Task derivado:** `docs/tasks/FEAT-glyphai-youtube-discovery.md`
+> **Test design:** N/A — implementación anterior a ADR-017; no se migra retroactivamente
 
 ## Contexto
 

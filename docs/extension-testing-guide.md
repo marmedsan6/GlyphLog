@@ -1,5 +1,11 @@
 # GlyphLog Companion Extension — Testing Guide
 
+Esta guía cubre los adaptadores actuales de Crunchyroll, AnimeFLV y MangaDex.
+Chrome es el baseline automatizado; Brave se usa para smoke tests y Edge será
+el siguiente target. La matriz completa, los niveles de evidencia y los
+contratos que consumirá la issue #68 están en
+[docs/companion-compatibility.md](companion-compatibility.md).
+
 ## Problema Resuelto
 
 **Síntoma:** La extensión no detectaba capítulos en Crunchyroll/MangaDex.  
@@ -18,6 +24,7 @@
 ```
 
 Este script:
+
 - Mata Brave si ya está corriendo
 - Inicia Brave con la extensión pre-cargada (flag `--load-extension`)
 - Muestra instrucciones
@@ -89,13 +96,14 @@ EOF
 
 ---
 
-## Probar en Crunchyroll / MangaDex
+## Probar en Crunchyroll / AnimeFLV / MangaDex
 
 ### Crunchyroll (Anime)
 
 1. Navega a: https://www.crunchyroll.com/es-es/series/GRMG8ZQZR/one-piece
 2. Abre cualquier episodio
-3. **Espera 2-3 segundos** (SPA detection)
+3. Tras una navegación SPA, espera el retardo de 100 ms y deja que finalice el
+   detector (hasta 10 intentos separados por 500 ms)
 4. Busca el overlay en la **esquina inferior derecha**
 5. Debería mostrar: **"¿Marcar Ep. N?"**
 
@@ -104,9 +112,17 @@ EOF
 1. Ve a: https://mangadex.org
 2. Busca un manga (ej. "Kimetsu no Yaiba")
 3. Abre un capítulo
-4. **Espera 2-3 segundos**
+4. Tras una navegación SPA, espera el retardo de 100 ms y deja que finalice el
+   detector (hasta 10 intentos separados por 500 ms)
 5. Busca el overlay en la **esquina inferior derecha**
 6. Debería mostrar: **"¿Marcar Cap. N?"**
+
+### AnimeFLV (Anime)
+
+1. Navega a un episodio bajo `https://animeflv.net/*` o un subdominio.
+2. Espera el mismo ciclo de SPA (100 ms + hasta 10 intentos cada 500 ms).
+3. Confirma que el título y el número de episodio no son genéricos.
+4. Registra si la página requiere login o presenta una variante regional.
 
 ---
 
@@ -127,7 +143,7 @@ EOF
 4. Se abre DevTools del popup
 5. En consola:
    ```javascript
-   chrome.storage.local.get(null, r => console.log(r))
+   chrome.storage.local.get(null, (r) => console.log(r));
    ```
    Debería mostrar: `{ device_token: "dt_...", api_base_url: "http://localhost:8000" }`
 
@@ -142,20 +158,20 @@ EOF
 
 ## Problemas Comunes
 
-| Problema | Solución |
-|----------|----------|
-| ❌ "Extension not found" | Ejecuta: `cd apps/extension && pnpm build` |
-| ❌ Overlay no aparece | Abre DevTools (F12), filter "glyphlog", busca errores |
-| ❌ Popup muestra "pairing" | Token no está guardado. Empareja de nuevo desde `/profile`; usa el Flujo 2 solo con un token temporal local. |
-| ❌ Crunchyroll muestra "404" | URL incorrecta. Prueba con: `/es-es/series/GRMG8ZQZR/one-piece` |
-| ❌ "Cannot connect to API" | Verifica que backend corre: `docker compose ps` |
+| Problema                     | Solución                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| ❌ "Extension not found"     | Ejecuta: `cd apps/extension && pnpm build`                                                                   |
+| ❌ Overlay no aparece        | Abre DevTools (F12), filter "glyphlog", busca errores                                                        |
+| ❌ Popup muestra "pairing"   | Token no está guardado. Empareja de nuevo desde `/profile`; usa el Flujo 2 solo con un token temporal local. |
+| ❌ Crunchyroll muestra "404" | URL incorrecta. Prueba con: `/es-es/series/GRMG8ZQZR/one-piece`                                              |
+| ❌ "Cannot connect to API"   | Verifica que backend corre: `docker compose ps`                                                              |
 
 ---
 
 ## Arquitectura Técnica
 
 ```
-Content Script (crunchyroll.ts)
+Content Script (adaptadores Crunchyroll/AnimeFLV/MangaDex)
   ↓ detecta media (anime/manga)
 Background Service Worker (background.ts)
   ↓ API proxy (evita CORS)
@@ -173,7 +189,14 @@ BD (PostgreSQL)
 - **Storage:** Chrome.storage.local es aislado por extensión (seguro, persiste entre recargas)
 - **Content Scripts:** Solo acceden a `chrome.runtime.sendMessage` → background
 - **Background:** Puede hacer fetch directo + acceso a `chrome.storage.local`
-- **SPA Detection:** Reintenta detectación cada 100ms durante 3 segundos (MangaDex toma tiempo renderizar)
+- **SPA Detection:** `detectMediaWithRetry` realiza hasta 10 intentos separados
+  por 500 ms; `pushState`/`popstate` esperan 100 ms antes de iniciar el ciclo.
+  El timeout total y el resultado `null` deben ser observables en pruebas, sin
+  bloquear la página.
+- **Niveles de evidencia:** una fixture valida parsing aislado; un E2E local
+  usa extensión empaquetada, perfil aislado, API y PostgreSQL; la validación
+  manual cubre región, login, store y DRM. No se deben mezclar como si fueran
+  la misma garantía.
 
 ---
 
@@ -183,4 +206,3 @@ BD (PostgreSQL)
 - [ ] Agregar más adaptadores (Tachiyomi, Netflix, etc.)
 - [ ] UI de popup más amigable para emparejamiento
 - [ ] Tests E2E automatizados con Playwright
-

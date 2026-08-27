@@ -3,6 +3,9 @@
  * Vanilla TypeScript con tipos en todos los elementos DOM y funciones API.
  */
 
+import { DEFAULT_API_BASE_URL, GUIDE_URL } from '~/config';
+import { POPUP_COPY, popupErrorMessage } from '~/popup-status';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +43,7 @@ interface PaginatedEntriesResponse {
 const state: PopupState = {
   token: null,
   deviceName: null,
-  apiBaseUrl: 'http://localhost:8000',
+  apiBaseUrl: DEFAULT_API_BASE_URL,
   currentEntry: null,
   searchTimeout: null,
 };
@@ -85,6 +88,11 @@ const btnSaveSettings = document.getElementById('btn-save-settings') as HTMLButt
 const btnUnpair = document.getElementById('btn-unpair') as HTMLButtonElement;
 const toastEl = document.getElementById('toast') as HTMLDivElement;
 const toastMessageEl = document.getElementById('toast-message') as HTMLSpanElement;
+const apiUnavailableEl = document.getElementById('api-unavailable') as HTMLDivElement;
+const btnRetryApi = document.getElementById('btn-retry-api') as HTMLButtonElement;
+const btnOpenSettingsFromError = document.getElementById('btn-open-settings-from-error') as HTMLButtonElement;
+const extensionVersionEl = document.getElementById('extension-version') as HTMLSpanElement;
+const guideLink = document.getElementById('guide-link') as HTMLAnchorElement;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage Helpers
@@ -95,7 +103,7 @@ async function loadStorage(): Promise<void> {
     chrome.storage.local.get(['device_token', 'device_name', 'api_base_url'], (res) => {
       state.token = res.device_token || null;
       state.deviceName = res.device_name || null;
-      state.apiBaseUrl = res.api_base_url || 'http://localhost:8000';
+      state.apiBaseUrl = res.api_base_url || DEFAULT_API_BASE_URL;
       resolve();
     });
   });
@@ -154,11 +162,13 @@ async function apiFetch(
   const res = await fetch(url, { ...options, headers });
 
   if (res.status === 401) {
-    // Token revocado o inválido
     await clearStorage();
     state.token = null;
+    hideApiUnavailable();
     showScreen('pairing');
-    throw new Error('Sesión expirada o token revocado. Vuelve a emparejar.');
+    pairingError.textContent = POPUP_COPY.unauthorized;
+    pairingError.style.display = 'block';
+    throw new Error(POPUP_COPY.unauthorized);
   }
 
   const data = await res.json().catch(() => ({}));
@@ -183,7 +193,7 @@ btnPair.addEventListener('click', async () => {
   btnPair.disabled = true;
   btnPair.textContent = 'Emparejando...';
 
-  state.apiBaseUrl = apiUrlInput.value.trim() || 'http://localhost:8000';
+  state.apiBaseUrl = apiUrlInput.value.trim() || DEFAULT_API_BASE_URL;
 
   try {
     const res = await apiFetch('/devices/activate', {
@@ -207,7 +217,7 @@ btnPair.addEventListener('click', async () => {
     showScreen('main');
     fetchEntries();
   } catch (err) {
-    pairingError.textContent = (err as Error).message;
+    pairingError.textContent = popupErrorMessage(err);
     pairingError.style.display = 'block';
   } finally {
     btnPair.disabled = false;
@@ -230,6 +240,7 @@ searchInput.addEventListener('input', () => {
 
 async function fetchEntries(query: string = ''): Promise<void> {
   entriesList.innerHTML = '<p class="empty-state">Cargando...</p>';
+  hideApiUnavailable();
 
   try {
     const endpoint = query
@@ -246,8 +257,22 @@ async function fetchEntries(query: string = ''): Promise<void> {
 
     renderEntries(data.entries);
   } catch (err) {
-    entriesList.innerHTML = `<p class="error-text">${(err as Error).message}</p>`;
+    const message = popupErrorMessage(err);
+    if (message === POPUP_COPY.apiUnavailable) {
+      showApiUnavailable();
+      entriesList.innerHTML = '';
+      return;
+    }
+    entriesList.innerHTML = `<p class="error-text">${message}</p>`;
   }
+}
+
+function showApiUnavailable(): void {
+  apiUnavailableEl.style.display = 'block';
+}
+
+function hideApiUnavailable(): void {
+  apiUnavailableEl.style.display = 'none';
 }
 
 function renderEntries(entries: EntryData[]): void {
@@ -382,7 +407,7 @@ btnUpdate.addEventListener('click', async () => {
     showToast('Progreso actualizado');
     openDetail(updatedEntry);
   } catch (err) {
-    detailError.textContent = (err as Error).message;
+    detailError.textContent = popupErrorMessage(err);
     detailError.style.display = 'block';
   } finally {
     btnUpdate.disabled = false;
@@ -410,7 +435,7 @@ btnBackSettings.addEventListener('click', () => {
 });
 
 btnSaveSettings.addEventListener('click', async () => {
-  state.apiBaseUrl = settingsApiUrlInput.value.trim() || 'http://localhost:8000';
+  state.apiBaseUrl = settingsApiUrlInput.value.trim() || DEFAULT_API_BASE_URL;
   await saveStorage({ api_base_url: state.apiBaseUrl });
   showToast('Configuración guardada');
   showScreen('main');
@@ -429,9 +454,24 @@ btnUnpair.addEventListener('click', async () => {
 // Initialization
 // ─────────────────────────────────────────────────────────────────────────────
 
+btnRetryApi.addEventListener('click', () => {
+  if (state.token) {
+    fetchEntries(searchInput.value.trim());
+  }
+});
+
+btnOpenSettingsFromError.addEventListener('click', () => {
+  deviceNameEl.textContent = state.deviceName || 'Extensión Chrome';
+  settingsApiUrlInput.value = state.apiBaseUrl;
+  showScreen('settings');
+});
+
 async function init(): Promise<void> {
   await loadStorage();
   apiUrlInput.value = state.apiBaseUrl;
+  const manifest = chrome.runtime.getManifest();
+  extensionVersionEl.textContent = `GlyphLog Companion v${manifest.version}`;
+  guideLink.href = GUIDE_URL;
 
   if (state.token) {
     showScreen('main');

@@ -1,270 +1,183 @@
 ---
 name: sdd
-description: "Guía al agente a través del flujo completo Specification-Driven Development (SDD) de GlyphLog: idea → tier → spec → gate de aprobación (plan mode) → task doc → implementación → tests → validación → cierre. Orquesta las skills existentes (user-story, deploy-to-prod, thermo-nuclear-review) y los artefactos del repo (docs/specs/, docs/tasks/, backlog.md, memory-bank). Usar cuando el usuario quiere crear algo nuevo, implementar una feature, o formalizar una idea siguiendo el flujo spec → plan → tasks → código → tests → validación."
+description: "Orquesta el flujo Specification-Driven Development opcional de GlyphLog: propuesta y aprobación explícita → tier → spec → test design independiente → gate de planificación en Plan mode → task doc → TDD Red/Green/Refactor → validación → cierre. Usar cuando el usuario pide SDD o acepta una propuesta de SDD para trabajo con ambigüedad sustancial o que se beneficia de artefactos durables. Nunca activar SDD silenciosamente por ser una feature nueva."
 ---
 
-# SDD — Specification-Driven Development en GlyphLog
+# SDD en GlyphLog
 
-Skill que orquesta el flujo Specification-Driven Development de GlyphLog. No implementa por su cuenta: guía al agente fase a fase, reutilizando las skills y artefactos existentes para no duplicar lógica.
+Orquestar SDD sin duplicar las skills de historias, QA, review o deploy. La spec define el comportamiento; el test design define cómo demostrarlo sin conocer la implementación; Plan mode decide el enfoque técnico; el task doc conserva esa planificación.
 
-## When to use
+## Reglas no negociables
 
-- El usuario dice "quiero hacer algo nuevo", "tengo una idea", "nueva feature", "implementa X"
-- El usuario quiere formalizar una idea antes de escribir código
-- El usuario pide seguir el flujo SDD o "hazlo como siempre"
+1. **SDD es opcional.** Proponerlo cuando reduzca incertidumbre y activarlo solo tras petición explícita o aceptación del usuario.
+2. **Preguntar toda duda material.** No asumir silenciosamente alcance, comportamiento, arquitectura, datos o seguridad. Exponer siempre las inconsistencias importantes.
+3. **Plan mode es un gate, no un archivo.** No crear `PLAN-*.md`; persistir el resultado técnico en el task doc.
+4. **Test design antes del plan.** Derivarlo solo de la spec, sin consultar la solución de producción para decidir el oráculo.
+5. **TDD durante la implementación.** Para comportamiento nuevo: Red observado → código mínimo → Green → Refactor.
 
-## When NOT to use
+## Flujo
 
-- Fix trivial (< 10 min): typo, bug puntual, ajuste de texto → Tier 1, directo al código (ver sección de tiers)
-- El usuario pide explícitamente código inmediato sin spec (preguntar si es intencional antes de saltarse el flujo)
-- Tareas que no son features nuevas (mantenimiento de deps, CI) → usar tipo CHORE sin spec
-
-## Regla de oro
-
-> **La spec está lista cuando puedes escribir los tests solo leyéndola.**
-
-Si no puedes escribir los tests de aceptación solo con la spec, la spec no está completa.
-
----
-
-## El flujo en una línea
-
-```
-idea → tier → spec → gate (plan mode) → task doc → código → tests → validación → cierre
+```text
+idea
+→ routing y aprobación de SDD
+→ tier
+→ spec
+→ test design
+→ gate de planificación en Plan mode
+→ task doc
+→ Red → Green → Refactor
+→ validación
+→ cierre
 ```
 
-Cada fase se aprueba antes de pasar a la siguiente. Nada se implementa sin spec aprobada (excepto Tier 1).
+## Fase 0 — Routing, dudas y aprobación
 
----
+1. Capturar en máximo diez líneas:
+   - problema y usuario afectado;
+   - resultado observable;
+   - motivo y alcance.
+2. Revisar contexto mediante quick-context, Engram y codebase-memory; confirmar las skills disponibles.
+3. Identificar dudas, supuestos y contradicciones materiales. Resolver primero por comprobaciones de solo lectura; preguntar al usuario lo que siga abierto.
+4. Elegir la ruta más pequeña de AGENTS.md §6.6:
+   - directa inline;
+   - directa delegada;
+   - SDD opcional.
+5. Si SDD aporta valor, explicar el overhead y pedir aprobación. Detener el flujo SDD hasta recibirla.
 
-## Fase 0 — Captura de la idea y decisión de tier
+Para una feature nueva puede usarse `user-story` como captura INVEST y tracking en GitHub Project #2, pero no sustituye la spec.
 
-Cuando el usuario trae una idea, NO escribas código todavía. Primero:
+## Fase 1 — Decidir Tier
 
-1. **Captura la idea** en máximo 10 líneas:
-   - ¿Qué problema resuelve?
-   - ¿Quién lo usa / qué usuario afecta?
-   - ¿Por qué ahora?
+| Tier | Uso | Artefactos |
+| ---- | --- | ---------- |
+| 1 | Fix trivial, refactor mecánico o ajuste menor | Sin spec ni test design separados |
+| 2 | Feature pequeña y comportamiento acotado | Spec compacta + test design compacto |
+| 3 | Feature grande, auth, importación, descubrimiento o integración | Spec formal + test design completo |
 
-2. **Decide el tier**:
+Si el Tier cambia el overhead o no está claro, preguntar antes de crear archivos.
 
-| Tier | Cuándo | Artefacto |
-|------|--------|-----------|
-| **1** | Fix trivial (< 10 min): typo, bug puntual | Sin spec, directo al código |
-| **2** | Feature pequeña: un endpoint, un componente | Sección `## Especificación` compacta inline en el task doc |
-| **3** | Feature grande: auth, importaciones, descubrimiento, integraciones | Spec propia en `docs/specs/SPEC-<slug>.md` + gate de revisión |
+### Tier 1
 
-3. **Si el tier es ambiguo, pregunta al usuario.** No asumas que algo es "pequeño" si toca BD + API + frontend.
+- **Bug:** reproducir → escribir regresión → observar Red → fix mínimo → Green.
+- **Refactor puro:** ejecutar/añadir caracterización verde → refactor → confirmar verde. No forzar un Red artificial.
+- **Docs/config no ejecutable:** definir y ejecutar validaciones específicas.
 
-### Fase 0.5 — Captura como HU (opcional pero recomendado para Tier 2 y 3)
+## Fase 2 — Escribir la spec
 
-Para features nuevas (no fixes triviales), reutiliza la skill `user-story` para capturar la idea como historia de usuario INVEST y subirla a GitHub Project #2:
+### Tier 2
 
-- La skill `user-story` ya hace el Q&A iterativo, genera la HU INVEST, y crea el issue en GitHub.
-- La HU en GitHub es el **issue de tracking**, no el contrato técnico. El contrato técnico vive en la spec (Tier 3) o en el task doc (Tier 2).
-- Si el usuario no quiere issue en GitHub, salta este paso y trabaja solo local.
+Crear `docs/specs/SPEC-<slug>.md` desde `docs/specs/TEMPLATE-SPEC-COMPACT.md`. La spec ya no vive dentro del task doc.
 
-**Regla de separación:**
-- `user-story` → produce la HU INVEST y el issue en GitHub (qué y por qué, a nivel de negocio).
-- `sdd` → produce la spec técnica (Tier 3) o el bloque inline (Tier 2), y el task doc (cómo, a nivel técnico).
+### Tier 3
 
----
+Crear `docs/specs/SPEC-<slug>.md` desde `docs/specs/TEMPLATE-SPEC.md` y completar contexto, requisitos, contratos, schemas, data models, edge cases y fuera de alcance.
 
-## Fase 1 — Tier 1: Fix trivial (directo al código)
+Para ambos Tiers:
 
-Si es Tier 1, no hay spec. Pero sigue estas reglas mínimas:
+- usar identificadores `RF-*` y `EC-*` estables;
+- expresar resultados observables, no implementación;
+- marcar la spec como `en-revision` cuando pueda alimentar test design;
+- comprobar que pueden diseñarse tests leyendo solo la spec;
+- preguntar cualquier comportamiento ambiguo antes de continuar.
 
-1. Reproduce/confirma el problema antes de tocar código.
-2. Cambio mínimo y acotado. No refactorizar de paso.
-3. Verifica con el test/lint/build relevante.
-4. Documenta brevemente en `memory-bank/sessions/` si fue significativo.
+## Fase 3 — Crear test design
 
-No uses esta fase como excusa para saltarte el flujo en features que en realidad son Tier 2/3.
+Crear `docs/test-specs/TEST-SPEC-<slug>.md` desde `docs/test-specs/TEMPLATE-TEST-SPEC.md`.
 
----
+1. Leer la spec, no el código de producción, para decidir resultados esperados.
+2. Trazar cada `RF-*` y `EC-*` relevante a casos `TC-*`.
+3. Definir precondición, estímulo y resultado observable/binario.
+4. No decidir archivos, clases internas, mocks, fixtures, framework ni nivel de test; esas decisiones pertenecen al gate y al task doc.
+5. Tier 2 usa cobertura compacta; Tier 3 cubre reglas, errores, permisos, seguridad, integraciones y degradación.
 
-## Fase 2 — Tier 3: Escribir la spec
+Si aparece una inconsistencia entre spec y test design, detenerse, mostrarla y pedir decisión. Corregir primero la spec y regenerar el caso afectado.
 
-1. **Copia la plantilla:**
-   ```bash
-   cp docs/specs/TEMPLATE-SPEC.md docs/specs/SPEC-<slug>.md
-   ```
-   - `<slug>` en kebab-case, descriptivo: `SPEC-youtube-discovery.md`, `SPEC-google-oauth.md`.
+## Fase 4 — Gate de planificación en Plan mode
 
-2. **Rellena TODAS las secciones.** Si una no aplica, escribe `N/A`. Las secciones obligatorias:
-   - **Contexto** — qué existe hoy, qué antecede.
-   - **Objetivo** — una frase clara.
-   - **Requisitos funcionales** — historias _Como / Quiero / Para_ (comportamiento, no código).
-   - **API contract** — endpoint, método, request/response, status codes, **todos los errores posibles**.
-   - **Schemas Pydantic** — campos, tipos, validaciones, ejemplos (nivel de campo).
-   - **Data models** — tablas, columnas, relaciones, migraciones Alembic.
-   - **Edge cases** — "¿y si...?" cada uno convertible en test.
-   - **Fuera de alcance** — lo que explícitamente NO se hace.
-   - **Criterios de salida** — checklist de auto-revisión.
+Entrar en Plan mode para revisar **spec + test design + código real**. Plan mode no produce un documento separado.
 
-3. Marca `> **Estado:**` como `borrador`.
+El gate debe verificar:
 
-4. **Aplica la regla de oro**: ¿puedes escribir los tests solo leyendo la spec? Si no, vuelve a rellenar lo que falte (normalmente edge cases o contrato de errores).
+- requisitos completos y sin contradicciones;
+- todos los `RF-*`/`EC-*` testeables cubiertos por `TC-*`;
+- oráculos independientes de la implementación;
+- compatibilidad con arquitectura y código existentes;
+- riesgos, dependencias y orden de trabajo;
+- dudas materiales resueltas con el usuario.
 
----
+Resultados:
 
-## Fase 3 — Gate de aprobación (plan mode)
+- **Aprobado:** marcar spec y test design como `aprobada`; continuar.
+- **Rechazado:** volver al artefacto que contiene el defecto. No crear task doc.
 
-**Solo Tier 3.** La spec se somete a revisión ANTES de crear el task doc:
+## Fase 5 — Crear task doc
 
-1. Entra en **plan mode** (`enter_plan_mode`).
-2. El planificador valida la spec contra el código real.
-3. Resultado:
-   - ✅ **Aprobada** → pasa a Fase 4.
-   - ❌ **Rechazada** → vuelve a Fase 2; normalmente falta contrato, esquema o edge cases.
+Solo tras aprobar spec y test design:
 
-**Tier 2** no necesita plan mode: la spec inline se revisa manualmente con el usuario antes de implementar.
+1. Crear `docs/tasks/<TIPO>-<slug>.md` desde `docs/tasks/TEMPLATE.md`.
+2. Enlazar spec y test design.
+3. Persistir las decisiones de Plan mode: enfoque, capas, dependencias, riesgos y archivos previstos.
+4. Incluir matriz `TC-* → test ejecutable previsto`.
+5. Ordenar cada slice como test primero y producción después.
+6. Añadir la tarea a `docs/tasks/backlog.md`.
+7. Rellenar los enlaces de task derivado en spec y test design.
 
----
+## Fase 6 — Implementar con TDD
 
-## Fase 4 — Crear el task doc
+Para cada comportamiento nuevo:
 
-**Solo tras aprobar la spec (Tier 3) o validar el bloque inline (Tier 2).**
+1. **Red:** escribir el test enlazado a `TC-*`, ejecutarlo y confirmar que falla por ausencia o incorrección del comportamiento. Un fallo de setup no cuenta.
+2. **Green:** escribir el código mínimo para pasarlo respetando la arquitectura.
+3. **Refactor:** mejorar estructura sin alterar comportamiento y mantener todos los tests verdes.
+4. Marcar las tareas completadas con evidencia breve de Red/Green.
 
-1. **Copia la plantilla:**
-   ```bash
-   cp docs/tasks/TEMPLATE.md "docs/tasks/<TIPO>-<slug>.md"
-   ```
-   - Tipos válidos: `FEAT`, `FIX`, `REFACTOR`, `DOCS`, `SETUP`, `TEST`, `CHORE`.
+Backend:
 
-2. **Rellena la sección `## Especificación`:**
-   - **Tier 3** — enlaza la spec:
-     ```markdown
-     **Spec:** [`docs/specs/SPEC-<slug>.md`](../specs/SPEC-<slug>.md) — estado `aprobada`
-     **Contrato:** `POST /api/v1/...`; schemas `X`/`Y`; tabla `z`; edge cases: ...
-     ```
-   - **Tier 2** — bloque compacto inline con API contract, schemas, data models, edge cases, fuera de alcance.
-   - **Tier 1** — escribe `N/A`.
-
-3. **Añade la tarea a `docs/tasks/backlog.md`** (ID, título, tipo, estado).
-
-4. **En la spec (Tier 3)**, rellena `> **Plan/Task derivado:**` con el enlace al task doc.
-
----
-
-## Fase 5 — Implementar
-
-Sigue la arquitectura estrictamente. **Backend:**
-```
+```text
 Router → Service → Repository → Base de datos
 ```
-- Router: valida request, delega al service, devuelve response. Nunca toca la BD.
-- Service: lógica de negocio. No habla con BD directamente.
-- Repository: única capa que ejecuta SQL/ORM.
 
-**Frontend:**
-```
+Frontend:
+
+```text
 services → hooks → componentes
 ```
 
-Cada **criterio de aceptación** del task doc traza a un **requisito funcional** de la spec (Tier 3) o del bloque inline (Tier 2).
+## Fase 7 — Validación y cierre
 
-Reglas:
-- Leer el código existente antes de escribir (convenciones, patrones).
-- Cambios atómicos, no tocar código no relacionado.
-- Si surge una decisión de arquitectura nueva → apuntarla para el ADR (Fase 7).
+1. Ejecutar tests relevantes, lint, typecheck, build y E2E según riesgo.
+2. Usar `thermo-nuclear-review` para revisión estricta cuando corresponda.
+3. Confirmar trazabilidad completa:
 
----
-
-## Fase 6 — Tests y validación
-
-| Capa | Herramienta | Qué testear |
-|------|-------------|-------------|
-| Backend | `pytest` | services > repositories > routers |
-| Frontend | `Vitest` + `RTL` | hooks y utils > componentes |
-| E2E | `Playwright` (`apps/e2e/`) | flujos críticos |
-| Calidad | `sonar`, `lint`, `tsc`, `build` | run completo antes de cerrar |
-
-```bash
-pnpm build            # build de todos los workspaces
-pnpm lint             # linting
-pnpm test             # tests unitarios (turbo)
-pnpm turbo run e2e    # tests E2E con Playwright
+```text
+RF/EC → TC → test ejecutable → código → resultado
 ```
 
-Para code review ultra-estricto de la implementación, reutiliza la skill `thermo-nuclear-review`.
+4. Marcar spec y test design como `implementada`; task como `completada`; actualizar backlog.
+5. Guardar descubrimientos, bugs resueltos y resumen de sesión en Engram. No crear nuevas entradas en `memory-bank/sessions/`.
+6. Añadir ADR en `memory-bank/decisions.md` solo si hubo decisión arquitectónica.
+7. Si hay deploy, usar `deploy-to-prod`.
 
----
+## Auditoría
 
-## Fase 7 — Cierre
-
-1. Cambia el estado de la spec → `implementada` (Tier 3) o el task doc → `completada`.
-2. Actualiza `docs/tasks/backlog.md`.
-3. Crea entrada en `memory-bank/sessions/` con sección **Validación** (qué se validó, cómo, resultados).
-4. Si hubo decisión de arquitectura nueva → añade ADR en `memory-bank/decisions.md`.
-5. Si es un deploy → reutiliza la skill `deploy-to-prod` (no duplicar su lógica).
-
----
-
-## Reglas de trazabilidad (no negociables)
-
-```
-spec → task doc → criterios de aceptación → código → tests
-```
-
-- Si un eslabón falta, el flujo no es conforme.
-- Cada criterio de aceptación traza a un requisito de la spec.
-- Los commits de features referencian task doc y spec.
-
----
-
-## Auditoría SDD
-
-Ejecuta el checklist de `docs/specs/README.md` periódicamente (fin de milestone o sesión significativa):
-
-1. ¿Existe `docs/specs/` y se usa `TEMPLATE-SPEC.md` para Tier 3?
-2. ¿Cada task doc tiene `## Especificación` antes de `## Tareas técnicas`?
-3. ¿Los Tier 3 referencian una spec con estado `aprobada`/`implementada`?
-4. ¿Las specs incluyen API contract, schemas, data models y edge cases?
-5. ¿Ningún task doc mezcla spec + plan + implementación?
-6. ¿Cada criterio de aceptación traza a un requisito?
-7. ¿Los commits referencian task doc y spec?
-8. ¿Toda decisión de arquitectura nueva tiene ADR?
-9. ¿Hay sesión en `memory-bank/sessions/` tras trabajo significativo?
-10. ¿El gate (plan mode + Criterios de salida) se usó antes de generar tasks?
-
----
+- SDD tuvo aprobación explícita.
+- Las dudas materiales y grandes inconsistencias se expusieron al usuario.
+- Tier 2/3 tienen spec y test design independientes.
+- Plan mode actuó como gate y no se creó un archivo de plan redundante.
+- Cada requisito/edge case testeable traza a un `TC-*`.
+- Cada comportamiento nuevo tiene evidencia Red antes del código y Green después.
+- Refactors y cambios no ejecutables usan su excepción correcta.
+- Estados, backlog, Engram y ADRs están actualizados.
 
 ## Anti-patrones
 
-| Anti-patrón | Qué hacer |
-|-------------|-----------|
-| Saltar de idea a código sin spec (Tier 2/3) | Detener y aplicar Fase 0 |
-| Mezclar spec + plan + implementación en un solo doc | Separar: spec (qué) vs task doc (cómo) |
-| Spec sin edge cases ni errores | Volver a Fase 2, rellenar |
-| Task doc sin enlazar la spec | Volver a Fase 4 |
-| No marcar el estado al cerrar | Actualizar `backlog.md` y el estado |
-| Duplicar lógica de user-story o deploy-to-prod | Reutilizar esas skills |
-
----
-
-## Ejemplo de flujo completo (Tier 3)
-
-**Usuario:** "Quiero poder importar mi lista de anime desde un archivo .gz"
-
-**Agente (sdd):**
-1. **Fase 0**: captura — "importar anime desde .gz, usuario de colección, sin importación hoy". Tier 3 (importación = integración).
-2. **Fase 0.5**: reutiliza `user-story` → crea HU INVEST en GitHub.
-3. **Fase 2**: crea `docs/specs/SPEC-mal-import.md` con API contract (`POST /api/v1/imports/mal`), schemas (`ImportRequest`, `ImportResponse`), data models (tabla `import_jobs`), edge cases (.gz corrupto, duplicados, rate limit).
-4. **Fase 3**: entra en plan mode → aprueba la spec.
-5. **Fase 4**: crea `docs/tasks/FEAT-mal-import.md` enlazando la spec; añade a `backlog.md`.
-6. **Fase 5**: implementa router → service → repository.
-7. **Fase 6**: pytest (service/repository), `pnpm test`, `pnpm build`.
-8. **Fase 7**: estado `implementada`, sesión en memory-bank, ADR si hay decisión.
-
----
-
-## Referencias
-
-- `docs/specs/README.md` — flujo SDD y tiers (fuente de verdad)
-- `docs/specs/TEMPLATE-SPEC.md` — plantilla de spec (Tier 3)
-- `docs/tasks/TEMPLATE.md` — plantilla de task doc
-- `docs/tasks/backlog.md` — tabla central de estado
-- `AGENTS.md` §6.5 — flujo SDD; §6 — arquitectura; §11 — testing
-- `memory-bank/decisions.md` — ADRs
-- Skills reutilizables: `user-story` (captura INVEST), `thermo-nuclear-review` (review), `deploy-to-prod` (deploy)
+| Anti-patrón | Corrección |
+| ----------- | ---------- |
+| Activar SDD por defecto | Proponer y pedir aprobación |
+| Resolver una duda material mediante suposición | Preguntar antes de escribir |
+| Ocultar una contradicción no bloqueante | Mostrarla y explicar impacto |
+| Crear `PLAN-*.md` | Usar Plan mode y persistir resultado en task doc |
+| Diseñar tests desde el código | Derivarlos solo de spec |
+| Implementar y luego añadir tests | Exigir Red antes de producción |
+| Forzar Red en refactor puro | Usar caracterización verde antes/después |
+| Crear sesiones en Memory Bank | Guardar sesión y descubrimientos en Engram |

@@ -32,4 +32,6 @@ export const env = {
   // no se renderiza y el endpoint backend responde 503 (modo degradado).
   // Sigue el mismo Client ID que GOOGLE_CLIENT_ID en el backend.
   googleClientId: optionalEnvVar('VITE_GOOGLE_CLIENT_ID'),
+  companionExtensionId: optionalEnvVar('VITE_COMPANION_EXTENSION_ID'),
+  companionStoreUrl: optionalEnvVar('VITE_COMPANION_STORE_URL'),
 } as const

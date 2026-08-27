@@ -14,33 +14,54 @@
 
 ## Especificación
 
-> La especificación técnica formal debe definirse y aprobarse **antes** de desglosar en tareas (flujo SDD: spec → plan → tasks → código → tests → validación).
+> Para SDD Tier 2/3, la spec y el test design se crean y aprueban **antes** de este documento. Plan mode actúa como gate; este task doc conserva sus decisiones técnicas.
 
-- **Tier 3 (feature grande: auth, importaciones, integraciones):** la spec vive en `docs/specs/SPEC-<slug>.md` como artefacto independiente. Enlázala aquí y resume el contrato en 2-3 líneas:
+- **Tier 2/3:** enlazar la spec independiente:
 
   ```markdown
   **Spec:** [`docs/specs/SPEC-<slug>.md`](../specs/SPEC-<slug>.md) — estado `aprobada`
-  **Contrato:** `POST /api/v1/...`; schemas `X`/`Y`; tabla `z`; edge cases: ...
+  **Contrato observable:** comportamiento, entradas, salidas y errores relevantes.
   ```
 
-- **Tier 2 (feature pequeña: un endpoint, un componente):** la spec es un bloque compacto inline aquí, con el mismo contenido esencial que `TEMPLATE-SPEC.md`:
-  - **API contract:** endpoint(s), método, request/response, status codes y errores posibles.
-  - **Schemas:** campos, tipos, validaciones (Pydantic / TypeScript).
-  - **Data models:** tablas o columnas nuevas, relaciones, migraciones.
-  - **Edge cases:** los "¿y si...?" que el código debe manejar (config ausente, datos vacíos, errores externos).
-  - **Fuera de alcance:** lo que explícitamente NO se hace.
+- **Tier 1 (fix trivial, refactor mecánico o ajuste menor):** no requiere spec; escribe `N/A`.
 
-- **Tier 1 (fix trivial: typo, bug puntual < 10 min):** no requiere spec; escribe `N/A`.
+## Test design
+
+- **Tier 2/3:**
+
+  ```markdown
+  **Test design:** [`docs/test-specs/TEST-SPEC-<slug>.md`](../test-specs/TEST-SPEC-<slug>.md) — estado `aprobada`
+  ```
+
+- **Tier 1:** `N/A`. Para bugs, describir el test de regresión rojo en Tareas técnicas; para refactors, la caracterización verde previa.
+
+### Matriz de automatización
+
+| Caso | Test ejecutable previsto | Nivel |
+| ---- | ------------------------ | ----- |
+| TC-01 | `ruta/al/test` | unitario / integración / componente / E2E |
+
+## Decisiones de Plan mode
+
+- **Enfoque técnico:** ...
+- **Capas afectadas:** ...
+- **Dependencias y orden:** ...
+- **Riesgos y mitigaciones:** ...
+- **Archivos previstos:** ...
 
 ## Tareas técnicas
 
-- [ ] Subtarea 1
-- [ ] Subtarea 2
+- [ ] **Red TC-01:** escribir el test y confirmar que falla por el comportamiento ausente/incorrecto.
+- [ ] **Green TC-01:** implementar el mínimo necesario para pasarlo.
+- [ ] **Refactor TC-01:** mejorar estructura manteniendo la suite verde.
+- [ ] Repetir Red/Green/Refactor por cada slice de comportamiento.
 
 ## Criterios de aceptación
 
 - ✅ El usuario puede hacer X
 - ✅ La API devuelve Y con status Z
+- ✅ Cada `RF/EC` traza a `TC`, test ejecutable y código
+- ✅ Existe evidencia Red anterior al código para comportamiento nuevo
 - ✅ Los tests relevantes pasan
 - ✅ El código sigue las convenciones del proyecto
 

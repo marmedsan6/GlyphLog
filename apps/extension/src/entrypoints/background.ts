@@ -9,10 +9,33 @@ import {
   getApiErrorMessage,
   type APIRequestMessage,
 } from '~/background-request';
+import { DEFAULT_API_BASE_URL } from '~/config';
 
 export default defineBackground((): void => {
   chrome.runtime.onInstalled.addListener(() => {
     console.log('GlyphLog Companion instalado correctamente.');
+  });
+
+  chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
+    if (message?.type === 'GLYPHLOG_PING') {
+      chrome.storage.local.get(['device_token'], (result) => {
+        sendResponse({
+          version: chrome.runtime.getManifest().version,
+          paired: Boolean(result.device_token),
+        });
+      });
+      return true;
+    }
+
+    if (message?.type === 'GLYPHLOG_CLEAR_TOKEN') {
+      chrome.storage.local.remove(['device_token', 'device_name'], () => {
+        sendResponse({ ok: true });
+      });
+      return true;
+    }
+
+    sendResponse({ ok: false });
+    return false;
   });
 
   // Listener adicional: logging para debugging
@@ -53,7 +76,7 @@ export default defineBackground((): void => {
       chrome.storage.local.get(['device_token', 'api_base_url'], (result) => {
         const { url, options } = buildApiRequest(
           apiMessage,
-          result.api_base_url || 'http://localhost:8000',
+          result.api_base_url || DEFAULT_API_BASE_URL,
           result.device_token
         );
 

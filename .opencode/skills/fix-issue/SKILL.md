@@ -205,3 +205,4 @@ Usar al finalizar la corrección del issue:
 3. **Scope mínimo.** Solo tocar el código necesario para corregir el bug. No refactorizar de paso.
 4. **Evidencia antes y después.** Documentar que el bug existía y que ya no existe.
 5. **No asumir, preguntar.** Ante CUALQUIER duda sobre el comportamiento esperado, severidad, o alcance del fix → preguntar al usuario antes de proceder.
+6. **Exponer inconsistencias.** Si issue, spec, test o código describen resultados distintos, mostrar siempre la contradicción y su impacto; no escoger silenciosamente una fuente.

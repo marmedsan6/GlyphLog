@@ -3,6 +3,8 @@
  * Maneja autenticación con device tokens y comunicación con la API de GlyphLog.
  */
 
+import { DEFAULT_API_BASE_URL } from './config';
+
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
 }
@@ -11,7 +13,7 @@ export class GlyphLogAPIClient {
   private apiBaseUrl: string;
   private deviceToken: string | null = null;
 
-  constructor(apiBaseUrl: string = 'http://localhost:8000') {
+  constructor(apiBaseUrl: string = DEFAULT_API_BASE_URL) {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, '');
   }
 

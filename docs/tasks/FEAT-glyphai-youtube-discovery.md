@@ -1,6 +1,6 @@
 # [FEAT] Descubrimiento de YouTube en el chat de GlyphAI
 
-> **Estado:** backlog
+> **Estado:** completada
 > **Prioridad:** media
 > **Dependencias:** [FEAT-glyphai-recommendations](./FEAT-glyphai-recommendations.md) (patrón de integración en el chat)
 
@@ -14,20 +14,22 @@ Integrar el descubrimiento de YouTube como segunda herramienta del "+" de GlyphA
 
 ## Especificación
 
-**Spec:** [`docs/specs/SPEC-glyphai-youtube-discovery.md`](../specs/SPEC-glyphai-youtube-discovery.md) — estado `aprobada`
+**Spec:** [`docs/specs/SPEC-glyphai-youtube-discovery.md`](../specs/SPEC-glyphai-youtube-discovery.md) — estado `implementada`
 **Contrato:** `POST /api/v1/ai/youtube`; schemas `GenerateChatYoutubeRequest`/`Response`; reutiliza `chat_messages.metadata` (sin migraciones nuevas); edge cases: URLs inválidas, API key ausente, análisis lento (60–90s), cuota agotada, sin menciones.
+
+**Test design:** N/A — implementación anterior a ADR-017; validada en el commit `f891547`.
 
 ## Tareas técnicas
 
-- [ ] Backend — schemas `GenerateChatYoutubeRequest` y `GenerateChatYoutubeResponse`.
-- [ ] Backend — `YoutubeDiscoveryService.format_suggestions_as_text(suggestions)`.
-- [ ] Backend — endpoint `POST /ai/youtube` (resolver conversación, delegar al servicio, persistir user + assistant con metadata, mapear errores).
-- [ ] Frontend — `youtube-discovery.service.ts`: `generateChatYoutubeDiscovery(channelUrls, conversationId?)`.
-- [ ] Frontend — `useAIChat`: `ChatMessageMetadata.suggestions`, acción `generateYoutubeDiscovery`, estado `isGeneratingYoutube`.
-- [ ] Frontend — `chat-input.tsx`: opción "Descubrimiento YouTube" en el "+" + panel (Popover) para pegar URLs.
-- [ ] Frontend — nuevo `chat-youtube-suggestion-list.tsx` + render en `chat-message.tsx`.
-- [ ] Frontend — `chat.page.tsx`: mapear `metadata.suggestions`, conectar panel e indicador "analizando…".
-- [ ] Tests — pytest (endpoint y formateador), Vitest/RTL (panel, tarjetas, añadir), Playwright (flujo con LLM mockeado).
+- [x] Backend — schemas `GenerateChatYoutubeRequest` y `GenerateChatYoutubeResponse`.
+- [x] Backend — `YoutubeDiscoveryService.format_suggestions_as_text(suggestions)`.
+- [x] Backend — endpoint `POST /ai/youtube` (resolver conversación, delegar al servicio, persistir user + assistant con metadata, mapear errores).
+- [x] Frontend — `youtube-discovery.service.ts`: `generateChatYoutubeDiscovery(channelUrls, conversationId?)`.
+- [x] Frontend — `useAIChat`: `ChatMessageMetadata.suggestions`, acción `generateYoutubeDiscovery`, estado `isGeneratingYoutube`.
+- [x] Frontend — `chat-input.tsx`: opción "Descubrimiento YouTube" en el "+" + panel (Popover) para pegar URLs.
+- [x] Frontend — nuevo `chat-youtube-suggestion-list.tsx` + render en `chat-message.tsx`.
+- [x] Frontend — `chat.page.tsx`: mapear `metadata.suggestions`, conectar panel e indicador "analizando…".
+- [x] Tests — pytest (endpoint y formateador), Vitest/RTL (panel, tarjetas, añadir), Playwright (flujo con LLM mockeado).
 
 ## Criterios de aceptación
 

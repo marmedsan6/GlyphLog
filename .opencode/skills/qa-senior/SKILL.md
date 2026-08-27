@@ -7,20 +7,26 @@ description: "Use when testing web applications, creating test plans, writing Pl
 
 ## 1. Flujo de trabajo del QA
 
+Para features SDD Tier 2/3, el orden obligatorio es `spec → test design → gate en Plan mode → task → Red/Green/Refactor`. Derivar el resultado esperado de la spec antes de consultar la implementación. Si spec, test design y código se contradicen, mostrar la inconsistencia y preguntar al usuario antes de elegir un oráculo.
+
 ### 1.1 Fase de análisis
-1. **Entender el feature**: leer la descripción, criterios de aceptación, y el código existente
-2. **Identificar flujos**: flujo feliz, flujos alternativos, flujos de error
-3. **Evaluar riesgo**: qué partes son críticas, qué puede romperse
+1. **Entender el comportamiento**: leer primero spec, requisitos, edge cases y criterios de aceptación
+2. **Diseñar casos independientes**: mapear `RF/EC → TC` sin derivar resultados del código
+3. **Identificar flujos**: flujo feliz, flujos alternativos, flujos de error y límites
+4. **Evaluar riesgo**: qué partes son críticas, qué puede romperse
+5. **Consultar el código después**: usarlo para elegir nivel, fixtures y automatización, nunca para redefinir silenciosamente el resultado esperado
 
 ### 1.2 Fase de planificación
 1. Definir el alcance: qué se testea y qué NO
 2. Elegir la estrategia: unitario, integración, E2E, exploratorio
-3. Crear el **plan de pruebas**
+3. Para SDD, completar `docs/test-specs/TEST-SPEC-<slug>.md` antes del gate; después persistir el mapeo a tests ejecutables en el task doc
 
 ### 1.3 Fase de ejecución
-1. Ejecutar tests automatizados (Playwright)
-2. Realizar testing exploratorio manual
-3. Documentar bugs y hallazgos
+1. Para comportamiento nuevo, escribir el test ejecutable y observar **Red** por la causa correcta antes del código de producción
+2. Confirmar **Green** después de la implementación mínima y mantenerlo durante Refactor
+3. Ejecutar tests automatizados (Playwright u otra capa relevante)
+4. Realizar testing exploratorio manual
+5. Documentar bugs, inconsistencias y hallazgos
 
 ### 1.4 Fase de reporte
 1. **Reporte técnico**: para developers (bugs, stack traces, logs, PRs)
@@ -165,3 +171,4 @@ description: "Use when testing web applications, creating test plans, writing Pl
 - Los bugs deben ser **reproducibles**: si no se puede reproducir consistentemente, documentar frecuencia
 - Un bug sin evidencia no es un bug → siempre incluir screenshot o video
 - Separar hallazgos de UX de bugs funcionales
+- Comunicar siempre las inconsistencias importantes entre spec, test design, task y comportamiento real; preguntar cualquier duda material antes de clasificarla como esperado o bug

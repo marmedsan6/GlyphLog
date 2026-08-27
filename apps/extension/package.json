@@ -1,7 +1,7 @@
 {
   "name": "glyphlog-companion-extension",
-  "version": "0.1.0",
-  "description": "GlyphLog Companion — Chrome Extension con WXT",
+  "version": "0.2.0",
+  "description": "GlyphLog Companion — actualiza tu progreso de anime y manga sin abrir la app",
   "type": "module",
   "scripts": {
     "dev": "wxt",
