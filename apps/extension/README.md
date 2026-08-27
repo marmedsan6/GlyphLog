@@ -1,26 +1,53 @@
-# GlyphLog Companion (Chrome Extension)
+# GlyphLog Companion
 
-Extensión de Chrome para registrar y actualizar el progreso de tus animes, mangas y videojuegos sin necesidad de abrir la aplicación web completa.
+Extensión Chromium para registrar y actualizar el progreso de tus animes y
+mangas sin abrir la aplicación web. Chrome y Brave son el soporte actual; Edge
+Chromium funciona. Firefox y Safari no están soportados.
 
-## 🚀 Cómo instalar en Google Chrome (Modo Desarrollador)
+La guía de usuario vive en GlyphLog → **Perfil → Dispositivos**. Esta página es
+la referencia de instalación para el zip de fallback.
 
-1. Abre Google Chrome y navega a `chrome://extensions/`.
-2. Activa el **Modo de desarrollador** (interruptor en la esquina superior derecha).
-3. Haz clic en **Cargar descomprimida** (Load unpacked).
-4. Selecciona la carpeta `apps/extension/.output/chrome-mv3` del repositorio
-   (generada por `pnpm --filter glyphlog-companion-extension build`; si no existe, ejecuta ese comando primero).
-5. Haz clic en el icono del rompecabezas en la barra de Chrome y fija **GlyphLog Companion**.
+## Instalar (usuario)
 
-## 🔑 Cómo emparejar la extensión
+Hasta que Companion esté en Chrome Web Store unlisted, usa el zip:
 
-1. En GlyphLog (SPA web), ve a tu **Perfil** (`/profile`).
-2. En la sección **Dispositivos**, haz clic en **Emparejar nuevo dispositivo**.
-3. Copia el código de 6 caracteres generado (ej. `A3X9K2`).
-4. Abre la extensión en Chrome e introduce el código en la pantalla de inicio.
-5. ¡Listo! La extensión quedará emparejada de forma segura sin compartir las credenciales ni el JWT de la aplicación web.
+1. En GlyphLog, ve a **Perfil → Dispositivos** y pulsa **Descargar extensión**.
+2. Descomprime el zip en una carpeta.
+3. Abre `chrome://extensions` o `brave://extensions`.
+4. Activa **Modo de desarrollador**.
+5. Pulsa **Cargar descomprimida** y elige esa carpeta.
+6. Vuelve a GlyphLog y pulsa **Emparejar nuevo dispositivo**.
+7. Introduce el código de 6 caracteres en el popup. Nunca copies el token de sesión.
 
-## 🛡️ Seguridad
+Cuando exista URL de Store, el botón **Añadir a Chrome** sustituye estos pasos.
+El zip sigue como fallback.
 
-- La extensión **NO** solicita permisos para leer las páginas web que visitas (`no <all_urls>`).
-- Utiliza **tokens de dispositivo (Device Tokens)** independientes y revocables en cualquier momento desde tu perfil en GlyphLog.
-- El token expira automáticamente tras 90 días de inactividad.
+## Emparejar
+
+1. GlyphLog → **Perfil** (`/profile`) → **Dispositivos**.
+2. **Emparejar nuevo dispositivo**.
+3. Copia el código de 6 caracteres (caduca en 5 minutos).
+4. Ábrelo en el popup de Companion.
+
+El token de dispositivo es independiente del JWT, se puede revocar y caduca a
+los 90 días de inactividad.
+
+## Desarrollo (load unpacked desde el repo)
+
+1. `pnpm --filter glyphlog-companion-extension build`
+2. Carga `apps/extension/.output/chrome-mv3` en Chrome o Brave.
+3. El ID estable con `manifest.key` es `boehfebkjeecahbomjhbnokjkjnippje`.
+
+El build de desarrollo incluye `http://localhost:8000/*`. El de producción usa
+`https://glyphlog.qzz.io` y no declara localhost.
+
+## Seguridad
+
+- No solicita `<all_urls>`. Solo hosts de adaptadores y la API de GlyphLog.
+- Tokens de dispositivo revocables desde el perfil.
+- La clave privada RSA (`companion-private.pem`) no se versiona. Guardarla
+  fuera del repo antes de publicar en Chrome Web Store.
+
+## Privacidad
+
+https://glyphlog.qzz.io/privacy

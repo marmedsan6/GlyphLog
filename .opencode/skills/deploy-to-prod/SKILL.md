@@ -178,5 +178,5 @@ Después de un deploy exitoso:
 1. Reportar SHA desplegado y resultado de cada smoke test.
 2. Indicar cualquier check omitido o degradado.
 3. Cerrar issues únicamente con \`bash scripts/gh.sh\` y autorización del usuario.
-4. Documentar el resultado en \`memory-bank/sessions/\` solo si el usuario solicita mantener ese registro.
+4. Guardar resultado, incidencias y evidencia resumida en Engram; no crear nuevas entradas en \`memory-bank/sessions/\`.
 5. No eliminar ramas ni secretos antiguos sin confirmar que la rotación fue efectiva.

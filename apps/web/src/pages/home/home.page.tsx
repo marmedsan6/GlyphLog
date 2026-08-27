@@ -39,6 +39,11 @@ export function HomePage() {
             Registrarse
           </Link>
         </div>
+        <p>
+          <Link to="/privacy" className="text-xs text-muted-foreground underline hover:no-underline">
+            Privacidad
+          </Link>
+        </p>
       </div>
     </div>
   )

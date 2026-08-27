@@ -162,6 +162,11 @@ export function LoginPage() {
                 ¿Olvidaste tu contraseña?
               </button>
             </p>
+            <p>
+              <Link to="/privacy" className="text-xs text-muted-foreground underline hover:no-underline">
+                Privacidad
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>

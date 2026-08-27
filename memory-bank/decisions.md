@@ -8,24 +8,25 @@
 
 ## Índice
 
-| ID                  | Título                                                                  | Estado   | Fecha       |
-| ------------------- | ----------------------------------------------------------------------- | -------- | ----------- |
-| [ADR-001](#adr-001) | SPA sobre SSR                                                           | Aceptada | junio 2025  |
-| [ADR-002](#adr-002) | Turborepo como gestor de monorepo                                       | Aceptada | junio 2025  |
-| [ADR-003](#adr-003) | shadcn/ui como sistema de componentes                                   | Aceptada | junio 2025  |
-| [ADR-004](#adr-004) | JWT en sessionStorage                                                   | Aceptada | junio 2025  |
-| [ADR-005](#adr-005) | PyJWT en lugar de python-jose                                           | Aceptada | junio 2025  |
-| [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend                  | Aceptada | julio 2026  |
-| [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada | julio 2026  |
-| [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables         | Aceptada | julio 2026  |
-| [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada                 | Aceptada | julio 2026  |
-| [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>`                | Aceptada | julio 2026  |
-| [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada | agosto 2026 |
-| [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock         | Aceptada | agosto 2026 |
-| [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado                         | Aceptada | agosto 2026 |
-| [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod)         | Aceptada | agosto 2026 |
-| [ADR-015](#adr-015) | Flujo de trabajo SDD con fase de especificación formal                   | Aceptada | agosto 2026 |
-| [ADR-016](#adr-016) | Render seguro de Markdown en respuestas de GlyphAI                       | Aceptada | agosto 2026 |
+| ID                  | Título                                                                  | Estado                  | Fecha       |
+| ------------------- | ----------------------------------------------------------------------- | ----------------------- | ----------- |
+| [ADR-001](#adr-001) | SPA sobre SSR                                                           | Aceptada                | junio 2025  |
+| [ADR-002](#adr-002) | Turborepo como gestor de monorepo                                       | Aceptada                | junio 2025  |
+| [ADR-003](#adr-003) | shadcn/ui como sistema de componentes                                   | Aceptada                | junio 2025  |
+| [ADR-004](#adr-004) | JWT en sessionStorage                                                   | Aceptada                | junio 2025  |
+| [ADR-005](#adr-005) | PyJWT en lugar de python-jose                                           | Aceptada                | junio 2025  |
+| [ADR-006](#adr-006) | Google OAuth con google-auth + SDK directo en frontend                  | Aceptada                | julio 2026  |
+| [ADR-007](#adr-007) | Reicon para theme toggle + View Transitions API para transición de tema | Aceptada                | julio 2026  |
+| [ADR-008](#adr-008) | Seguimiento de progreso con unidades fijas y eventos inmutables         | Aceptada                | julio 2026  |
+| [ADR-009](#adr-009) | Unidades de progreso fijas y únicas por tipo de entrada                 | Aceptada                | julio 2026  |
+| [ADR-010](#adr-010) | Extensión de permisos: solo Crunchyroll, NO `<all_urls>`                | Reemplazada por ADR-018 | julio 2026  |
+| [ADR-011](#adr-011) | Device tokens limitados a lectura/creación/progreso (auth por-endpoint) | Aceptada                | agosto 2026 |
+| [ADR-012](#adr-012) | Sistema de Recomendaciones con Claude Sonnet 4.5 en AWS Bedrock         | Aceptada                | agosto 2026 |
+| [ADR-013](#adr-013) | GlyphAI provider-agnostic con SSE y RAG acotado                         | Aceptada                | agosto 2026 |
+| [ADR-014](#adr-014) | Llm_client inyectable por entorno (OpenAI local / Bedrock prod)         | Aceptada                | agosto 2026 |
+| [ADR-015](#adr-015) | Flujo de trabajo SDD con fase de especificación formal                  | Reemplazada por ADR-017 | agosto 2026 |
+| [ADR-016](#adr-016) | Render seguro de Markdown en respuestas de GlyphAI                      | Aceptada                | agosto 2026 |
+| [ADR-017](#adr-017) | SDD opcional con test design previo y TDD                               | Aceptada                | agosto 2026 |
 
 ---
 
@@ -438,46 +439,6 @@ Reglas del sistema:
 
 ---
 
-## Template para nuevas decisiones
-
-Copiar y rellenar para cada nueva decisión:
-
-```markdown
-## ADR-XXX
-
-### Título de la decisión
-
-**Fecha:** [mes año]
-**Estado:** [Propuesta | Aceptada | Rechazada | Reemplazada por ADR-XXX]
-
-#### Contexto
-
-¿Qué situación llevó a tomar esta decisión? ¿Qué opciones existían?
-
-#### Decisión
-
-¿Qué se decidió hacer exactamente?
-
-#### Razones
-
-- Razón 1
-- Razón 2
-- Razón 3
-
-#### Consecuencias
-
-- ¿Qué implica esta decisión? ¿Qué se gana y qué se pierde?
-- ¿Hay deuda técnica introducida?
-- ¿Hay pasos de seguimiento necesarios?
-
-#### Alternativas consideradas
-
-- **Alternativa A:** Por qué se descartó.
-- **Alternativa B:** Por qué se descartó.
-```
-
----
-
 ## ADR-010
 
 ### Extensión: Permisos limitados a Crunchyroll, NO `<all_urls>`
@@ -525,6 +486,60 @@ Los adaptadores para futuras plataformas (Netflix, etc.) se agregarán con ADRs 
 - **`<all_urls>` desde el inicio:** Rechazado. Viola privacidad y genera desconfianza. Aunque es "más flexible", no vale la pena.
 - **Solicitar `<all_urls>` dinámicamente en runtime:** Rechazado. Chrome no permite esto. Los permisos deben estar en el manifest.
 - **Content script inyectado solo en Crunchyroll, `<all_urls>` para la background API:** Rechazado. El background también solo necesita localhost para pairing, no acceso a todas las URLs.
+
+---
+
+## ADR-018
+
+### Política de compatibilidad y allowlist explícita de GlyphLog Companion
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada
+**Reemplaza:** ADR-010
+
+#### Contexto
+
+ADR-010 describía el primer lanzamiento, cuando el único adaptador previsto
+era Crunchyroll. La extensión actual también tiene adaptadores para AnimeFLV y
+MangaDex y el manifest declara sus hosts explícitos. La descripción histórica
+de ADR-010 ya no es una fuente de verdad suficiente, aunque su principio de
+permisos mínimos sigue siendo válido.
+
+#### Decisión
+
+- Cada plataforma se incorpora mediante una allowlist explícita por host,
+  revisada conscientemente junto con su adaptador, matriz, fixture y E2E.
+- GlyphLog Companion no solicitará `<all_urls>`, `*://*/*` ni equivalentes
+  amplios, tampoco como `optional_host_permissions`.
+- Los hosts actuales son los definidos en `apps/extension/wxt.config.ts`:
+  API local/remota, Crunchyroll, AnimeFLV (incluido subdominio) y MangaDex.
+- “Implementado” y “verificado” son estados distintos: el primero requiere
+  código y host; el segundo requiere evidencia fixture, E2E local o manual
+  fechada.
+- La matriz `docs/companion-compatibility.md` y esta ADR son la política
+  documental; cualquier alta o baja de plataforma debe actualizar ambas.
+
+Chrome y Firefox ofrecen mecanismos técnicos de permisos opcionales, pero la
+política de GlyphLog no convierte esa capacidad en una autorización wildcard.
+
+#### Consecuencias
+
+- Se reduce la superficie de lectura y el impacto de una extensión comprometida.
+- Añadir una plataforma requiere una revisión y una actualización visible del
+  manifest, con coste de mantenimiento deliberado.
+- La matriz puede mostrar un adaptador implementado como pendiente de
+  verificación sin presentarlo como soporte validado.
+- ADR-010 queda preservada para explicar el contexto inicial, pero no debe
+  usarse para inferir que solo Crunchyroll está permitido.
+
+#### Alternativas consideradas
+
+- **`<all_urls>` desde la instalación:** rechazada por privacidad y superficie
+  de ataque innecesarias.
+- **Wildcard opcional solicitado bajo demanda:** rechazada; sigue siendo una
+  autorización amplia y dificulta que el usuario entienda el alcance.
+- **Permisos implícitos por detección:** rechazados; cada host debe estar
+  declarado y revisado antes de distribuirse.
 
 ---
 
@@ -823,7 +838,9 @@ Recomendaciones e importación de MAL dependían directamente de `BedrockClient`
 ### Flujo de trabajo SDD con fase de especificación formal
 
 **Fecha:** agosto 2026
-**Estado:** Aceptada
+**Estado:** Reemplazada por ADR-017
+
+> Esta decisión conserva el contexto histórico del primer flujo SDD. ADR-017 sustituye su orden de fases, el tratamiento de Tier 2, el rol de Plan mode y el mecanismo de memoria de cierre.
 
 #### Contexto
 
@@ -922,3 +939,49 @@ Usar `react-markdown@10.1.0` junto con `remark-gfm@4.0.1`, configurado con:
 **`rehypeRaw` o syntax highlighting**
 
 - Rechazados por no ser requisitos y aumentar superficie/tamaño del bundle.
+
+---
+
+## ADR-017
+
+### SDD opcional con test design previo y TDD
+
+**Fecha:** agosto 2026
+**Estado:** Aceptada
+
+#### Contexto
+
+ADR-015 introdujo specs formales, pero dejó el flujo como `spec → plan → tasks → código → tests`. Diseñar tests después del código permite que el oráculo se contamine con la implementación. Además, Tier 2 guardaba su spec dentro del task doc, la skill SDD se activaba automáticamente pese al routing opcional de AGENTS.md, “plan” no distinguía entre Plan mode y un artefacto, y el cierre aún enviaba sesiones al Memory Bank aunque Engram ya lo había sustituido.
+
+#### Decisión
+
+1. SDD es opcional y requiere petición explícita o propuesta aceptada.
+2. Tier 2 y Tier 3 crean una spec independiente y un test design `TEST-SPEC-*` antes del task doc.
+3. El test design se deriva solo de la spec y traza `RF/EC → TC`; no contiene archivos, clases, mocks ni frameworks.
+4. Plan mode es el gate de planificación que revisa spec + test design + código real. No se crea un archivo `PLAN-*`; el task doc conserva el enfoque técnico aprobado.
+5. La implementación de comportamiento nuevo sigue Red → Green → Refactor y conserva evidencia de que el test falló por la causa correcta antes del código.
+6. Bugs Tier 1 usan regresión roja; refactors puros usan caracterización verde antes/después; cambios no ejecutables usan validaciones específicas.
+7. Toda duda material se pregunta y toda inconsistencia importante se comunica, aunque no bloquee.
+8. Sesiones y descubrimientos se guardan en Engram; el Memory Bank queda para decisiones y patrones.
+
+#### Razones
+
+- Mantener el resultado esperado independiente del código implementado.
+- Convertir requisitos y edge cases en evidencia testeable antes de decidir la solución.
+- Evitar un archivo de plan redundante sin perder decisiones, porque el task doc persiste la salida de Plan mode.
+- Escalar el detalle por Tier sin permitir que la spec Tier 2 nazca dentro de las tareas técnicas.
+- Resolver contradicciones entre skills y fuentes de verdad del proyecto.
+
+#### Consecuencias
+
+- Tier 2 gana dos artefactos compactos previos al task doc; el overhead es deliberado cuando SDD fue aceptado.
+- Las tareas históricas no se migran retroactivamente.
+- Los tests ejecutables se escriben durante implementación, pero su comportamiento y oráculo ya están fijados en `TEST-SPEC-*`.
+- Una inconsistencia spec/test/código detiene el trabajo en el siguiente límite seguro hasta recibir decisión del usuario.
+
+#### Alternativas consideradas
+
+- **Tests solo dentro del task doc:** rechazada porque aparecen después de la planificación técnica.
+- **Archivo `PLAN-*` obligatorio:** rechazado por duplicar el task doc; Plan mode aporta el gate y el task conserva el resultado.
+- **SDD automático para toda feature:** rechazado por overhead y por contradecir el routing orgánico; debe proponerse y aprobarse.
+- **Gherkin/Cucumber obligatorio:** rechazado; Given/When/Then puede expresar comportamiento sin añadir una dependencia.

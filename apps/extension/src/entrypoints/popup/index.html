@@ -19,7 +19,7 @@
     <div class="pairing-content">
       <p class="pairing-instructions">
         Genera un código desde <strong>GlyphLog → Perfil → Dispositivos</strong>
-        e introdúcelo aquí:
+        e introdúcelo aquí. Nunca copies el token de sesión.
       </p>
       <input
         id="pairing-code-input"
@@ -42,8 +42,7 @@
         id="api-url-input"
         type="url"
         class="input-url"
-        value="http://localhost:8000"
-        placeholder="https://tu-api.com"
+        placeholder="https://glyphlog.qzz.io"
       >
     </div>
   </div>
@@ -161,6 +160,19 @@
       </button>
     </div>
   </div>
+
+  <div id="api-unavailable" class="api-banner" style="display: none;">
+    <p id="api-unavailable-text">No se puede contactar con GlyphLog. Comprueba tu conexión o la URL de la API.</p>
+    <div class="api-banner-actions">
+      <button id="btn-retry-api" class="btn btn-secondary" type="button">Reintentar</button>
+      <button id="btn-open-settings-from-error" class="btn btn-secondary" type="button">Ajustes</button>
+    </div>
+  </div>
+
+  <footer class="popup-footer">
+    <span id="extension-version">GlyphLog Companion</span>
+    <a id="guide-link" href="https://glyphlog.qzz.io/profile" target="_blank" rel="noopener noreferrer">Guía</a>
+  </footer>
 
   <!-- Toast de notificaciones -->
   <div id="toast" class="toast" style="display: none;">

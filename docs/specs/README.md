@@ -1,74 +1,76 @@
 # Especificaciones — GlyphLog
 
-Esta carpeta contiene las **especificaciones técnicas formales** del proyecto. Es la fase que antecede al plan: aquí se define **qué** se construye (contratos, schemas, modelos de datos, edge cases), antes de decidir **cómo** (plan → tareas → código).
+Esta carpeta contiene las specs de comportamiento que preceden al test design, al gate de planificación y al task doc. SDD es opcional y solo se activa tras petición explícita del usuario o propuesta aceptada.
 
-## ¿Por qué specs?
+## Flujo
 
-En el flujo SDD (Specification-Driven Development) el orden es:
-
+```text
+idea
+→ routing y aprobación de SDD
+→ spec
+→ test design
+→ gate de planificación en Plan mode
+→ task doc
+→ Red → Green → Refactor
+→ validación y cierre
 ```
-spec → plan → tasks → código → tests → validación
-```
 
-Cada fase se aprueba antes de pasar a la siguiente. La spec es el contrato revisable: las decisiones de diseño se toman y se aprueban **antes** de invertir horas de implementación. La regla de oro: _la spec está lista cuando puedes escribir los tests solo leyéndola._
+Plan mode es el gate donde se contrasta spec + test design con el código real y se decide el enfoque técnico. No produce un archivo `PLAN-*`; el task doc conserva el resultado.
 
-## Cuándo usar cada nivel de especificación (Tiers)
+## Tiers
 
-| Tier | Cuándo                                                                      | Artefacto                                                                 |
-| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1    | Fix trivial (< 10 min): typo, bug puntual                                   | Sin spec, directo al código                                               |
-| 2    | Feature pequeña: un endpoint, un componente                                 | Sección `## Especificación` compacta dentro del task doc en `docs/tasks/` |
-| 3    | Feature grande: auth, importaciones, descubrimiento, integraciones externas | Spec propia: `docs/specs/SPEC-<slug>.md` + gate de revisión               |
+| Tier | Uso                                           | Spec                       | Test design |
+| ---- | --------------------------------------------- | -------------------------- | ----------- |
+| 1    | Fix trivial, refactor mecánico o ajuste menor | No                         | No separado |
+| 2    | Feature pequeña y acotada                     | `TEMPLATE-SPEC-COMPACT.md` | Compacto    |
+| 3    | Feature grande o integración                  | `TEMPLATE-SPEC.md`         | Completo    |
 
-## Cómo escribir una spec (Tier 3)
+Tier 2 y Tier 3 usan `docs/specs/SPEC-<slug>.md` y `docs/test-specs/TEST-SPEC-<slug>.md` como artefactos independientes creados antes del task doc.
 
-1. Copia `TEMPLATE-SPEC.md` con el nombre `SPEC-<slug>.md` (p. ej. `SPEC-youtube-discovery.md`).
-2. Rellena **todas** las secciones. No dejes secciones vacías: si no aplica, escribe `N/A`.
-3. Marca los **Criterios de salida** al final. Si algún checkbox no se puede marcar, la spec no está lista.
-4. Sométela a aprobación (ver flujo abajo). El estado va en la línea `> **Estado:**` de arriba.
-5. Al aprobarla, se crea el task doc en `docs/tasks/` que **enlaza esta spec**, y se apunta en `> **Plan/Task derivado:**`.
+Las features ya implementadas antes de ADR-017 no se migran retroactivamente: deben marcar spec/task como implementadas y documentar `Test design: N/A — histórica pre-ADR-017`. Ninguna tarea activa nueva puede usar esta excepción.
 
-## Flujo día a día al implementar una tarea
+## Procedimiento
 
-1. **Idea** → responde en el issue/backlog: ¿qué problema resuelve? ¿quién lo usa? ¿por qué ahora? (máx 10 líneas).
-2. **Decide tier** (1/2/3 según la tabla de arriba).
-3. **Escribe la spec** (Tier 3 en esta carpeta; Tier 2 inline en el task doc).
-4. **Marca los Criterios de salida**. Si alguno queda sin marcar, sigue en la spec.
-5. **Gate de aprobación**: entra en plan mode (`enter_plan_mode`) → el plan valida la spec contra el código real → aprueba/rechaza con la revisión del plan. La spec se rechaza si le falta contrato, esquema o edge cases.
-6. **Solo tras aprobar**: crea el task doc en `docs/tasks/<TIPO>-<slug>.md` con `TEMPLATE.md`, añádelo a `docs/tasks/backlog.md` y apunta el enlace en la spec.
-7. **Implementa** siguiendo la arquitectura (`router → service → repository`; en web: services → hooks → componentes). Cada criterio de aceptación traza a un requisito de la spec.
-8. **Tests y validación**: pytest / Vitest+RTL / Playwright, sonar, lint, tsc, build.
-9. **Cierra**: estado de la spec → `implementada`, actualiza `backlog.md`, crea sesión en `memory-bank/sessions/` y ADR si hubo decisión de arquitectura.
+1. Confirmar que el usuario pidió o aceptó SDD.
+2. Resolver dudas materiales sobre problema, alcance y comportamiento; mostrar cualquier inconsistencia importante.
+3. Crear la spec adecuada al Tier y asignar IDs `RF-*` y `EC-*`.
+4. Marcar la spec `en-revision` cuando permita diseñar tests solo con su contenido.
+5. Crear el test design desde `docs/test-specs/TEMPLATE-TEST-SPEC.md`, sin consultar el código para decidir los resultados esperados.
+6. Trazar cada `RF-*`/`EC-*` testeable a uno o más `TC-*`.
+7. Entrar en Plan mode y revisar spec + test design + código real. Preguntar las dudas materiales detectadas.
+8. Si se aprueban, marcar ambos artefactos `aprobada` y crear el task doc. Si se rechazan, corregir primero el artefacto de origen.
+9. Implementar cada comportamiento con Red → Green → Refactor.
+10. Validar, actualizar estados/backlog, guardar sesión y descubrimientos en Engram y crear ADR solo si hubo decisión arquitectónica.
 
-## Estados de una spec
+## Estados
 
-| Estado         | Significado                                      |
-| -------------- | ------------------------------------------------ |
-| `borrador`     | En escritura, aún no sometida a aprobación       |
-| `en-revision`  | Sometida a revisión (gate de plan mode)          |
-| `aprobada`     | Aprobada; el plan/task puede derivarse           |
-| `implementada` | El feature derivado está implementado y validado |
+| Estado         | Significado                            |
+| -------------- | -------------------------------------- |
+| `borrador`     | En escritura                           |
+| `en-revision`  | Lista para derivar/revisar test design |
+| `aprobada`     | Spec y test design superaron el gate   |
+| `implementada` | Comportamiento implementado y validado |
 
-## Auditoría SDD — checklist
+## Auditoría SDD
 
-Ejecuta este checklist periódicamente (fin de milestone o sesión significativa) para comprobar que el proyecto sigue SDD estrictamente:
-
-1. ¿Existe `docs/specs/` y se usa `TEMPLATE-SPEC.md` para Tier 3?
-2. ¿Cada task doc tiene `## Especificación` rellena **antes** de `## Tareas técnicas`?
-3. ¿Los Tier 3 referencian una spec en `docs/specs/` con estado `aprobada`/`implementada`?
-4. ¿Las specs incluyen API contract, schemas, data models y edge cases (Criterios de salida marcados)?
-5. ¿Ningún task doc mezcla spec + plan + implementación?
-6. ¿Cada criterio de aceptación traza a un requisito de la spec?
-7. ¿Los commits de features referencian task doc y spec?
-8. ¿Toda decisión de arquitectura nueva tiene ADR en `memory-bank/decisions.md`?
-9. ¿Hay sesión en `memory-bank/sessions/` tras trabajo significativo, con sección Validación?
-10. ¿El gate (plan mode + Criterios de salida) se usó antes de generar tasks?
-
-**Regla de trazabilidad:** spec → task doc → criterios de aceptación → código → tests. Si un eslabón falta, el flujo no es conforme.
+1. ¿SDD tuvo aprobación explícita?
+2. ¿Se preguntaron las dudas materiales y se mostraron las inconsistencias importantes?
+3. ¿Tier 2/3 tienen spec y test design independientes creados antes del task doc?
+4. ¿Cada requisito y edge case testeable tiene ID y traza a un `TC-*`?
+5. ¿Los oráculos del test design provienen de la spec y no del código?
+6. ¿Plan mode revisó spec + test design sin crear un plan redundante?
+7. ¿El task doc enlaza ambos artefactos y conserva las decisiones técnicas del gate?
+8. ¿Cada comportamiento nuevo tiene evidencia Red anterior al código y Green posterior?
+9. ¿Refactors y cambios no ejecutables usan la excepción correcta?
+10. ¿La trazabilidad `RF/EC → TC → test ejecutable → código → resultado` está completa?
+11. ¿Estados y backlog están actualizados?
+12. ¿La sesión/descubrimientos fueron a Engram y las decisiones arquitectónicas al ADR?
 
 ## Archivos
 
-| Archivo                                | Descripción                                            |
-| -------------------------------------- | ------------------------------------------------------ |
-| [TEMPLATE-SPEC.md](./TEMPLATE-SPEC.md) | Plantilla estándar para nuevas especificaciones        |
-| `SPEC-<slug>.md`                       | Especificaciones individuales (una por feature Tier 3) |
+- `TEMPLATE-SPEC-COMPACT.md`: spec Tier 2.
+- `TEMPLATE-SPEC.md`: spec Tier 3.
+- `SPEC-<slug>.md`: spec individual.
+- [`SPEC-companion-compatibility.md`](./SPEC-companion-compatibility.md): compatibilidad verificable de Companion (#66).
+- [`SPEC-companion-install.md`](./SPEC-companion-install.md): instalación guiada y distribución de Companion (#67).
+- `../test-specs/TEMPLATE-TEST-SPEC.md`: test design Tier 2/3.

@@ -128,6 +128,11 @@ export function RegisterPage() {
               Inicia sesión
             </Link>
           </p>
+          <p className="mt-2 text-center">
+            <Link to="/privacy" className="text-xs text-muted-foreground underline hover:no-underline">
+              Privacidad
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

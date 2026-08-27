@@ -63,6 +63,8 @@ services:
         # El MISMO valor debe estar en .env.production como GOOGLE_CLIENT_ID
         # para que el backend pueda verificar los id_tokens.
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_COMPANION_EXTENSION_ID: ${VITE_COMPANION_EXTENSION_ID:-}
+        VITE_COMPANION_STORE_URL: ${VITE_COMPANION_STORE_URL:-}
     container_name: glyphlog-nginx
     ports:
       - "80:80"

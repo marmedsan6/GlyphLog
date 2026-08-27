@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useDevices, useGeneratePairingCode, useRevokeDevice } from '@/hooks/use-devices'
 import { useToast } from '@/hooks/use-toast'
+import {
+  clearCompanionToken,
+  companionStatusFromPing,
+  getCompanionStoreUrl,
+  pingCompanion,
+  type CompanionInstallStatus,
+} from '@/utils/companion-extension'
 
 const EXTENSION_DOWNLOAD_URL = '/extension/glyphlog-companion.zip'
 
@@ -26,8 +33,27 @@ export function DeviceManager() {
   const [pairingCode, setPairingCode] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [deviceToRevoke, setDeviceToRevoke] = useState<string | null>(null)
+  const [companionStatus, setCompanionStatus] = useState<CompanionInstallStatus>('checking')
+  const storeUrl = getCompanionStoreUrl()
 
-  // Countdown timer for pairing code (5 minutes)
+  useEffect(() => {
+    let cancelled = false
+    pingCompanion()
+      .then((ping) => {
+        if (!cancelled) {
+          setCompanionStatus(companionStatusFromPing(ping))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompanionStatus('missing')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     if (timeLeft <= 0) return
 
@@ -68,9 +94,12 @@ export function DeviceManager() {
 
     try {
       await revokeMutation.mutateAsync(deviceToRevoke)
+      await clearCompanionToken()
+      const ping = await pingCompanion()
+      setCompanionStatus(companionStatusFromPing(ping))
       toast({
         title: 'Dispositivo revocado',
-        description: 'La extensión ha sido desvinculada correctamente.',
+        description: 'La extensión ha sido desvinculada. Vuelve a emparejarla con un código nuevo.',
       })
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'No se pudo revocar el dispositivo.'
@@ -109,26 +138,13 @@ export function DeviceManager() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Extension download banner */}
-        <div className="rounded-lg border bg-muted/40 p-4 flex items-start gap-4">
-          <span className="text-2xl select-none">⬡</span>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium">GlyphLog Companion — Extensión de Chrome</p>
-            <p className="text-xs text-muted-foreground">
-              Registra animes y actualiza tu progreso directamente desde Crunchyroll, AnimeFLV y MangaDex.
-            </p>
-          </div>
-          <a
-            href={EXTENSION_DOWNLOAD_URL}
-            download="glyphlog-companion.zip"
-            className="shrink-0"
-          >
-            <Button variant="outline" size="sm">
-              Descargar extensión
-            </Button>
-          </a>
-        </div>
-        {/* Pairing code alert banner — aparece al generar código */}
+        <CompanionGuide
+          status={companionStatus}
+          storeUrl={storeUrl}
+          onPair={handleGenerateCode}
+          pairingPending={generateMutation.isPending}
+        />
+
         {pairingCode && (
           <div className="rounded-lg border border-primary/50 bg-primary/10 p-4 text-center space-y-2">
             <p className="text-sm font-medium text-primary">
@@ -138,7 +154,7 @@ export function DeviceManager() {
               {pairingCode}
             </div>
             <p className="text-xs text-muted-foreground">
-              Abre la extensión de Chrome e introduce este código para finalizar la vinculación.
+              Abre GlyphLog Companion e introduce este código de 6 caracteres. No copies el token de sesión de GlyphLog.
             </p>
           </div>
         )}
@@ -155,7 +171,9 @@ export function DeviceManager() {
           </p>
         ) : !devices || devices.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center border border-dashed rounded-lg">
-            No tienes ningún dispositivo emparejado.
+            {companionStatus === 'paired'
+              ? 'Companion está emparejada en este navegador. Si revocas el acceso, genera un código nuevo para volver a vincularla.'
+              : 'No tienes ningún dispositivo emparejado.'}
           </p>
         ) : (
           <div className="divide-y divide-border rounded-lg border">
@@ -221,4 +239,113 @@ export function DeviceManager() {
       </AlertDialog>
     </Card>
   )
+}
+
+function CompanionGuide({
+  status,
+  storeUrl,
+  onPair,
+  pairingPending,
+}: {
+  status: CompanionInstallStatus
+  storeUrl: string
+  onPair: () => void
+  pairingPending: boolean
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+      <div className="flex items-start gap-4">
+        <span className="text-2xl select-none">⬡</span>
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-medium">GlyphLog Companion</p>
+          <p className="text-xs text-muted-foreground">{statusLabel(status)}</p>
+        </div>
+      </div>
+
+      {status === 'missing' && <InstallSteps storeUrl={storeUrl} />}
+
+      {status === 'unpaired' && (
+        <div className="space-y-2 text-xs text-muted-foreground">
+          <p>
+            Companion ya está instalada. Pulsa <strong>Emparejar</strong>, copia el código de 6 caracteres y pégalo en el popup. No uses el token de sesión de GlyphLog.
+          </p>
+          <Button size="sm" onClick={onPair} disabled={pairingPending}>
+            {pairingPending ? 'Generando...' : 'Emparejar'}
+          </Button>
+        </div>
+      )}
+
+      {status === 'paired' && (
+        <p className="text-xs text-muted-foreground">
+          Para actualizar la instalación desde zip, recarga la extensión en chrome://extensions o brave://extensions. Si usas la Store, se actualizará sola. Revocar aquí desvincula el acceso de inmediato.
+        </p>
+      )}
+
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer font-medium text-foreground">Guía de Companion</summary>
+        <div className="mt-2 space-y-2">
+          <p>
+            <strong>Requisitos:</strong> Chrome o Brave. Edge Chromium también funciona. Firefox y Safari no están soportados.
+          </p>
+          <p>
+            <strong>Emparejar:</strong> genera un código de 6 caracteres (caduca en 5 minutos), ábrelo en el popup y confírmalo. Nunca copies el JWT ni el token de sesión.
+          </p>
+          <p>
+            <strong>Permisos:</strong> guarda un token de dispositivo en el navegador, habla con la API de GlyphLog y lee Crunchyroll, AnimeFLV y MangaDex para detectar el título o capítulo. No ve el resto de tu navegación.
+          </p>
+          <p>
+            <strong>Actualizar:</strong> la Store se actualiza sola. Con el zip, vuelve a cargar la carpeta descomprimida en chrome://extensions o brave://extensions.
+          </p>
+          <p>
+            <strong>Revocar:</strong> usa Revocar en esta lista. Companion volverá a pedir un código nuevo.
+          </p>
+          <p>
+            <strong>Problemas:</strong> si el código caduca, genera otro. Si la API no responde, revisa tu conexión en el popup. Si revocaste el dispositivo, empareja de nuevo.
+          </p>
+        </div>
+      </details>
+    </div>
+  )
+}
+
+function InstallSteps({ storeUrl }: { storeUrl: string }) {
+  return (
+    <div className="space-y-3 text-xs text-muted-foreground">
+      <p>
+        Instala Companion en Chrome o Brave y luego empareja con un código. Firefox y Safari no están soportados.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {storeUrl ? (
+          <a href={storeUrl} target="_blank" rel="noopener noreferrer">
+            <Button size="sm">Añadir a Chrome</Button>
+          </a>
+        ) : null}
+        <a href={EXTENSION_DOWNLOAD_URL} download="glyphlog-companion.zip">
+          <Button variant={storeUrl ? 'outline' : 'default'} size="sm">
+            Descargar extensión
+          </Button>
+        </a>
+      </div>
+      <ol className="list-decimal space-y-1 pl-4">
+        <li>Descarga el zip y descomprímelo en una carpeta.</li>
+        <li>Abre chrome://extensions o brave://extensions.</li>
+        <li>Activa Modo de desarrollador.</li>
+        <li>Pulsa Cargar descomprimida y elige esa carpeta.</li>
+        <li>Vuelve aquí y pulsa Emparejar nuevo dispositivo.</li>
+      </ol>
+    </div>
+  )
+}
+
+function statusLabel(status: CompanionInstallStatus): string {
+  if (status === 'checking') {
+    return 'Comprobando si Companion está instalada…'
+  }
+  if (status === 'missing') {
+    return 'No está instalada en este navegador. Sigue los pasos para instalarla.'
+  }
+  if (status === 'unpaired') {
+    return 'Instalada. Emparéjala con un código de 6 caracteres.'
+  }
+  return 'Instalada y emparejada en este navegador.'
 }

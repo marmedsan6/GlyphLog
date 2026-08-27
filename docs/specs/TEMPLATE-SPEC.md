@@ -3,7 +3,8 @@
 > **Estado:** borrador | en-revision | aprobada | implementada
 > **Prioridad:** alta | media | baja
 > **Dependencias:** ninguna | [SPEC-X]
-> **Plan/Task derivado:** (se rellena al aprobar: `docs/tasks/<TIPO>-<slug>.md`)
+> **Test design derivado:** (se rellena antes del gate: `docs/test-specs/TEST-SPEC-<slug>.md`)
+> **Task derivado:** (se rellena al aprobar: `docs/tasks/<TIPO>-<slug>.md`)
 
 ## Contexto
 
@@ -72,10 +73,10 @@ Tablas nuevas o alteradas, columnas, relaciones y migraciones Alembic necesarias
 
 Los "¿y si...?" que el código deberá manejar explícitamente. Cada uno debe poder convertirse en un test.
 
-- [ ] Config ausente (ej: API key) → comportamiento degradado con status concreto.
-- [ ] Datos vacíos o nulos en campos críticos.
-- [ ] Rate limit / quota agotada.
-- [ ] Caché: TTL, invalidación, fallo de backend.
+- **EC-1** — Config ausente (ej: API key) → comportamiento degradado con status concreto.
+- **EC-2** — Datos vacíos o nulos en campos críticos → resultado esperado.
+- **EC-3** — Rate limit / quota agotada → resultado esperado.
+- **EC-4** — Caché: TTL, invalidación o fallo de backend → resultado esperado.
 
 ## Fuera de alcance
 
@@ -93,4 +94,6 @@ Checklist de auto-revisión **antes** de someter la spec a aprobación. Si algú
 - [ ] Data models definidos (tablas, columnas, relaciones, migraciones).
 - [ ] Edge cases enumerados y convertibles en tests.
 - [ ] Sin implementación ni detalles de plan (los "cómo" van al plan, no a la spec).
-- [ ] Los tests de aceptación pueden escribirse solo leyendo esta spec.
+- [ ] Requisitos y edge cases tienen identificadores estables `RF-*`/`EC-*`.
+- [ ] El test design `TC-*` puede escribirse solo leyendo esta spec.
+- [ ] No contiene archivos, clases, mocks ni decisiones propias de Plan mode.

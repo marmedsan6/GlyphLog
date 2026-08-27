@@ -1,0 +1,15 @@
+---
+description: Preguntar dudas materiales y exponer inconsistencias importantes antes de actuar
+alwaysApply: true
+---
+
+# Gate de dudas e inconsistencias
+
+- Antes de escribir o ejecutar una decisión difícil de revertir, identifica las dudas, supuestos y contradicciones que puedan cambiar el resultado, alcance, arquitectura, datos o seguridad.
+- Pregunta siempre al usuario por las dudas materiales. No elijas silenciosamente entre alternativas con consecuencias distintas.
+- Expón siempre las inconsistencias importantes encontradas, aunque no bloqueen la tarea.
+- Agrupa las preguntas relacionadas y formula primero las de mayor impacto; evita interrogar paso a paso.
+- Si una duda puede resolverse de forma segura con contexto local o una comprobación de solo lectura, verifícala antes de preguntar.
+- No bloquees el trabajo por detalles menores, preferencias reversibles o información ya disponible.
+- Cuando no haya dudas materiales, indícalo brevemente y continúa.
+- Si una nueva inconsistencia aparece durante la ejecución, detente en el siguiente límite seguro, explica el impacto y pide decisión antes de divergir del alcance acordado.

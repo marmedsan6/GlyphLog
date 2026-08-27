@@ -11,6 +11,7 @@ import { PageSkeleton } from '@/components/shared/page-skeleton'
 import { HomePage } from '@/pages/home/home.page'
 import { LoginPage } from '@/pages/login/login.page'
 import { RegisterPage } from '@/pages/register/register.page'
+import { PrivacyPage } from '@/pages/privacy/privacy.page'
 import { NotFoundPage } from '@/pages/not-found/not-found.page'
 
 // Lazy loading de rutas protegidas para reducir bundle inicial
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
   // TEMPORAL: preview de avatares para elegir estilo DiceBear. Eliminar al decidir.
   ...(import.meta.env.DEV
     ? [

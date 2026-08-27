@@ -1,9 +1,10 @@
 # [SPEC] Recomendaciones en el chat de GlyphAI
 
-> **Estado:** aprobada
+> **Estado:** implementada
 > **Prioridad:** alta
 > **Dependencias:** ninguna
-> **Plan/Task derivado:** `docs/tasks/FEAT-glyphai-recommendations.md`
+> **Task derivado:** `docs/tasks/FEAT-glyphai-recommendations.md`
+> **Test design:** N/A — implementación anterior a ADR-017; no se migra retroactivamente
 
 ## Contexto
 

@@ -175,7 +175,7 @@ bash scripts/gh.sh issue create \
 Después de crear el issue, añadirlo al proyecto:
 
 ```bash
-bash scripts/gh.sh project item add 2 \
+bash scripts/gh.sh project item-add 2 \
   --url <URL-del-issue-creado> \
   --owner marmedsan6
 ```
@@ -188,11 +188,14 @@ Si el proyecto tiene campos personalizados (estado, prioridad), establecerlos:
 # Obtener el item ID del issue dentro del proyecto
 bash scripts/gh.sh project item-list 2 --owner marmedsan6 --format json
 
+# Obtener el node ID del proyecto (campo `id`, distinto del número 2)
+bash scripts/gh.sh project view 2 --owner marmedsan6 --format json
+
 # Establecer el estado a "Backlog" (o el que corresponda)
-bash scripts/gh.sh project item edit <item-id> \
+bash scripts/gh.sh project item-edit \
   --id <item-id> \
   --field-id <field-id-estado> \
-  --project-id 2 \
+  --project-id <project-node-id> \
   --single-select-option-id <option-id-backlog>
 ```
 
@@ -204,7 +207,7 @@ bash scripts/gh.sh project item edit <item-id> \
 ### Flujo resumido de creación
 
 1. Crear issue con `gh issue create`
-2. Añadir al proyecto #2 con `gh project item add`
+2. Añadir al proyecto #2 con `gh project item-add`
 3. Establecer estado a "Backlog" si es posible
 4. Mostrar al usuario: URL del issue + confirmación de que está en el backlog
 

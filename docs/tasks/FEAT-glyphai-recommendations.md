@@ -1,6 +1,6 @@
 # [FEAT] Recomendaciones en el chat de GlyphAI
 
-> **Estado:** backlog
+> **Estado:** completada
 > **Prioridad:** alta
 > **Dependencias:** ninguna
 
@@ -14,23 +14,25 @@ Integrar las recomendaciones dentro del chat de GlyphAI: un botón "+" que, tras
 
 ## Especificación
 
-**Spec:** [`docs/specs/SPEC-glyphai-recommendations.md`](../specs/SPEC-glyphai-recommendations.md) — estado `aprobada`
+**Spec:** [`docs/specs/SPEC-glyphai-recommendations.md`](../specs/SPEC-glyphai-recommendations.md) — estado `implementada`
 **Contrato:** `POST /api/v1/ai/recommendations`; schemas `GenerateChatRecommendationsRequest`/`Response` y `ChatMessageResponse.metadata`; columna `metadata JSON` en `chat_messages`; edge cases: <5 entradas, sin entradas del tipo, géneros null, catálogo caído, proveedor LLM caído, `external_url` de juegos → RAWG.
+
+**Test design:** N/A — implementación anterior a ADR-017; validada en el commit `f891547`.
 
 ## Tareas técnicas
 
-- [ ] Backend — añadir columna `metadata JSON NULL` a `ChatMessage` y su migración Alembic.
-- [ ] Backend — `ConversationRepository.add_message` y `ConversationService.add_message` aceptan `metadata`.
-- [ ] Backend — `ChatMessageResponse` expone `metadata`.
-- [ ] Backend — schemas `GenerateChatRecommendationsRequest` y `GenerateChatRecommendationsResponse`.
-- [ ] Backend — `RecommendationService`: prompt con géneros, `favorite_genres` calculado, `external_url` de juegos → RAWG.
-- [ ] Backend — nuevo endpoint `POST /ai/recommendations` (persistir mensaje user + assistant con content textual y metadata).
-- [ ] Frontend — `ai.service.ts`: `generateChatRecommendations(type, conversationId?)`.
-- [ ] Frontend — `useAIChat`: `AIChatMessage.metadata` + flujo de generación de recomendaciones.
-- [ ] Frontend — `chat-input.tsx`: botón "+" con `DropdownMenu` y selector obligatorio de tipo.
-- [ ] Frontend — nuevo `chat-recommendation-list.tsx` + render en `chat-message.tsx`.
-- [ ] Frontend — `chat.page.tsx`: mapear `metadata` del historial y conectar el selector.
-- [ ] Tests — pytest (servicio y endpoint), Vitest/RTL (selector, tarjetas, añadir), Playwright (flujo con LLM mockeado).
+- [x] Backend — añadir columna `metadata JSON NULL` a `ChatMessage` y su migración Alembic.
+- [x] Backend — `ConversationRepository.add_message` y `ConversationService.add_message` aceptan `metadata`.
+- [x] Backend — `ChatMessageResponse` expone `metadata`.
+- [x] Backend — schemas `GenerateChatRecommendationsRequest` y `GenerateChatRecommendationsResponse`.
+- [x] Backend — `RecommendationService`: prompt con géneros, `favorite_genres` calculado, `external_url` de juegos → RAWG.
+- [x] Backend — nuevo endpoint `POST /ai/recommendations` (persistir mensaje user + assistant con content textual y metadata).
+- [x] Frontend — `ai.service.ts`: `generateChatRecommendations(type, conversationId?)`.
+- [x] Frontend — `useAIChat`: `AIChatMessage.metadata` + flujo de generación de recomendaciones.
+- [x] Frontend — `chat-input.tsx`: botón "+" con `DropdownMenu` y selector obligatorio de tipo.
+- [x] Frontend — nuevo `chat-recommendation-list.tsx` + render en `chat-message.tsx`.
+- [x] Frontend — `chat.page.tsx`: mapear `metadata` del historial y conectar el selector.
+- [x] Tests — pytest (servicio y endpoint), Vitest/RTL (selector, tarjetas, añadir), Playwright (flujo con LLM mockeado).
 
 ## Criterios de aceptación
 

@@ -79,6 +79,8 @@ Estos principios son no negociables. Aplicarlos en cada tarea, sin excepciones.
 - **No tocar código no relacionado.** Si estás arreglando un bug en el router de entradas, no refactorices el sistema de autenticación de paso.
 - **Verificar criterios de aceptación.** Una tarea no está terminada hasta que todos los criterios de aceptación definidos en su descripción se cumplen. Verificarlos explícitamente.
 - **Documentar decisiones relevantes.** Cualquier decisión de arquitectura, elección de librería o tradeoff significativo debe quedar registrado en `memory-bank/decisions.md`.
+- **Preguntar dudas materiales.** Antes de asumir una decisión que pueda cambiar resultado, alcance, arquitectura, datos o seguridad, comprobar el contexto disponible y preguntar al usuario lo que siga abierto.
+- **Exponer inconsistencias importantes.** Comunicar siempre las contradicciones relevantes encontradas, aunque no bloqueen la tarea; agrupar las preguntas por impacto y no detenerse por detalles menores verificables.
 
 ---
 
@@ -199,23 +201,28 @@ Router → Service → Repository → Base de datos
 
 ## 6.5. Flujo SDD (Specification-Driven Development)
 
-El proyecto sigue el flujo SDD: **spec → plan → tasks → código → tests → validación**. Cada fase se aprueba antes de pasar a la siguiente; la especificación formal es el contrato revisable que antecede al plan.
+SDD es una ruta **opcional**: se activa solo si el usuario la pide o acepta una propuesta del agente. Nunca se inicia silenciosamente por tratarse de una feature nueva.
+
+El flujo es: **spec → test design → gate de planificación en Plan mode → task doc → Red → Green → Refactor → validación**. Plan mode es una fase de revisión, no un archivo `PLAN-*`; sus decisiones técnicas se conservan en el task doc.
 
 ### Niveles de especificación (Tiers)
 
-| Tier | Cuándo                                                             | Artefacto                                                     |
-| ---- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
-| 1    | Fix trivial (< 10 min): typo, bug puntual                          | Sin spec, directo al código                                   |
-| 2    | Feature pequeña: un endpoint, un componente                        | Sección `## Especificación` compacta inline en el task doc    |
-| 3    | Feature grande: auth, importaciones, descubrimiento, integraciones | Spec propia en `docs/specs/SPEC-<slug>.md` + gate de revisión |
+| Tier | Cuándo                                                             | Artefactos previos al task                                      |
+| ---- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 1    | Fix trivial, refactor mecánico o ajuste menor                      | Sin spec/test design separados                                  |
+| 2    | Feature pequeña: un endpoint, un componente                        | Spec compacta + test design compacto independientes              |
+| 3    | Feature grande: auth, importaciones, descubrimiento, integraciones | Spec formal + test design completo independientes                |
 
 ### Reglas del flujo
 
-1. **La spec se escribe y aprueba antes de desglosar en tareas.** Para Tier 3, la spec vive en `docs/specs/` (plantilla `TEMPLATE-SPEC.md`); para Tier 2, en la sección `## Especificación` del task doc.
-2. **Gate de aprobación:** la spec se somete a revisión en plan mode (con los "Criterios de salida" de `TEMPLATE-SPEC.md`) antes de generar el task doc. Regla de oro: _la spec está lista cuando puedes escribir los tests solo leyéndola_.
-3. **El task doc entra como salida del plan aprobado.** Se crea con `docs/tasks/TEMPLATE.md`, se añade a `docs/tasks/backlog.md` y se enlaza la spec en su sección Especificación.
-4. **Trazabilidad:** spec → task doc → criterios de aceptación → código → tests. Cada criterio de aceptación traza a un requisito de la spec.
-5. **Auditoría:** ejecuta el checklist de auditoría SDD de `docs/specs/README.md` periódicamente (fin de milestone o sesión significativa) para comprobar que el flujo se sigue estrictamente.
+1. **Aprobación previa:** elegir SDD solo tras petición explícita o propuesta aceptada.
+2. **Specs independientes:** Tier 2 usa `TEMPLATE-SPEC-COMPACT.md`; Tier 3 usa `TEMPLATE-SPEC.md`. Ambas viven en `docs/specs/` antes del task doc.
+3. **Test design independiente:** crear `docs/test-specs/TEST-SPEC-<slug>.md` solo desde la spec, sin usar detalles del código como oráculo.
+4. **Gate en Plan mode:** revisar spec + test design contra el código real, resolver con el usuario toda duda material y aprobar/rechazar. No crear un archivo de plan separado.
+5. **Task como salida persistente:** crear `docs/tasks/<TIPO>-<slug>.md` con las decisiones del gate, enlazar spec/test design y añadirlo al backlog.
+6. **TDD:** para comportamiento nuevo, observar Red antes del código, implementar el mínimo para Green y refactorizar manteniendo verde.
+7. **Trazabilidad:** `RF/EC → TC → test ejecutable → código → resultado`.
+8. **Cierre:** actualizar estados/backlog, guardar sesión y descubrimientos en Engram y registrar solo decisiones arquitectónicas en `memory-bank/decisions.md`.
 
 ---
 
@@ -243,7 +250,7 @@ La delegación se aplica **por acción** (tests, builds, revisiones) sin cambiar
 
 ## 7. Estructura de tareas
 
-Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. Úsalo al crear nuevas tareas o al documentar trabajo en curso. La sección `## Especificación` (antes de `## Tareas técnicas`) contiene el contrato de la tarea: enlace a la spec Tier 3 en `docs/specs/` o bloque compacto para Tier 2.
+Todas las tareas deben seguir `docs/tasks/TEMPLATE.md`. Para SDD Tier 2/3, el task doc se crea solo tras aprobar la spec y el test design independientes; enlaza ambos y conserva las decisiones técnicas de Plan mode.
 
 ### Template
 
@@ -260,7 +267,11 @@ Todas las tareas deben seguir el template definido en `docs/tasks/TEMPLATE.md`. 
 
 ## Especificación
 
-Contrato técnico: enlace a `docs/specs/SPEC-<slug>.md` (Tier 3) o bloque inline (Tier 2). N/A para Tier 1.
+Enlace a `docs/specs/SPEC-<slug>.md`. N/A para Tier 1.
+
+## Test design
+
+Enlace a `docs/test-specs/TEST-SPEC-<slug>.md` y matriz `TC-* → test ejecutable previsto`. N/A para Tier 1.
 
 ## Tareas técnicas
 
@@ -555,7 +566,7 @@ Cada subagente tiene contexto acotado y gasta menos tokens que el agente princip
 
 | Skill                   | Cuándo usarla                                                  |
 | ----------------------- | -------------------------------------------------------------- |
-| `sdd`                   | Orquestar el flujo SDD completo: idea → spec → task → código → tests → cierre |
+| `sdd`                   | Orquestar SDD opcional: spec → test design → Plan mode → task → TDD → cierre |
 | `quick-context`         | Al iniciar sesión — resumen del proyecto en 40 líneas          |
 | `thermo-nuclear-review` | Code review ultra-estricto (calidad, abstracciones, spaghetti) |
 | `qa-senior`             | Planes de prueba, templates de bug reports, testing E2E        |
@@ -579,7 +590,10 @@ quick-context → resumen de 40 líneas
 engram mem_search → ¿ya se trabajó en esto?
 codebase-memory-mcp → explorar código sin grep/read
 context7 (si se usan librerías) → docs actualizadas
-senior-dev → implementar
+resolver dudas materiales y exponer inconsistencias importantes
+elegir ruta; proponer SDD si reduce incertidumbre y pedir aprobación
+si SDD: spec → test design → gate en Plan mode → task
+implementar con Red → Green → Refactor
 thermo-nuclear-review → revisar calidad
 qa-senior → testear
 ```
