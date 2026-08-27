@@ -1,7 +1,7 @@
 # GlyphLog Companion — benchmark y matriz de compatibilidad
 
-> **Estado:** implementada (spike documental de la issue #66)  
-> **Fecha de consulta de fuentes:** 2026-08-26  
+> **Estado:** implementada (spike documental de la issue #66)
+> **Fecha de consulta de fuentes:** 2026-08-26
 > **Alcance:** política de compatibilidad, benchmark reproducible y contratos QA; no modifica adaptadores, API, permisos ni código de producción.
 
 ## Conclusión ejecutiva
