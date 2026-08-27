@@ -1,0 +1,8 @@
+# Portable subset of Gentle AI's Codex configuration. Project instructions and
+# skills stay in Codex-native repository paths; no absolute machine paths here.
+[features]
+multi_agent = true
+
+[agents]
+max_depth = 2
+max_threads = 4

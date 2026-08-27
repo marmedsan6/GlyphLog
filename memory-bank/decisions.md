@@ -27,6 +27,8 @@
 | [ADR-015](#adr-015) | Flujo de trabajo SDD con fase de especificación formal                  | Reemplazada por ADR-017 | agosto 2026 |
 | [ADR-016](#adr-016) | Render seguro de Markdown en respuestas de GlyphAI                      | Aceptada                | agosto 2026 |
 | [ADR-017](#adr-017) | SDD opcional con test design previo y TDD                               | Aceptada                | agosto 2026 |
+| [ADR-018](#adr-018) | Política de compatibilidad y allowlist explícita de GlyphLog Companion   | Aceptada                | agosto 2026 |
+| [ADR-019](#adr-019) | Integración selectiva y aislada de Gentle AI con Codex                   | Experimental            | agosto 2026 |
 
 ---
 
@@ -540,6 +542,54 @@ política de GlyphLog no convierte esa capacidad en una autorización wildcard.
   autorización amplia y dificulta que el usuario entienda el alcance.
 - **Permisos implícitos por detección:** rechazados; cada host debe estar
   declarado y revisado antes de distribuirse.
+
+---
+
+## ADR-019
+
+### Integración selectiva y aislada de Gentle AI con Codex
+
+**Fecha:** agosto 2026
+**Estado:** Experimental
+
+#### Contexto
+
+GlyphLog ya dispone de reglas de proyecto, MCPs, Engram, SDD con test design, skills de QA/review y workflows GitHub. Gentle AI v2.5.0-rc.1 ofrece un lifecycle nativo de review y distribución coordinada de configuración, pero su preset Codex solapa gran parte de esas capacidades.
+
+Una instalación aislada de la RC demostró además que `--scope workspace` mantiene efectos globales para backups y Engram, instala el routing en `.codex/AGENTS.md`, genera instrucciones de 70 KB, usa `.codex/skills` y escribe rutas absolutas al worktree.
+
+#### Decisión
+
+Evaluar Gentle AI mediante una integración versionada y selectiva:
+
+1. Fijar el runner a `v2.5.0-rc.1` y verificar su SHA-256 antes de ejecutarlo.
+2. Adoptar solo el review nativo opt-in y el routing que complemente las reglas de GlyphLog.
+3. Mantener las instrucciones siempre activas en un `AGENTS.md` compacto y las skills de proyecto en `.agents/skills`.
+4. No ejecutar el installer contra el HOME real durante el experimento.
+5. No instalar persona, SDD genérico, Engram/Context7 duplicados, temas, logos ni perfiles con rutas absolutas.
+6. Conservar OpenCode y Cursor hasta que una comparación real justifique retirar una herramienta.
+
+#### Razones
+
+- El review transaccional es la aportación diferencial; el resto ya existe o contradice convenciones de GlyphLog.
+- Un runner fijado y checksum permiten reproducir la prueba y evitan ejecutar contenido remoto no verificado.
+- Las rutas nativas de Codex reducen fallos silenciosos de descubrimiento.
+- Mantener RDD apagado por defecto preserva la autoridad del usuario sobre cambios y entrega.
+- El aislamiento permite abandonar la rama sin restaurar configuración global.
+
+#### Consecuencias
+
+- La actualización de Gentle AI será deliberada: exige cambiar versión, hash y repetir la evaluación.
+- El review de Gentle coexistirá temporalmente con `thermo-nuclear-review`; la comparación decidirá si uno sustituye al otro.
+- Las skills existentes conservan su fuente canónica en `.opencode/skills`; Codex accede mediante adaptadores pequeños para evitar copias divergentes.
+- La integración no prueba todavía que Gentle produzca mejores resultados; solo deja preparado un entorno seguro para medirlo.
+
+#### Alternativas consideradas
+
+- **Instalación completa global:** rechazada por impacto transversal sobre otras herramientas y configuración personal.
+- **Instalación completa workspace:** rechazada porque la RC aún escribe globalmente y genera rutas/paths incompatibles con el contrato actual de Codex.
+- **Copiar todos los assets generados:** rechazada por duplicación (~295 KB) y conflicto con el SDD específico del proyecto.
+- **No integrar nada:** rechazada porque impediría probar la única capacidad diferenciadora con evidencia real.
 
 ---
 

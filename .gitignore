@@ -140,3 +140,8 @@ start-brave-extension.sh
 
 # ─── Config local de Command Code (no es código del proyecto) ──────────────────
 .commandcode/
+
+# ─── Gentle AI experimental runtime (binary/state local, never versioned) ─────
+.gentle-ai/bin/
+.gentle-ai/backups/
+.gentle-ai/runtime/
