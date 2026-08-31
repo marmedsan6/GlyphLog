@@ -9,9 +9,9 @@ import {
   backgroundAPI,
   type ExtensionEntry,
   type ExternalSearchResult,
-} from '~/background-api';
-import type { MediaType } from '~/adapters/types';
-import styles from './overlay.css?inline';
+} from "~/background-api";
+import type { MediaType } from "~/adapters/types";
+import styles from "./overlay.css?inline";
 
 export interface OverlayData {
   title: string;
@@ -20,6 +20,9 @@ export interface OverlayData {
   mediaType: MediaType;
   pageUrl: string;
 }
+
+let activeOverlayHost: HTMLElement | null = null;
+let activeOverlay: OverlayComponent | null = null;
 
 export class OverlayComponent {
   private host: HTMLElement;
@@ -34,7 +37,7 @@ export class OverlayComponent {
    */
   constructor(host: HTMLElement) {
     this.host = host;
-    this.root = host.attachShadow({ mode: 'open' });
+    this.root = host.attachShadow({ mode: "open" });
     this.root.innerHTML = `<style>${styles}</style>`;
   }
 
@@ -42,36 +45,40 @@ export class OverlayComponent {
    * Establece los datos del media detectado y abre el overlay.
    */
   async show(data: OverlayData): Promise<void> {
-    console.log('[GlyphLog Overlay] Showing overlay for:', data.title);
+    console.log("[GlyphLog Overlay] Showing overlay for:", data.title);
     this.data = data;
     this.isLoading = true;
 
     // Mostrar estado de carga
     this.renderLoading(data);
-    console.debug('[GlyphLog Overlay] Rendered loading state');
+    console.debug("[GlyphLog Overlay] Rendered loading state");
 
     try {
       // Buscar la entrada en la colección
       const normalizedTitle = this.normalizeTitle(data.title);
-      console.debug('[GlyphLog Overlay] Searching for entry:', normalizedTitle);
-      
+      console.debug("[GlyphLog Overlay] Searching for entry:", normalizedTitle);
+
       const searchResult = await backgroundAPI.searchEntries(normalizedTitle);
-      console.debug('[GlyphLog Overlay] Search result:', searchResult);
+      console.debug("[GlyphLog Overlay] Search result:", searchResult);
 
       // Determinar si la entrada existe
       const entry = searchResult.entries?.[0];
 
       if (entry) {
         // Mostrar: "¿Marcar Ep. N?"
-        console.log('[GlyphLog Overlay] Entry found! Rendering mark progress...');
+        console.log(
+          "[GlyphLog Overlay] Entry found! Rendering mark progress...",
+        );
         this.renderMarkProgress(data, entry);
       } else {
         // Mostrar: "¿Agregar a tu lista?"
-        console.log('[GlyphLog Overlay] Entry not found! Rendering add entry...');
+        console.log(
+          "[GlyphLog Overlay] Entry not found! Rendering add entry...",
+        );
         this.renderAddEntry(data);
       }
     } catch (error) {
-      console.error('[GlyphLog Overlay] Error:', error);
+      console.error("[GlyphLog Overlay] Error:", error);
       this.renderError((error as Error).message);
     } finally {
       this.isLoading = false;
@@ -88,8 +95,8 @@ export class OverlayComponent {
   private normalizeTitle(title: string): string {
     // Normalización fuzzy: lowercase, sin puntuación, sin (Sub)/(Dub)
     let normalized = title.toLowerCase();
-    normalized = normalized.replace(/\s*\((sub|dub)\)\s*/gi, '');
-    normalized = normalized.replace(/[^\w\s]/g, '');
+    normalized = normalized.replace(/\s*\((sub|dub)\)\s*/gi, "");
+    normalized = normalized.replace(/[^\w\s]/g, "");
     return normalized.trim();
   }
 
@@ -124,13 +131,17 @@ export class OverlayComponent {
       </div>
     `;
 
-    const confirmBtn = this.root.getElementById('gl-confirm') as HTMLButtonElement;
-    const dismissBtn = this.root.getElementById('gl-dismiss') as HTMLButtonElement;
+    const confirmBtn = this.root.getElementById(
+      "gl-confirm",
+    ) as HTMLButtonElement;
+    const dismissBtn = this.root.getElementById(
+      "gl-dismiss",
+    ) as HTMLButtonElement;
 
-    confirmBtn.addEventListener('click', () =>
-      this.handleMarkProgress(entry, progressValue)
+    confirmBtn.addEventListener("click", () =>
+      this.handleMarkProgress(entry, progressValue),
     );
-    dismissBtn.addEventListener('click', () => this.handleDismiss());
+    dismissBtn.addEventListener("click", () => this.handleDismiss());
   }
 
   private renderAddEntry(data: OverlayData): void {
@@ -142,7 +153,7 @@ export class OverlayComponent {
           <div class="gl-overlay-title">¿Agregar a tu lista?</div>
           <div class="gl-overlay-subtitle">
             ${this.escapeHtml(data.title)}
-            ${progressLabel ? `&bull; ${progressLabel}` : ''}
+            ${progressLabel ? `&bull; ${progressLabel}` : ""}
           </div>
           <div class="gl-overlay-actions">
             <button class="gl-btn gl-btn-confirm" id="gl-confirm">Agregar</button>
@@ -152,13 +163,15 @@ export class OverlayComponent {
       </div>
     `;
 
-    const confirmBtn = this.root.getElementById('gl-confirm') as HTMLButtonElement;
-    const dismissBtn = this.root.getElementById('gl-dismiss') as HTMLButtonElement;
+    const confirmBtn = this.root.getElementById(
+      "gl-confirm",
+    ) as HTMLButtonElement;
+    const dismissBtn = this.root.getElementById(
+      "gl-dismiss",
+    ) as HTMLButtonElement;
 
-    confirmBtn.addEventListener('click', () =>
-      this.handleAddEntry(data)
-    );
-    dismissBtn.addEventListener('click', () => this.handleDismiss());
+    confirmBtn.addEventListener("click", () => this.handleAddEntry(data));
+    dismissBtn.addEventListener("click", () => this.handleDismiss());
   }
 
   private renderError(message: string): void {
@@ -175,8 +188,13 @@ export class OverlayComponent {
     setTimeout(() => this.hide(), 3000);
   }
 
-  private async handleMarkProgress(entry: ExtensionEntry, newValue: number): Promise<void> {
-    const confirmBtn = this.root.querySelector('#gl-confirm') as HTMLButtonElement;
+  private async handleMarkProgress(
+    entry: ExtensionEntry,
+    newValue: number,
+  ): Promise<void> {
+    const confirmBtn = this.root.querySelector(
+      "#gl-confirm",
+    ) as HTMLButtonElement;
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="gl-spinner"></span>Guardando...';
 
@@ -184,7 +202,9 @@ export class OverlayComponent {
       await backgroundAPI.updateProgress(entry.id, newValue);
 
       // Mostrar confirmación
-      const progressLabel = this.data ? this.formatProgressLabel(this.data) : '';
+      const progressLabel = this.data
+        ? this.formatProgressLabel(this.data)
+        : "";
       this.root.innerHTML = `
         <style>${styles}</style>
         <div class="gl-overlay">
@@ -203,7 +223,9 @@ export class OverlayComponent {
   }
 
   private async handleAddEntry(data: OverlayData): Promise<void> {
-    const confirmBtn = this.root.querySelector('#gl-confirm') as HTMLButtonElement;
+    const confirmBtn = this.root.querySelector(
+      "#gl-confirm",
+    ) as HTMLButtonElement;
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="gl-spinner"></span>Buscando...';
 
@@ -212,12 +234,19 @@ export class OverlayComponent {
     let externalMeta: ExternalSearchResult | null = null;
     try {
       const searchResult = await backgroundAPI.searchExternal(data.title);
-      const targetType = data.mediaType === 'manga' ? 'manga' : 'anime';
+      const targetType = data.mediaType === "manga" ? "manga" : "anime";
       // Primer resultado del tipo correcto
-      externalMeta = searchResult.results?.find(r => r.type === targetType) ?? null;
-      console.debug('[GlyphLog Overlay] External meta found:', externalMeta?.title ?? 'none');
+      externalMeta =
+        searchResult.results?.find((r) => r.type === targetType) ?? null;
+      console.debug(
+        "[GlyphLog Overlay] External meta found:",
+        externalMeta?.title ?? "none",
+      );
     } catch (error) {
-      console.debug('[GlyphLog Overlay] External search failed (non-blocking):', error);
+      console.debug(
+        "[GlyphLog Overlay] External search failed (non-blocking):",
+        error,
+      );
     }
 
     confirmBtn.innerHTML = '<span class="gl-spinner"></span>Agregando...';
@@ -225,8 +254,8 @@ export class OverlayComponent {
     try {
       const entryData: Record<string, string | number | undefined> = {
         title: data.title,
-        type: data.mediaType === 'manga' ? 'manga' : 'anime',
-        status: 'watching',
+        type: data.mediaType === "manga" ? "manga" : "anime",
+        status: "watching",
       };
 
       // Enriquecer con metadatos externos cuando están disponibles
@@ -234,11 +263,15 @@ export class OverlayComponent {
         if (externalMeta.year) {
           entryData.year = externalMeta.year;
         }
-        if (externalMeta.progress_total !== null && externalMeta.progress_total !== undefined) {
+        if (
+          externalMeta.progress_total !== null &&
+          externalMeta.progress_total !== undefined
+        ) {
           // El backend requiere enteros para episodios/capítulos; los juegos usan horas con decimales
-          const total = data.mediaType === 'game'
-            ? externalMeta.progress_total
-            : Math.floor(externalMeta.progress_total);
+          const total =
+            data.mediaType === "game"
+              ? externalMeta.progress_total
+              : Math.floor(externalMeta.progress_total);
           if (total > 0) {
             entryData.progress_total = total;
           }
@@ -249,49 +282,65 @@ export class OverlayComponent {
         }
       }
 
-      console.debug('[GlyphLog Overlay] Creating entry with:', entryData);
+      console.debug("[GlyphLog Overlay] Creating entry with:", entryData);
       const newEntry = await backgroundAPI.createEntry(entryData);
-      console.log('[GlyphLog Overlay] Entry created:', newEntry.id);
+      console.log("[GlyphLog Overlay] Entry created:", newEntry.id);
 
       // Paso 2: actualizar el progreso (episodio/capítulo actual).
       // Se ejecuta después de crear la entrada; si falla no deshace la creación.
       const progressValue = data.chapter ?? data.episode;
-      console.debug('[GlyphLog Overlay] Progress value to save:', progressValue);
+      console.debug(
+        "[GlyphLog Overlay] Progress value to save:",
+        progressValue,
+      );
 
       if (progressValue !== undefined && progressValue > 0) {
         // Validar que el progreso no supere el total si ya lo conocemos
         const knownTotal = externalMeta?.progress_total
           ? Math.floor(externalMeta.progress_total)
           : null;
-        const clampedProgress = knownTotal && progressValue > knownTotal
-          ? knownTotal
-          : progressValue;
+        const clampedProgress =
+          knownTotal && progressValue > knownTotal ? knownTotal : progressValue;
 
         try {
           await backgroundAPI.updateProgress(newEntry.id, clampedProgress);
-          console.log('[GlyphLog Overlay] Progress saved:', clampedProgress);
+          console.log("[GlyphLog Overlay] Progress saved:", clampedProgress);
         } catch (error) {
-          console.error('[GlyphLog Overlay] Progress update failed:', error);
-          this.renderPartialSuccess(data.title, externalMeta?.cover_image ?? null, error);
+          console.error("[GlyphLog Overlay] Progress update failed:", error);
+          this.renderPartialSuccess(
+            data.title,
+            externalMeta?.cover_image ?? null,
+            error,
+          );
           return;
         }
       } else {
-        console.debug('[GlyphLog Overlay] No episode/chapter detected — progress not updated');
+        console.debug(
+          "[GlyphLog Overlay] No episode/chapter detected — progress not updated",
+        );
       }
 
-      this.renderSuccess(data.title, externalMeta?.cover_image ?? null, progressValue);
+      this.renderSuccess(
+        data.title,
+        externalMeta?.cover_image ?? null,
+        progressValue,
+      );
     } catch (error) {
       this.renderError(this.getErrorMessage(error));
     }
   }
 
-  private renderSuccess(title: string, coverUrl: string | null = null, episode?: number): void {
+  private renderSuccess(
+    title: string,
+    coverUrl: string | null = null,
+    episode?: number,
+  ): void {
     const episodeHtml = episode
       ? `<div class="gl-overlay-progress">Ep. ${episode} registrado</div>`
-      : '';
+      : "";
     const coverHtml = coverUrl
       ? `<img class="gl-cover" src="${this.escapeHtml(coverUrl)}" alt="" />`
-      : '';
+      : "";
     this.root.innerHTML = `
       <style>${styles}</style>
       <div class="gl-overlay">
@@ -307,10 +356,14 @@ export class OverlayComponent {
     setTimeout(() => this.hide(), 2500);
   }
 
-  private renderPartialSuccess(title: string, coverUrl: string | null, error: unknown): void {
+  private renderPartialSuccess(
+    title: string,
+    coverUrl: string | null,
+    error: unknown,
+  ): void {
     const coverHtml = coverUrl
       ? `<img class="gl-cover" src="${this.escapeHtml(coverUrl)}" alt="" />`
-      : '';
+      : "";
     this.root.innerHTML = `
       <style>${styles}</style>
       <div class="gl-overlay">
@@ -333,33 +386,33 @@ export class OverlayComponent {
   private formatProgressLabel(data: OverlayData): string {
     const value = data.chapter ?? data.episode;
     if (value === undefined) {
-      return '';
+      return "";
     }
-    if (data.mediaType === 'manga') {
+    if (data.mediaType === "manga") {
       return `Cap. ${value}`;
     }
     return `Ep. ${value}`;
   }
 
   private getErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : 'Error desconocido';
+    return error instanceof Error ? error.message : "Error desconocido";
   }
 
   private handleDismiss(): void {
     // Marcar URL como descartada en esta sesión
     if (this.data) {
-      sessionStorage.setItem(`glyphlog-dismissed-${this.data.pageUrl}`, 'true');
+      sessionStorage.setItem(`glyphlog-dismissed-${this.data.pageUrl}`, "true");
     }
     this.hide();
   }
 
   private escapeHtml(text: string): string {
     return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 }
 
@@ -370,15 +423,26 @@ export async function createAndShowOverlay(data: OverlayData): Promise<void> {
   // Checar si ya fue descartado en esta sesión
   const dismissedKey = `glyphlog-dismissed-${data.pageUrl}`;
   if (sessionStorage.getItem(dismissedKey)) {
-    console.debug('[GlyphLog] URL descartada en esta sesión');
+    console.debug("[GlyphLog] URL descartada en esta sesión");
     return;
   }
 
-  // Host con nombre de custom element (válido para attachShadow aunque no se registre)
-  const host = document.createElement('glyphlog-overlay');
-  document.body.appendChild(host);
+  if (!activeOverlayHost?.isConnected || !activeOverlay) {
+    // Host con nombre de custom element (válido para attachShadow aunque no se registre)
+    activeOverlayHost = document.createElement("glyphlog-overlay");
+    document.body.appendChild(activeOverlayHost);
+    activeOverlay = new OverlayComponent(activeOverlayHost);
+  }
 
-  // Crear el componente y mostrar datos
-  const overlay = new OverlayComponent(host);
-  await overlay.show(data);
+  await activeOverlay.show(data);
+}
+
+/**
+ * Oculta cualquier overlay de una ruta anterior. Las SPAs conservan el mismo
+ * documento al cambiar de episodio o al volver a una sección no compatible.
+ */
+export function hideActiveOverlay(): void {
+  activeOverlay?.hide();
+  activeOverlay = null;
+  activeOverlayHost = null;
 }

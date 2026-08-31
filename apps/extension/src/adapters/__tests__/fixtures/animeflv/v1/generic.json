@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "platform": "animeflv",
+  "scenario": "generic",
+  "capturedAt": "2026-08-28",
+  "sourceUrlPattern": "https://animeflv.net/ver/stellar-chronicles-7",
+  "locale": "es-ES",
+  "hydrationState": "degraded",
+  "authenticated": false,
+  "sanitized": true,
+  "expected": null,
+  "redactions": ["series-title"]
+}

@@ -7,7 +7,7 @@
  * patrón de URL como señal principal y el DOM como confirmación.
  */
 
-import { SiteAdapter, DetectedMedia } from './types';
+import { SiteAdapter, DetectedMedia } from "./types";
 
 export class AnimeFlvAdapter implements SiteAdapter {
   // Selectores centralizados: si AnimeFLV cambia su DOM, solo hay que
@@ -15,8 +15,8 @@ export class AnimeFlvAdapter implements SiteAdapter {
   private readonly SELECTORS = {
     titleCandidates: [
       'meta[property="og:title"]', // "Kami no Shizuku Episodio 12"
-      'h1.Title',                  // "Kami no Shizuku Episodio 12"
-      'h2.SubTitle',               // Variante en algunas páginas
+      "h1.Title", // "Kami no Shizuku Episodio 12"
+      "h2.SubTitle", // Variante en algunas páginas
     ],
   };
 
@@ -26,7 +26,10 @@ export class AnimeFlvAdapter implements SiteAdapter {
   matches(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return this.HOST_PATTERN.test(parsed.hostname) && parsed.pathname.startsWith('/ver/');
+      return (
+        this.HOST_PATTERN.test(parsed.hostname) &&
+        parsed.pathname.startsWith("/ver/")
+      );
     } catch {
       return false;
     }
@@ -42,12 +45,12 @@ export class AnimeFlvAdapter implements SiteAdapter {
       return {
         title,
         episode: this.extractEpisodeNumber(url),
-        mediaType: 'anime',
+        mediaType: "anime",
         pageUrl: url,
       };
     } catch (error) {
       // Fallo silencioso: el adaptador no debe romper la navegación del usuario
-      console.debug('[AnimeFlvAdapter] Detección falló:', error);
+      console.debug("[AnimeFlvAdapter] Detección falló:", error);
       return null;
     }
   }
@@ -59,7 +62,7 @@ export class AnimeFlvAdapter implements SiteAdapter {
         const text = this.extractTextContent(element);
         if (text) {
           const cleaned = this.cleanTitle(text);
-          if (cleaned) {
+          if (this.isUsableTitle(cleaned)) {
             return cleaned;
           }
         }
@@ -69,12 +72,22 @@ export class AnimeFlvAdapter implements SiteAdapter {
     // Fallback: document.title ("{Título} Episodio {N} Sub Español - AnimeFLV")
     if (document.title) {
       const cleaned = this.cleanTitle(document.title);
-      if (cleaned) {
+      if (this.isUsableTitle(cleaned)) {
         return cleaned;
       }
     }
 
     return null;
+  }
+
+  private isUsableTitle(title: string): boolean {
+    if (!title) {
+      return false;
+    }
+
+    return !/^(?:AnimeFLV|Ver\s+anime(?:\s+online)?|Anime\s+online|(?:Ep\.?|Episode|Episodio)\s*\d+)$/i.test(
+      title,
+    );
   }
 
   /**
@@ -98,27 +111,27 @@ export class AnimeFlvAdapter implements SiteAdapter {
 
   private extractTextContent(element: Element): string {
     // Las meta tags guardan su valor en el atributo content, no en textContent
-    if (element.tagName === 'META') {
-      return element.getAttribute('content')?.trim() || '';
+    if (element.tagName === "META") {
+      return element.getAttribute("content")?.trim() || "";
     }
-    return element.textContent?.trim() || '';
+    return element.textContent?.trim() || "";
   }
 
   private cleanTitle(title: string): string {
     let cleaned = title;
 
     // Remover sufijos del sitio: "- AnimeFLV" / "| AnimeFLV"
-    cleaned = cleaned.replace(/\s*[-|]\s*AnimeFLV\s*$/i, '');
+    cleaned = cleaned.replace(/\s*[-|]\s*AnimeFLV\s*$/i, "");
 
     // Remover "Sub Español" (y variantes de idioma) al final
-    cleaned = cleaned.replace(/\s+Sub\s*Español\s*$/i, '');
-    cleaned = cleaned.replace(/\s+(Español|Latino|Castellano)\s*$/i, '');
+    cleaned = cleaned.replace(/\s+Sub\s*Español\s*$/i, "");
+    cleaned = cleaned.replace(/\s+(Español|Latino|Castellano)\s*$/i, "");
 
     // Remover "Episodio N" al final (og:title: "{Título} Episodio {N}")
-    cleaned = cleaned.replace(/\s+Episodio\s*\d+\s*$/i, '');
+    cleaned = cleaned.replace(/\s+Episodio\s*\d+\s*$/i, "");
 
     // Normalizar espacios múltiples
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
 
     return cleaned;
   }

@@ -2,8 +2,8 @@
 
 > **Rama:** `experiment/gentle-ai-codex`
 > **Versión evaluada:** Gentle AI `v2.5.0-rc.1`
-> **Estado:** integración selectiva validada; prueba con una tarea real pendiente
-> **Fecha:** 28 de agosto de 2026
+> **Estado:** integración selectiva validada; evaluación con #68 completada
+> **Fecha:** 31 de agosto de 2026
 
 ## Hipótesis
 
@@ -119,3 +119,24 @@ Adoptar en `main` solo si una tarea real demuestra alguna de estas mejoras sin f
 - reduce el tiempo de coordinación de una revisión compleja.
 
 Rechazar o reducir la integración si obliga a mantener estado frágil, duplica hallazgos sin mejorar señal o interfiere con los workflows actuales.
+
+## Evaluación durante #68
+
+Gentle aportó valor como guardrail de proceso, no como detector funcional:
+
+- obligó a conservar un lifecycle explícito (spec → test design → Red → Green →
+  validación) y un target inmutable para el review;
+- dejó evidencia reproducible del estado del review (`clean`) y evitó confundir
+  un review informativo con autorización para commit o release;
+- hizo visibles los límites del provider: RDD no pudo habilitarse de forma
+  clone-local sin tocar estado global, por lo que no hubo findings del review;
+- no detectó la ambigüedad de identidad que apareció al usar la extensión real;
+  esa señal requirió smoke manual y observación del DOM/flujo de usuario;
+- añadió coste operativo (preflight, estados y documentación) sin reducir el
+  tiempo de diagnóstico del bug intermitente.
+
+Recomendación: **ajustar**, manteniendo el runner y el lifecycle como revisión
+opt-in para cambios de integración, pero sin convertir Gentle en gate de
+aceptación funcional. Para Companion debe combinarse con smoke real y un flujo
+de selección explícita; Gentle no sustituye pruebas de producto, navegador ni
+backend. No se adopta RDD global ni se ejecuta `gentle-ai install`.

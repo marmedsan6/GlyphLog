@@ -8,15 +8,15 @@
  * documenta explícitamente la regla de capítulos decimales.
  */
 
-import { SiteAdapter, DetectedMedia } from './types';
+import { SiteAdapter, DetectedMedia } from "./types";
 
 export class MangaDexAdapter implements SiteAdapter {
   // Selectores centrales del lector de MangaDex.
   private readonly SELECTORS = {
     // Enlace al título del manga en el header del lector
-    title: 'a.reader--header-manga',
+    title: "a.reader--header-manga",
     // Badge con "Ch. 427" o "Oneshot"
-    chapterMeta: '.reader--meta.chapter',
+    chapterMeta: ".reader--meta.chapter",
   };
 
   private readonly CHAPTER_UUID_PATTERN = /^\/chapter\/[0-9a-f-]{36,}(?:\/|$)/i;
@@ -24,8 +24,10 @@ export class MangaDexAdapter implements SiteAdapter {
   matches(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return parsed.hostname.toLowerCase() === 'mangadex.org' &&
-        this.CHAPTER_UUID_PATTERN.test(parsed.pathname);
+      return (
+        parsed.hostname.toLowerCase() === "mangadex.org" &&
+        this.CHAPTER_UUID_PATTERN.test(parsed.pathname)
+      );
     } catch {
       return false;
     }
@@ -43,12 +45,12 @@ export class MangaDexAdapter implements SiteAdapter {
       return {
         title,
         chapter,
-        mediaType: 'manga',
+        mediaType: "manga",
         pageUrl: url,
       };
     } catch (error) {
       // Fallo silencioso: nunca romper la navegación del usuario
-      console.debug('[MangaDexAdapter] Detección falló:', error);
+      console.debug("[MangaDexAdapter] Detección falló:", error);
       return null;
     }
   }
@@ -57,24 +59,36 @@ export class MangaDexAdapter implements SiteAdapter {
     // 1. Header del lector: título limpio sin parsing
     const titleLink = document.querySelector(this.SELECTORS.title);
     const titleFromLink = titleLink?.textContent?.trim();
-    if (titleFromLink) {
+    if (titleFromLink && this.isUsableTitle(titleFromLink)) {
       return titleFromLink;
     }
 
     // 2. og:title: "{Title} - Ch. N - {Chapter name} - MangaDex"
-    const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
+    const ogTitle = document
+      .querySelector('meta[property="og:title"]')
+      ?.getAttribute("content");
     if (ogTitle) {
       const cleaned = this.cleanTitleFromOg(ogTitle);
-      if (cleaned) return cleaned;
+      if (cleaned && this.isUsableTitle(cleaned)) return cleaned;
     }
 
     // 3. document.title: "1 | Chapter N - {Title} - MangaDex"
     if (document.title) {
       const cleaned = this.cleanTitleFromDocumentTitle(document.title);
-      if (cleaned) return cleaned;
+      if (cleaned && this.isUsableTitle(cleaned)) return cleaned;
     }
 
     return null;
+  }
+
+  private isUsableTitle(title: string): boolean {
+    if (!title) {
+      return false;
+    }
+
+    return !/^(?:MangaDex|Reader|(?:Ch\.?|Chapter)\s*\d+(?:\.\d+)?)$/i.test(
+      title,
+    );
   }
 
   private extractChapterNumber(document: Document): number {
@@ -91,7 +105,9 @@ export class MangaDexAdapter implements SiteAdapter {
     }
 
     // 2. og:title: "{Title} - Ch. N - {Chapter name} - MangaDex"
-    const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
+    const ogTitle = document
+      .querySelector('meta[property="og:title"]')
+      ?.getAttribute("content");
     if (ogTitle) {
       const parsed = this.parseChapterNumber(ogTitle);
       if (parsed !== undefined) {
@@ -131,10 +147,14 @@ export class MangaDexAdapter implements SiteAdapter {
 
   private cleanTitleFromOg(ogTitle: string): string | null {
     // Formato: "{Title} - Ch. N - {Chapter name} - MangaDex"
-    const withoutSuffix = ogTitle.replace(/\s+-\s+MangaDex\s*$/i, '');
+    const withoutSuffix = ogTitle.replace(/\s+-\s+MangaDex\s*$/i, "");
     const parts = withoutSuffix.split(/\s+-\s+/);
     const [titlePart, chapterPart] = parts;
-    if (titlePart && chapterPart && /^(Ch\.?|Chapter)\s*[0-9]/i.test(chapterPart)) {
+    if (
+      titlePart &&
+      chapterPart &&
+      /^(Ch\.?|Chapter)\s*[0-9]/i.test(chapterPart)
+    ) {
       return titlePart.trim();
     }
     return null;
@@ -142,7 +162,9 @@ export class MangaDexAdapter implements SiteAdapter {
 
   private cleanTitleFromDocumentTitle(pageTitle: string): string | null {
     // Formato: "{page} | Chapter N - {Title} - MangaDex"
-    const match = pageTitle.match(/\|\s*Chapter\s*[0-9.]+\s+-\s+(.+?)\s+-\s+MangaDex/i);
+    const match = pageTitle.match(
+      /\|\s*Chapter\s*[0-9.]+\s+-\s+(.+?)\s+-\s+MangaDex/i,
+    );
     if (match && match[1]) {
       return match[1].trim();
     }

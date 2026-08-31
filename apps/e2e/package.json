@@ -9,6 +9,8 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "test:e2e": "playwright test --project=chromium",
+    "test:companion": "playwright test e2e-tests/tests/companion/companion-extension.spec.ts --project=companion-chromium",
+    "test:companion:brave": "playwright test e2e-tests/tests/companion/companion-extension.spec.ts --project=companion-brave",
     "test:report": "playwright show-report",
     "e2e": "playwright test"
   },

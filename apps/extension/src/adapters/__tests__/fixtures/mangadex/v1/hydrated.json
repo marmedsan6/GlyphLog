@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "platform": "mangadex",
+  "scenario": "hydrated",
+  "capturedAt": "2026-08-28",
+  "sourceUrlPattern": "https://mangadex.org/chapter/12345678-1234-1234-1234-123456789abc",
+  "locale": "en",
+  "hydrationState": "hydrated",
+  "authenticated": false,
+  "sanitized": true,
+  "expected": {
+    "title": "Paper Moons",
+    "chapter": 42,
+    "mediaType": "manga",
+    "pageUrl": "https://mangadex.org/chapter/12345678-1234-1234-1234-123456789abc"
+  },
+  "redactions": ["account", "reader-images"]
+}

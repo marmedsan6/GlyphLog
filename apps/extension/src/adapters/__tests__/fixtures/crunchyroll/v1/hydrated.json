@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "platform": "crunchyroll",
+  "scenario": "hydrated",
+  "capturedAt": "2026-08-28",
+  "sourceUrlPattern": "https://www.crunchyroll.com/es-es/watch/GLYPHLOG01/episode-12",
+  "locale": "es-ES",
+  "hydrationState": "hydrated",
+  "authenticated": false,
+  "sanitized": true,
+  "expected": {
+    "title": "Orbital Hearts",
+    "episode": 12,
+    "mediaType": "anime",
+    "pageUrl": "https://www.crunchyroll.com/es-es/watch/GLYPHLOG01/episode-12"
+  },
+  "redactions": ["account", "analytics", "media"]
+}

@@ -4,24 +4,25 @@
  *
  * Responsabilidades:
  * 1. Ejecutar detectión cuando la página carga
- * 2. Escuchar cambios de navegación SPA (history.pushState, popstate)
+ * 2. Escuchar cambios de navegación SPA
  * 3. Mostrar el overlay cuando se detecta media
  */
 
-import { defineContentScript } from 'wxt/sandbox';
-import { detectMediaInPage, getAdapter } from '~/adapters';
-import { createAndShowOverlay } from '~/overlay/overlay';
+import { defineContentScript } from "wxt/sandbox";
+import type { ContentScriptContext } from "wxt/client";
+import { detectMediaInPage, getAdapter } from "~/adapters";
+import { createAndShowOverlay, hideActiveOverlay } from "~/overlay/overlay";
 
 export default defineContentScript({
   // Mismo alcance que host_permissions: sin <all_urls>, un patrón por sitio soportado
   matches: [
-    '*://www.crunchyroll.com/*',
-    '*://crunchyroll.com/*',
-    '*://animeflv.net/*',
-    '*://*.animeflv.net/*',
-    '*://mangadex.org/*',
+    "*://www.crunchyroll.com/*",
+    "*://crunchyroll.com/*",
+    "*://animeflv.net/*",
+    "*://*.animeflv.net/*",
+    "*://mangadex.org/*",
   ],
-  main() {
+  main(ctx) {
     /**
      * Sesión de episodios descartados (URL → descartado en esta sesión)
      * Se reinicia con cada reload de página.
@@ -32,27 +33,92 @@ export default defineContentScript({
     // SPA Navigation Detection
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Monkey-patch de history.pushState para detectar navegación SPA
-     */
-    function setupHistoryListener(): void {
-      const originalPushState = history.pushState;
+    function setupHistoryListener(ctx: ContentScriptContext): void {
+      let lastObservedUrl = window.location.href;
+      let pendingDetection: number | undefined;
+      let hydrationObserver: MutationObserver | undefined;
+      let hydrationTimeout: number | undefined;
+      let detectionInFlight = false;
+      let rerunRequested = false;
 
-      history.pushState = function (...args: Parameters<History['pushState']>) {
-        const result = originalPushState.call(this, args[0], args[1], args[2]);
-        // Después de que pushState cambie la URL, intentar detectar media
-        setTimeout(() => {
-          detectAndShow();
-        }, 100); // pequeño delay para que el DOM se actualice
-        return result;
+      const stopHydrationObservation = (): void => {
+        hydrationObserver?.disconnect();
+        hydrationObserver = undefined;
+        window.clearTimeout(hydrationTimeout);
+        hydrationTimeout = undefined;
+        window.clearTimeout(pendingDetection);
+        pendingDetection = undefined;
+        rerunRequested = false;
       };
 
-      // Escuchar popstate (botón atrás/adelante)
-      window.addEventListener('popstate', () => {
-        setTimeout(() => {
-          detectAndShow();
+      const runDetection = async (): Promise<void> => {
+        pendingDetection = undefined;
+        if (detectionInFlight) {
+          rerunRequested = true;
+          return;
+        }
+
+        detectionInFlight = true;
+        try {
+          const detected = await detectAndShow();
+          if (detected) {
+            stopHydrationObservation();
+          }
+        } finally {
+          detectionInFlight = false;
+          if (rerunRequested && hydrationObserver) {
+            rerunRequested = false;
+            pendingDetection = ctx.setTimeout(() => {
+              runDetection().catch(console.error);
+            }, 100);
+          }
+        }
+      };
+
+      const scheduleDetection = (): void => {
+        if (pendingDetection !== undefined) {
+          return;
+        }
+        pendingDetection = ctx.setTimeout(() => {
+          runDetection().catch(console.error);
         }, 100);
-      });
+      };
+
+      const observeHydration = (url: string): void => {
+        stopHydrationObservation();
+        if (!getAdapter(url)) {
+          return;
+        }
+
+        hydrationObserver = new MutationObserver(scheduleDetection);
+        // Crunchyroll puede sustituir el shell <html> durante una navegación
+        // blanda. El Document sobrevive a ese reemplazo; observar el elemento
+        // anterior dejaría el detector conectado a un árbol ya descartado.
+        hydrationObserver.observe(document, {
+          attributes: true,
+          attributeFilter: ["content"],
+          childList: true,
+          subtree: true,
+        });
+        hydrationTimeout = ctx.setTimeout(stopHydrationObservation, 30_000);
+        scheduleDetection();
+      };
+
+      const detectNavigation = (): void => {
+        const nextUrl = window.location.href;
+        if (nextUrl === lastObservedUrl) {
+          return;
+        }
+        lastObservedUrl = nextUrl;
+        observeHydration(nextUrl);
+      };
+
+      // WXT mantiene un watcher de history API en el contexto del content
+      // script. A diferencia de parchear pushState desde el mundo aislado,
+      // este evento también cubre las navegaciones iniciadas por el shell SPA
+      // de Crunchyroll.
+      ctx.addEventListener(window, "wxt:locationchange", detectNavigation);
+      ctx.addEventListener(window, "popstate", detectNavigation);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -66,41 +132,52 @@ export default defineContentScript({
      * asíncrona. Si la URL corresponde a un adaptador conocido y la primera
      * detección falla, reintentamos durante unos segundos antes de rendirnos.
      */
-    async function detectAndShow(): Promise<void> {
+    async function detectAndShow(): Promise<boolean> {
       // Checar si el URL fue descartado en esta sesión
       const currentUrl = window.location.href;
       if (dismissedEpisodes.has(currentUrl)) {
-        console.debug('[GlyphLog] URL descartada en esta sesión:', currentUrl);
-        return;
+        console.debug("[GlyphLog] URL descartada en esta sesión:", currentUrl);
+        return true;
       }
 
       // Intentar detectar media (con reintentos si hay un adaptador para esta URL)
       const media = await detectMediaWithRetry(currentUrl);
 
-      if (!media) {
-        console.debug('[GlyphLog] No se detectó media en:', currentUrl);
-        return;
+      // La SPA puede cambiar de ruta mientras los reintentos esperan la
+      // hidratación. No mostramos datos de una ruta antigua sobre la nueva.
+      if (window.location.href !== currentUrl) {
+        return false;
       }
 
-      console.log('[GlyphLog] Media detectado:', media);
+      if (!media) {
+        hideActiveOverlay();
+        console.debug("[GlyphLog] No se detectó media en:", currentUrl);
+        return false;
+      }
+
+      console.log("[GlyphLog] Media detectado:", media);
 
       // Emitir evento al background (para logging)
       chrome.runtime.sendMessage(
         {
-          type: 'MEDIA_DETECTED',
+          type: "MEDIA_DETECTED",
           data: media,
         },
         (response) => {
           if (chrome.runtime.lastError) {
-            console.error('[GlyphLog] Error enviando mensaje:', chrome.runtime.lastError);
+            console.error(
+              "[GlyphLog] Error enviando mensaje:",
+              chrome.runtime.lastError,
+            );
           } else {
-            console.debug('[GlyphLog] Mensaje enviado al background');
+            console.debug("[GlyphLog] Mensaje enviado al background");
           }
-        }
+        },
       );
 
       // Mostrar el overlay
       await createAndShowOverlay(media);
+      return true;
     }
 
     /**
@@ -110,23 +187,30 @@ export default defineContentScript({
     async function detectMediaWithRetry(
       url: string,
       maxAttempts: number = 10,
-      delayMs: number = 500
+      delayMs: number = 500,
     ): Promise<any | null> {
       const adapter = getAdapter(url);
       const attempts = adapter ? maxAttempts : 1;
 
-      console.debug(`[GlyphLog] Adapter for ${url.substring(0, 60)}: ${adapter ? adapter.constructor.name : 'NONE'}`);
+      console.debug(
+        `[GlyphLog] Adapter for ${url.substring(0, 60)}: ${adapter ? adapter.constructor.name : "NONE"}`,
+      );
       console.debug(`[GlyphLog] Attempting detection ${attempts} times...`);
 
       for (let attempt = 1; attempt <= attempts; attempt++) {
         try {
           const media = await detectMediaInPage();
           if (media) {
-            console.log(`[GlyphLog] ✅ Media detected on attempt ${attempt}/${attempts}:`, media);
+            console.log(
+              `[GlyphLog] ✅ Media detected on attempt ${attempt}/${attempts}:`,
+              media,
+            );
             return media;
           }
           if (attempt % 2 === 0) {
-            console.debug(`[GlyphLog] Attempt ${attempt}/${attempts}: no media yet...`);
+            console.debug(
+              `[GlyphLog] Attempt ${attempt}/${attempts}: no media yet...`,
+            );
           }
         } catch (error) {
           console.error(`[GlyphLog] Error on attempt ${attempt}:`, error);
@@ -136,7 +220,9 @@ export default defineContentScript({
         }
       }
 
-      console.warn(`[GlyphLog] ❌ Media detection failed after ${attempts} attempts`);
+      console.warn(
+        `[GlyphLog] ❌ Media detection failed after ${attempts} attempts`,
+      );
       return null;
     }
 
@@ -148,21 +234,24 @@ export default defineContentScript({
     // Initialization
     // ─────────────────────────────────────────────────────────────────────────
 
-    function init(): void {
-      console.log('[GlyphLog] Content script inicializado en:', window.location.href);
+    function init(ctx: ContentScriptContext): void {
+      console.log(
+        "[GlyphLog] Content script inicializado en:",
+        window.location.href,
+      );
 
       // Configurar listeners de navegación SPA
-      setupHistoryListener();
+      setupHistoryListener(ctx);
 
       // Ejecutar detección inicial
       detectAndShow().catch(console.error);
     }
 
     // Ejecutar al cargar el script
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => init(ctx));
     } else {
-      init();
+      init(ctx);
     }
 
     // Exponer funciones para debugging (opcional)

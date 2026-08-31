@@ -101,20 +101,36 @@ trabajo priorizado; `candidato posterior` queda detrás de la siguiente fase;
 
 ### Plataformas
 
-- **Crunchyroll — soportado.** Anime; Chrome y Brave. Señales: URL, DOM y
-  metadatos del episodio. Calidad: media, con fixture de adaptador y pendiente
-  de E2E local. Región/login pueden cambiar el DOM. Host requerido:
-  `https://www.crunchyroll.com/*`. Evidencia: fixture + revisión manual; última
-  verificación documental 2026-08-26. Riesgo: alto cambio de SPA y datos
-  personalizados.
+- **Crunchyroll — degradado temporalmente, fix automatizado pendiente de smoke real.** Anime;
+  Chrome/Chromium y Brave.
+  Señales: URL, DOM y metadatos del episodio. Host requerido:
+  `https://www.crunchyroll.com/*`. Evidencia automatizada: fixtures DOM `v1`
+  hidratada/incompleta/genérica y E2E local de detección, SPA, creación,
+  progreso, auth y errores en Chromium 151.0.7922.34; evidencia `smoke real` con
+  extensión cargada en Brave 150.1.92.144. Un smoke manual detectó que la
+  transición Crunchylists → episodio exigía reload. En la reproducción real del
+  2026-08-31, entrar desde Discover a un episodio mantuvo la URL correcta pero
+  no mostró overlay; tras recargar sí lo mostró, aunque el shell español llegó a
+  exponer temporalmente el título promocional `Crunchyroll: Ve animes populares...`.
+  El código ahora usa `wxt:locationchange`, observa el `Document` estable,
+  descarta ese título y oculta overlays al salir de una ruta compatible. El
+  adaptador sigue degradado hasta repetir el smoke real con el build nuevo y sin
+  reload. Última validación: 2026-08-31. Limitación conocida: región/login y el alto cambio de la SPA
+  pueden producir DOM personalizado; no se automatizan cuentas ni reproducción
+  real.
 - **AnimeFLV — soportado.** Anime; Chrome y Brave. Señales: URL/DOM del
-  episodio. Calidad: media; fixture existente, E2E pendiente. Host:
-  `https://animeflv.net/*` y `https://*.animeflv.net/*`. Evidencia: fixture;
-  validación regional manual. Riesgo: variantes de host y HTML no estable.
+  episodio. Hosts: `https://animeflv.net/*` y
+  `https://*.animeflv.net/*`. Evidencia automatizada: fixtures DOM `v1`
+  hidratada/incompleta/genérica y E2E local de detección con extensión cargada
+  en Chromium 151.0.7922.34 y Brave 150.1.92.144. Última validación: 2026-08-28.
+  Limitación conocida: las variantes regionales/subdominios y el HTML no estable
+  requieren smoke manual contra la web real.
 - **MangaDex — soportado.** Manga; Chrome y Brave. Señales: URL, DOM del
-  capítulo y metadatos del lector. Calidad: media; fixture existente, E2E
-  pendiente. Host: `https://mangadex.org/*`. Cuenta/idioma y lector pueden
-  cambiar la disponibilidad. Evidencia: fixture + manual; riesgo medio-alto.
+  capítulo y metadatos del lector. Host: `https://mangadex.org/*`. Evidencia
+  automatizada: fixtures DOM `v1` hidratada/incompleta/genérica y E2E local de
+  creación y actualización de progreso real en Chromium 151.0.7922.34 y Brave
+  150.1.92.144. Última validación: 2026-08-28. Limitación conocida: cuenta,
+  idioma y variantes del lector pueden cambiar el DOM real.
 - **MangaPlus — candidato siguiente.** Manga; Chrome, Brave y Edge como
   objetivo inicial. Señales: URL `viewer`/`titles`, DOM y estado de
   hidratación. Calidad: alta para rutas públicas; FAQ advierte disponibilidad
@@ -160,10 +176,15 @@ decisión MangaPlus también exige evidencia verificable y host acotado.
 ### Navegadores
 
 - **Chrome — soportado/baseline.** Alcance 5, cobertura incremental 3,
-  viabilidad WXT/distribución 5, coste de pruebas 5: **90/100**.
+  viabilidad WXT/distribución 5, coste de pruebas 5: **90/100**. Evidencia
+  automatizada 2026-08-28: build Chrome MV3 cargado en el Chromium
+  151.0.7922.34 incluido por Playwright. Limitación: Chrome branded ya no admite
+  de forma fiable los flags de sideload usados por estos E2E; la publicación en
+  Chrome Web Store continúa como validación manual separada.
 - **Brave — soportado/smoke real.** Alcance 3, incremental 3, viabilidad 5,
-  coste 4: **71/100**. Comparte Chromium, pero la carga local y shields se
-  validan en navegador real.
+  coste 4: **71/100**. Evidencia automatizada y `smoke real` 2026-08-28: suite
+  E2E completa con build MV3 cargado en Brave 150.1.92.144 headless. Limitación:
+  shields, UI headed y webs externas reales conservan validación manual.
 - **Edge — candidato siguiente.** Alcance 4, incremental 2, viabilidad 5,
   coste 5: **77/100**. Reutiliza el target Chromium y añade alcance de
   escritorio con cambios mínimos de build/distribución.
@@ -185,7 +206,7 @@ Cada fixture es un escenario autocontenido, versionado y sanitizado. Debe
 contener HTML mínimo más metadatos en un archivo adyacente (JSON/YAML) con:
 
 ```text
-platform, scenario, capturedAt, sourceUrlPattern, locale,
+schemaVersion, platform, scenario, capturedAt, sourceUrlPattern, locale,
 hydrationState (initial|hydrated|degraded), authenticated (false),
 sanitized (true), expected, redactions
 ```
@@ -230,6 +251,58 @@ login y DRM se validan manualmente y se registran como evidencia separada. Una
 regresión de adaptador se marca `degradado` si no rompe la navegación ni crea
 datos incorrectos.
 
+La validación de 2026-08-28 ejecutó siete casos aplicables en Chromium
+151.0.7922.34 y ocho en Brave 150.1.92.144:
+detección de los tres adaptadores, navegación SPA sobre DOM hidratado,
+navegación Crunchylists → reproductor con hidratación tardía, creación/actualización real
+de anime y manga, éxito parcial sin duplicado, token revocado y error de API.
+El smoke separado de carga/detección también pasó en Brave. Los documentos de
+plataforma y la búsqueda de catálogo externo se interceptaron con datos deterministas; las
+peticiones de entradas/progreso atravesaron content script, background, API y
+PostgreSQL locales.
+
+## Protocolo de adaptador degradado
+
+1. **Activación:** cualquier fixture antes verde o E2E que falle porque las
+   señales DOM ya no permiten extraer un medio fiable marca el adaptador como
+   `degradado`; un fallo de infraestructura se registra aparte y no cambia el
+   estado por sí solo.
+2. **Registro:** actualizar esta matriz con fecha, escenario afectado, impacto,
+   navegador, tipo de evidencia y limitación conocida. No se presenta el caso
+   como verificado aunque el adaptador siga instalado.
+3. **Contención:** títulos genéricos, hidratación incompleta o progreso ambiguo
+   deben producir detección nula. El adaptador degradado nunca inventa datos ni
+   crea/actualiza una entrada con señales insuficientes.
+4. **Recuperación:** añadir o actualizar una fixture DOM sanitizada y versionada,
+   aplicar el cambio mínimo del adaptador, ejecutar toda su matriz de fixtures y
+   repetir el E2E Chromium. Cuando el cambio pueda afectar al navegador, repetir
+   también el smoke Brave o documentar su bloqueo de entorno.
+5. **Salida:** solo volver a `soportado y verificado` cuando fixture, E2E y smoke
+   exigible estén verdes y la fecha/evidencia nueva figure en la matriz. Una
+   comprobación manual aislada no sustituye esos gates.
+
+## Aparcamiento de Companion y siguiente diseño
+
+La issue #68 queda aparcada: la detección automática actual no ofrece todavía
+una garantía suficiente para crear o actualizar una obra sin intervención. El
+smoke real encontró resultados intermitentes y posibles asociaciones erróneas
+cuando el título es genérico, hay varias temporadas/remakes o existe una obra
+de anime y otra de manga con el mismo nombre.
+
+La continuación recomendada es un flujo de detección asistida:
+
+- el adaptador devuelve señales y candidatos, pero no crea entradas;
+- la resolución combina título, títulos alternativos, temporada, idioma, tipo,
+  plataforma y coincidencias de la colección;
+- el overlay muestra candidatos seleccionables y «No es ninguno»;
+- crear/actualizar exige confirmación explícita y usa el identificador elegido;
+- una confianza baja bloquea la escritura y deja el caso para selección manual;
+- la operación confirmada conserva idempotencia y no duplica entradas.
+
+Esta separación debe convertirse en una spec nueva antes de reactivar la tarea,
+con pruebas para temporadas, remakes, traducciones, anime/manga homónimos,
+entradas existentes, API parcial y reintentos.
+
 ## Política de permisos y coherencia documental
 
 La fuente de verdad runtime es `apps/extension/wxt.config.ts`: API local/remota
@@ -247,8 +320,8 @@ como reemplazada.
 
 ## Trazabilidad y cierre
 
-La spec y el test design definen `RF-*`, `EC-*` y `TC-*`; el task doc los enlaza
-con esta evidencia. La validación final comprueba enlaces/fechas, recálculo de
-puntuaciones, sanitización, diff sin runtime, tests/build de la extensión y el
-manifest generado sin `<all_urls>`. La issue #68 puede implementar los
-contratos sin inventar nuevos oráculos.
+La spec y el test design de #68 definen `RF-*`, `EC-*` y `TC-*`; el task doc los
+enlaza con fixtures y tests ejecutables. La validación final comprueba
+enlaces/fechas, sanitización, tests/build de la extensión, E2E local y el manifest
+generado sin `<all_urls>`. La issue #68 materializa así los contratos de #66 sin
+inventar nuevos oráculos.

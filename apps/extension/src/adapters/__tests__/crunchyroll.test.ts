@@ -182,6 +182,36 @@ describe('CrunchyrollAdapter', () => {
       expect(result).toBeNull();
     });
 
+    it('debe ignorar el título promocional localizado durante la hidratación', () => {
+      const html = `
+        <html>
+          <head>
+            <title>Crunchyroll: Ve animes populares, juega a juegos y compra online</title>
+          </head>
+          <body></body>
+        </html>
+      `;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const result = adapter.detect(doc, 'https://www.crunchyroll.com/es-es/watch/ABC123/ep-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('debe ignorar el título residual de Crunchylists al entrar al reproductor por SPA', () => {
+      const html = `
+        <html>
+          <head>
+            <title>Crunchylists | Crunchyroll</title>
+          </head>
+          <body></body>
+        </html>
+      `;
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const result = adapter.detect(doc, 'https://www.crunchyroll.com/watch/ABC123/ep-1');
+
+      expect(result).toBeNull();
+    });
+
     it('debe retornar null si no encuentra título', () => {
       const html = `<html><head></head><body></body></html>`;
       const doc = new DOMParser().parseFromString(html, 'text/html');

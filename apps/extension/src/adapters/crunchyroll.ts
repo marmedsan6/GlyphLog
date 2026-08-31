@@ -125,7 +125,14 @@ export class CrunchyrollAdapter implements SiteAdapter {
 
     // Durante la hidratación, Crunchyroll expone un título de marketing en
     // lugar de la serie. Aceptarlo crea entradas imposibles de asociar después.
-    return !/^Crunchyroll(?:\s*[|:-]\s*|\s+)(?:Watch|Popular|Anime|Play|Games|Shop|Online)\b/i.test(title);
+    // El shell español usa, por ejemplo, "Crunchyroll: Ve animes
+    // populares...". No dependemos de la lista de idiomas o slogans: todo
+    // título que empiece por la marca y un separador/espacio es navegación,
+    // no una serie válida.
+    return (
+      !/^Crunchyroll(?:\s*[|:-]\s*|\s+)/i.test(title) &&
+      !/^Crunchylists?$/i.test(title)
+    );
   }
 
   /**

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const backgroundApiMock = vi.hoisted(() => ({
   searchEntries: vi.fn(),
@@ -7,21 +7,26 @@ const backgroundApiMock = vi.hoisted(() => ({
   updateProgress: vi.fn(),
 }));
 
-vi.mock('~/background-api', () => ({
+vi.mock("~/background-api", () => ({
   backgroundAPI: backgroundApiMock,
 }));
 
-import { OverlayComponent, type OverlayData } from './overlay';
+import {
+  createAndShowOverlay,
+  hideActiveOverlay,
+  OverlayComponent,
+  type OverlayData,
+} from "./overlay";
 
 const animeData: OverlayData = {
-  title: 'One Piece',
+  title: "One Piece",
   episode: 12,
-  mediaType: 'anime',
-  pageUrl: 'https://www.crunchyroll.com/watch/example/episode-12',
+  mediaType: "anime",
+  pageUrl: "https://www.crunchyroll.com/watch/example/episode-12",
 };
 
 function createOverlay(): { host: HTMLElement; overlay: OverlayComponent } {
-  const host = document.createElement('glyphlog-overlay');
+  const host = document.createElement("glyphlog-overlay");
   document.body.appendChild(host);
   return { host, overlay: new OverlayComponent(host) };
 }
@@ -33,7 +38,7 @@ async function flushPromises(): Promise<void> {
 
 const noExternalMeta = { results: [] };
 
-describe('OverlayComponent', () => {
+describe("OverlayComponent", () => {
   beforeEach(() => {
     backgroundApiMock.searchEntries.mockReset();
     backgroundApiMock.searchExternal.mockReset();
@@ -44,74 +49,199 @@ describe('OverlayComponent', () => {
     backgroundApiMock.searchExternal.mockResolvedValue(noExternalMeta);
   });
 
-  it('crea la entrada y actualiza el progreso inicial', async () => {
-    backgroundApiMock.createEntry.mockResolvedValue({ id: 'entry-1' });
-    backgroundApiMock.updateProgress.mockResolvedValue({ id: 'entry-1' });
+  it("crea la entrada y actualiza el progreso inicial", async () => {
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-1" });
+    backgroundApiMock.updateProgress.mockResolvedValue({ id: "entry-1" });
     const { host, overlay } = createOverlay();
 
     await overlay.show(animeData);
-    (host.shadowRoot?.querySelector('#gl-confirm') as HTMLButtonElement).click();
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
     await flushPromises();
 
     expect(backgroundApiMock.createEntry).toHaveBeenCalledWith({
-      title: 'One Piece',
-      type: 'anime',
-      status: 'watching',
+      title: "One Piece",
+      type: "anime",
+      status: "watching",
     });
-    expect(backgroundApiMock.updateProgress).toHaveBeenCalledWith('entry-1', 12);
-    expect(host.shadowRoot?.textContent).toContain('Agregado a tu lista');
+    expect(backgroundApiMock.updateProgress).toHaveBeenCalledWith(
+      "entry-1",
+      12,
+    );
+    expect(host.shadowRoot?.textContent).toContain("Agregado a tu lista");
     host.remove();
   });
 
-  it('enriquece la entrada con datos del catálogo externo', async () => {
+  it("enriquece la entrada con datos del catálogo externo", async () => {
     backgroundApiMock.searchExternal.mockResolvedValue({
-      results: [{ title: 'One Piece', year: 1999, cover_image: 'https://cdn.anilist.co/one-piece.jpg', type: 'anime', source: 'AniList', progress_total: 1100, slug: null }],
+      results: [
+        {
+          title: "One Piece",
+          year: 1999,
+          cover_image: "https://cdn.anilist.co/one-piece.jpg",
+          type: "anime",
+          source: "AniList",
+          progress_total: 1100,
+          slug: null,
+        },
+      ],
     });
-    backgroundApiMock.createEntry.mockResolvedValue({ id: 'entry-2' });
-    backgroundApiMock.updateProgress.mockResolvedValue({ id: 'entry-2' });
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-2" });
+    backgroundApiMock.updateProgress.mockResolvedValue({ id: "entry-2" });
     const { host, overlay } = createOverlay();
 
     await overlay.show(animeData);
-    (host.shadowRoot?.querySelector('#gl-confirm') as HTMLButtonElement).click();
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
     await flushPromises();
 
-    expect(backgroundApiMock.createEntry).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'One Piece',
-      type: 'anime',
-      status: 'watching',
-      year: 1999,
-      progress_total: 1100,
-      cover_image_url: 'https://cdn.anilist.co/one-piece.jpg',
-    }));
-    expect(backgroundApiMock.updateProgress).toHaveBeenCalledWith('entry-2', 12);
-    expect(host.shadowRoot?.textContent).toContain('Agregado a tu lista');
+    expect(backgroundApiMock.createEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "One Piece",
+        type: "anime",
+        status: "watching",
+        year: 1999,
+        progress_total: 1100,
+        cover_image_url: "https://cdn.anilist.co/one-piece.jpg",
+      }),
+    );
+    expect(backgroundApiMock.updateProgress).toHaveBeenCalledWith(
+      "entry-2",
+      12,
+    );
+    expect(host.shadowRoot?.textContent).toContain("Agregado a tu lista");
     host.remove();
   });
 
-  it('informa que la entrada existe si falla solo el progreso', async () => {
-    backgroundApiMock.createEntry.mockResolvedValue({ id: 'entry-1' });
-    backgroundApiMock.updateProgress.mockRejectedValue(new Error('Error 422'));
+  it("informa que la entrada existe si falla solo el progreso", async () => {
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-1" });
+    backgroundApiMock.updateProgress.mockRejectedValue(new Error("Error 422"));
     const { host, overlay } = createOverlay();
 
     await overlay.show(animeData);
-    (host.shadowRoot?.querySelector('#gl-confirm') as HTMLButtonElement).click();
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
     await flushPromises();
 
-    expect(host.shadowRoot?.textContent).toContain('Entrada añadida');
-    expect(host.shadowRoot?.textContent).toContain('Error 422');
+    expect(host.shadowRoot?.textContent).toContain("Entrada añadida");
+    expect(host.shadowRoot?.textContent).toContain("Error 422");
     host.remove();
   });
 
-  it('muestra el error de creación sin intentar actualizar progreso', async () => {
-    backgroundApiMock.createEntry.mockRejectedValue(new Error('Field required'));
+  it("muestra el error de creación sin intentar actualizar progreso", async () => {
+    backgroundApiMock.createEntry.mockRejectedValue(
+      new Error("Field required"),
+    );
     const { host, overlay } = createOverlay();
 
     await overlay.show(animeData);
-    (host.shadowRoot?.querySelector('#gl-confirm') as HTMLButtonElement).click();
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
     await flushPromises();
 
     expect(backgroundApiMock.updateProgress).not.toHaveBeenCalled();
-    expect(host.shadowRoot?.textContent).toContain('Field required');
+    expect(host.shadowRoot?.textContent).toContain("Field required");
     host.remove();
+  });
+
+  it("limita el progreso inicial al total conocido", async () => {
+    backgroundApiMock.searchExternal.mockResolvedValue({
+      results: [
+        {
+          title: "One Piece",
+          year: 1999,
+          cover_image: null,
+          type: "anime",
+          source: "AniList",
+          progress_total: 10,
+          slug: null,
+        },
+      ],
+    });
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-3" });
+    backgroundApiMock.updateProgress.mockResolvedValue({ id: "entry-3" });
+    const { host, overlay } = createOverlay();
+
+    await overlay.show(animeData);
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
+    await flushPromises();
+
+    expect(backgroundApiMock.updateProgress).toHaveBeenCalledWith(
+      "entry-3",
+      10,
+    );
+    host.remove();
+  });
+
+  it("no inventa progreso cuando el adaptador no lo detecta", async () => {
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-4" });
+    const { host, overlay } = createOverlay();
+
+    await overlay.show({
+      title: "Película sin episodio",
+      mediaType: "anime",
+      pageUrl: "https://animeflv.net/ver/pelicula-sin-numero",
+    });
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
+    await flushPromises();
+
+    expect(backgroundApiMock.createEntry).toHaveBeenCalledOnce();
+    expect(backgroundApiMock.updateProgress).not.toHaveBeenCalled();
+    host.remove();
+  });
+
+  it("reintenta el progreso sobre la entrada creada sin crear un duplicado", async () => {
+    backgroundApiMock.createEntry.mockResolvedValue({ id: "entry-5" });
+    backgroundApiMock.updateProgress.mockRejectedValueOnce(
+      new Error("Error 422"),
+    );
+    const { host, overlay } = createOverlay();
+
+    await overlay.show(animeData);
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
+    await flushPromises();
+
+    backgroundApiMock.searchEntries.mockResolvedValue({
+      entries: [{ id: "entry-5" }],
+    });
+    backgroundApiMock.updateProgress.mockResolvedValue({ id: "entry-5" });
+    await overlay.show(animeData);
+    (
+      host.shadowRoot?.querySelector("#gl-confirm") as HTMLButtonElement
+    ).click();
+    await flushPromises();
+
+    expect(backgroundApiMock.createEntry).toHaveBeenCalledOnce();
+    expect(backgroundApiMock.updateProgress).toHaveBeenLastCalledWith(
+      "entry-5",
+      12,
+    );
+    host.remove();
+  });
+
+  it("reutiliza un único host ante detecciones consecutivas de la misma pestaña", async () => {
+    await createAndShowOverlay(animeData);
+    await createAndShowOverlay({ ...animeData, episode: 13 });
+
+    expect(document.querySelectorAll("glyphlog-overlay")).toHaveLength(1);
+    document.querySelector("glyphlog-overlay")?.remove();
+  });
+
+  it("oculta el overlay al salir de una ruta compatible", async () => {
+    await createAndShowOverlay(animeData);
+
+    hideActiveOverlay();
+
+    expect(document.querySelector("glyphlog-overlay")).toBeNull();
   });
 });
