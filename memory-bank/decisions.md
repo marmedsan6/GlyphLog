@@ -543,6 +543,76 @@ política de GlyphLog no convierte esa capacidad en una autorización wildcard.
 
 ---
 
+## ADR-019
+
+### Integración selectiva y aislada de Gentle AI rc.1 con Codex
+
+**Fecha:** agosto 2026
+**Estado:** Experimental; conservada como antecedente
+
+#### Contexto
+
+GlyphLog ya disponía de reglas, MCPs, Engram, SDD con test design, QA y workflows GitHub. Gentle AI `v2.5.0-rc.1` ofrecía review nativo, pero su preset Codex duplicaba capacidades y una instalación aislada demostró escrituras globales, instrucciones de 70 KB, rutas no nativas y paths absolutos.
+
+#### Decisión
+
+Evaluar rc.1 en la rama `experiment/gentle-ai-codex` mediante un runner fijado, `AGENTS.md` compacto, adaptadores `.agents/skills` y review opt-in. No adoptar persona, SDD, Engram/Context7, temas, perfiles ni installer completo.
+
+#### Razones
+
+- El review transaccional era la única capacidad diferencial.
+- El checksum y el aislamiento permitían reproducir y revertir la prueba.
+- RDD apagado preservaba la autoridad del usuario y la política de entrega.
+
+#### Consecuencias
+
+- La evidencia rc.1 y el intento de #68 permanecen en `b63e55a`.
+- OpenCode, Cursor y las herramientas propias no fueron reemplazadas.
+- Esta ADR no queda reemplazada: rc.3 no superó su gate contractual.
+
+#### Alternativas consideradas
+
+- **Instalación completa:** rechazada por duplicación y escrituras fuera del workspace.
+- **No evaluar:** rechazada porque impedía medir el review diferencial.
+
+---
+
+## ADR-020
+
+### Capa anti-corrupción para Gentle AI rc.3
+
+**Fecha:** agosto 2026
+**Estado:** Rechazada para adopción con `v2.5.0-rc.3`
+
+#### Contexto
+
+rc.3 cambia el protocolo a capabilities `v2.3`, START `v4` y STATUS `v5`, y publica continuaciones ejecutables. Consumir directamente ese contrato trasladaría a skills y agentes la responsabilidad de reconstruir comandos, bindings, scopes y replay.
+
+#### Decisión
+
+Prototipar una capa anti-corrupción única en `scripts/gentle-ai.sh` y `scripts/gentle_ai_adapter.py` que fija artefactos, valida el contrato, persiste estado efímero, ejecuta argv literal y normaliza resultados. La propuesta se rechaza para `main` porque el bundle oficial verificado omite los schemas de transición que la release declara incluidos.
+
+#### Razones
+
+- La frontera evita propagar conceptos y cambios de Gentle al workflow de GlyphLog.
+- La ejecución argv, el binding persistido y el replay guard reducen command injection y confused deputy.
+- Un contrato publicado contradictorio impide demostrar que la continuación literal es admisible; el comportamiento correcto es fallar cerrado.
+
+#### Consecuencias
+
+- El prototipo y sus tests quedan solo en la rama experimental como evidencia reproducible.
+- RDD permanece apagado y el benchmark A/B no se ejecuta.
+- ADR-019 conserva su estado histórico; ninguna herramienta actual se elimina.
+- Una release futura necesita nuevos hashes, bundle completo y repetición íntegra de evaluación y benchmark; no basta con cambiar la versión.
+
+#### Alternativas consideradas
+
+- **Consumir el binario sin bundle:** rechazada porque confía en schemas autoanunciados sin el artefacto contractual publicado.
+- **Copiar schemas desde el source tag:** rechazada porque fabricaría localmente un bundle distinto al release evaluado.
+- **Reconstruir comandos desde campos o prose:** rechazada por romper el contrato literal y ampliar la superficie de inyección/drift.
+
+---
+
 ## Template para nuevas decisiones
 
 Copiar y rellenar para cada nueva decisión:

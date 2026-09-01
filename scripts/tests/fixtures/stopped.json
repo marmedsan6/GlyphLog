@@ -1,0 +1,9 @@
+{
+  "schema": "gentle-ai.review-integration.status/v5",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.status",
+  "target_identity": "sha256:target",
+  "authority": {"lineage_id": "lineage-one", "revision": "sha256:revision", "state": "reviewing"},
+  "projection": {"paths": ["tracked.txt"]},
+  "next_transition": {"kind": "stop", "reason_code": "manual_intervention_required"}
+}

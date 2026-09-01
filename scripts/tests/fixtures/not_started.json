@@ -1,0 +1,22 @@
+{
+  "schema": "gentle-ai.review-integration.status/v5",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.status",
+  "applicability": "current_target",
+  "action": "start",
+  "target_identity": "sha256:target",
+  "projection": {"paths": ["tracked.txt"]},
+  "next_transition": {
+    "kind": "execute",
+    "reason_code": "review_start_required",
+    "execute": {
+      "operation": "review.start",
+      "command": "gentle-ai review start --contract=gentle-ai.review-integration/v2 --projection=workspace",
+      "arguments": [
+        {"name": "contract", "value": "gentle-ai.review-integration/v2", "token": "--contract=gentle-ai.review-integration/v2"},
+        {"name": "projection", "value": "workspace", "token": "--projection=workspace"}
+      ],
+      "binding": {"lineage_id": "lineage-one", "revision": "sha256:revision", "target_identity": "sha256:target"}
+    }
+  }
+}

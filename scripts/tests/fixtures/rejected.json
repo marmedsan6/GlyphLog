@@ -1,0 +1,9 @@
+{
+  "schema": "gentle-ai.review-integration.failure/v2",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.status",
+  "code": "target_mismatch",
+  "message": "target changed",
+  "mutation_outcome": "not_started",
+  "next_action": "rerun_status"
+}

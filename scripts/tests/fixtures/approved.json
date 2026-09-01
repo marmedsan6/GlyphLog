@@ -1,0 +1,10 @@
+{
+  "schema": "gentle-ai.review-integration.start/v4",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.start",
+  "action": "closed",
+  "state": "approved",
+  "lineage_id": "lineage-one",
+  "target_identity": "sha256:target",
+  "projection": "workspace"
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "gentle-ai.review-integration.status/v5",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.status",
+  "applicability": "unrelated",
+  "action": "start",
+  "projection": {"paths": []},
+  "next_transition": {"kind": "stop", "reason_code": "rdd_disabled"}
+}

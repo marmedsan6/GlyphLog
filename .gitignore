@@ -140,3 +140,6 @@ start-brave-extension.sh
 
 # ─── Config local de Command Code (no es código del proyecto) ──────────────────
 .commandcode/
+
+# ─── Gentle AI experimental (binarios, contratos y estado efímero) ────────────
+.gentle-ai/

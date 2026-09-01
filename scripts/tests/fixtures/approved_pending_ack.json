@@ -1,0 +1,24 @@
+{
+  "schema": "gentle-ai.review-integration.status/v5",
+  "contract": "gentle-ai.review-integration/v2",
+  "operation": "review.status",
+  "target_identity": "sha256:target",
+  "authority": {"lineage_id": "lineage-one", "revision": "sha256:revision", "state": "approved"},
+  "projection": {"paths": ["tracked.txt"]},
+  "next_transition": {
+    "kind": "execute",
+    "reason_code": "approved_acknowledgement_required",
+    "execute": {
+      "operation": "review.acknowledge-approved",
+      "command": "gentle-ai review acknowledge-approved --cwd=/repo --lineage=lineage-one --target=sha256:target --expected-revision=sha256:revision --token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "arguments": [
+        {"name": "cwd", "value": "/repo", "token": "--cwd=/repo"},
+        {"name": "lineage", "value": "lineage-one", "token": "--lineage=lineage-one"},
+        {"name": "target", "value": "sha256:target", "token": "--target=sha256:target"},
+        {"name": "expected-revision", "value": "sha256:revision", "token": "--expected-revision=sha256:revision"},
+        {"name": "token", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "token": "--token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+      ],
+      "binding": {"lineage_id": "lineage-one", "revision": "sha256:revision", "target_identity": "sha256:target"}
+    }
+  }
+}
